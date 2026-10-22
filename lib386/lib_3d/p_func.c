@@ -1,6 +1,5 @@
 #include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 #include "../lib_sys/adeline.h"
 #include "../lib_sys/lib_sys.h"
 #include "lib_3d.h"
@@ -203,22 +202,11 @@ Distance3D(int32_t x0, int32_t y0, int32_t z0, int32_t x1, int32_t y1, int32_t z
 	return Sqr(dx*dx + dy*dy + dz*dz);
 }
 
-/* The word at byte off of P_SinTab, between two entries or not. */
-static int16_t
-sinword(uint32_t off)
-{
-	int16_t w;
-
-	memcpy(&w, (uint8_t*)P_SinTab + off, 2);
-	return w;
-}
-
 /*
  * GetAngle is p_func.asm's GetAngle: the angle of x1,z1 seen from x0,z0,
  * Distance their distance. The sine of the angle to the nearer axis is
- * sought in the table between steps 384 and 640 by halving byte
- * addresses, not entries, so that the last halvings read words across
- * two entries, as the assembly's did.
+ * sought in the table between steps 384 and 640 by halving entries, the
+ * nearer of the last two taken.
  */
 int32_t
 GetAngle(int32_t x0, int32_t z0, int32_t x1, int32_t z1)
@@ -242,11 +230,17 @@ GetAngle(int32_t x0, int32_t z0, int32_t x1, int32_t z1)
 	if (Distance == 0)
 		return 0;
 	s = (int32_t)((uint32_t)small << 14) / Distance;
-	lo = 384 * 2;
-	hi = 640 * 2;
+	/*
+	 * FIXED: LBA.EXE halves byte addresses in its search, not entries,
+	 * so that its last steps read words across two entries and half the
+	 * angles come out a step off the nearer one. This halves entries and
+	 * takes the nearer of the last two. Taken from DotEmu's Android 1.06.
+	 */
+	lo = 384;
+	hi = 640;
 	for (;;) {
 		mid = (lo + hi) >> 1;
-		w = sinword(mid);
+		w = P_SinTab[mid];
 		if (s > w)
 			hi = mid;
 		else {
@@ -257,10 +251,10 @@ GetAngle(int32_t x0, int32_t z0, int32_t x1, int32_t z1)
 		if (hi-lo == 1)
 			break;
 	}
-	if ((int16_t)((sinword(lo) + sinword(hi)) >> 1) <= s)
+	if (s <= (P_SinTab[lo] + P_SinTab[hi]) >> 1)
 		lo = hi;
 found:
-	a = (lo - 256*2) >> 1;
+	a = lo - 256;
 	if (big < 0)
 		a = -a;
 	if (big & 1)

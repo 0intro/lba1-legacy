@@ -130,6 +130,9 @@ UBYTE	NumVersion = 0 ;
 #define	NB_CAR_V	5
 
 #define	MAX_SIZE_PLAYER_NAME	29
+#ifdef	FIXES
+#define	SIZE_PLAYER_ENTRY	(MAX_SIZE_PLAYER_NAME+1+_MAX_PATH)	// le nom, puis le fichier
+#endif
 
 UBYTE	GamePathname[_MAX_PATH] ;
 
@@ -468,7 +471,11 @@ void	DrawMenuComportement( WORD beta )
 
 /*══════════════════════════════════════════════════════════════════════════*/
 
+#ifdef	FIXES
+void	MenuComportement( WORD arrows )
+#else
 void	MenuComportement()
+#endif
 {
 	T_OBJET	*ptrobj ;
 	UBYTE	*memoptrfile3d ;
@@ -526,9 +533,24 @@ void	MenuComportement()
 			if( MyJoy & J_DOWN )	CombatAuto = FALSE ;
 		}
 */
+		/*
+		 * FIXED: LBA.EXE reads the arrows in the menu that F1 to F4
+		 * open too, so that one held there, as Twinsen walks, turns
+		 * the key's behaviour into another. They are read for Ctrl's
+		 * menu alone. Taken from LbaWin 0.8.1.
+		 */
+#ifdef	FIXES
+		if( arrows )
+		{
+			if( MyJoy & J_RIGHT ) 	Comportement++ ;
+			if( MyJoy & J_LEFT )	Comportement-- ;
+			Comportement &= 3 ;
+		}
+#else
 		if( MyJoy & J_RIGHT ) 	Comportement++ ;
 		if( MyJoy & J_LEFT )	Comportement-- ;
 		Comportement &= 3 ;
+#endif
 
 		if( Comportement != oldcomp )
 		{
@@ -543,7 +565,17 @@ void	MenuComportement()
 					HQR_Get( HQR_Anims, TabAnim[Comportement] ),
 					Ptr3do ) ;
 
+			/*
+			 * FIXED: LBA.EXE waits for every arrow's release after a
+			 * change, so that Up held, as Twinsen walks, keeps the
+			 * menu up and the game stopped. It waits for Left and
+			 * Right alone. Taken from LbaWin 0.8.0.
+			 */
+#ifdef	FIXES
+			while( Joy & (J_LEFT|J_RIGHT) )
+#else
 			while( Joy )
+#endif
 				DrawComportement( Comportement, -1, TRUE ) ;
 		}
 		DrawComportement( Comportement, -1, TRUE ) ;
@@ -1152,6 +1184,9 @@ WORD	PlayerGameList( UBYTE **ptrlistname, UBYTE *listname )
 	ULONG	rc ;
 	UBYTE	wbyte ;
 	UBYTE	pathname[_MAX_PATH] ;
+#ifdef	FIXES
+	UBYTE	*entry ;
+#endif
 	WORD	nb = 0 ;
 	ULONG	handle ;
 
@@ -1167,6 +1202,9 @@ WORD	PlayerGameList( UBYTE **ptrlistname, UBYTE *listname )
 		{
 			Read( handle, &wbyte, 1 ) ;	// num version
 
+#ifdef	FIXES
+			entry = listname ;
+#endif
 			*ptrlistname++ = listname ;
 			do
 			{
@@ -1176,6 +1214,17 @@ WORD	PlayerGameList( UBYTE **ptrlistname, UBYTE *listname )
 			} while( wbyte != 0 ) ;
 
 			Close( handle ) ;
+
+			/*
+			 * FIXED: LBA.EXE lists the names alone, and the name
+			 * chosen is looked up again (FindPlayerFile), so that of
+			 * two saves of one name the first is loaded. Each entry
+			 * keeps its file after its name. Taken from LbaWin 0.7.8.
+			 */
+#ifdef	FIXES
+			strcpy( entry+MAX_SIZE_PLAYER_NAME+1, pathname ) ;
+			listname = entry+SIZE_PLAYER_ENTRY ;
+#endif
 
 			nb++ ;
 			if( nb == MAX_PLAYER )	return nb ;
@@ -1307,6 +1356,15 @@ void	LoadGame()
 	UBYTE	*ptr ;
 
 	handle = OpenRead( GamePathname ) ;
+	/*
+	 * FIXED: LBA.EXE reads the save from handle 0, the keyboard under
+	 * DOS, when its open fails, a file gone since the list was made.
+	 * The load returns at once, the game as InitGame set it, a new one.
+	 * Taken from DotEmu's Android 1.06.
+	 */
+#ifdef	FIXES
+	if( !handle )	return ;
+#endif
 
 	Read( handle, &wbyte, 1 ) ;	// num version
 
@@ -1359,7 +1417,6 @@ void	LoadGame()
 // others
 	Read( handle, &NbFourLeafClover, 1 ) ;
 	Read( handle, &Weapon, 2 ) ;
-
 
 	Close( handle ) ;
 
@@ -1731,7 +1788,11 @@ WORD	ChoosePlayerName( WORD mess )
 	CopyScreen( Screen, Log ) ;
 	Flip() ;
 
+#ifdef	FIXES
+	listplayername = Malloc( MAX_PLAYER * SIZE_PLAYER_ENTRY ) ;
+#else
 	listplayername = Malloc( MAX_PLAYER * (MAX_SIZE_PLAYER_NAME+1) ) ;
+#endif
 	ptrlist = (UBYTE**)Malloc( MAX_PLAYER * sizeof(UBYTE*) ) ;
 
 	if( !listplayername OR !ptrlist )
@@ -1807,7 +1868,11 @@ WORD	ChoosePlayerName( WORD mess )
 	}
 
 	strcpy( PlayerName, ptrlist[select] ) ;
+#ifdef	FIXES
+	strcpy( GamePathname, ptrlist[select]+MAX_SIZE_PLAYER_NAME+1 ) ;
+#else
 	FindPlayerFile() ;
+#endif
 
 	Free( ptrlist ) ;
 	Free( listplayername ) ;
@@ -1964,12 +2029,18 @@ void	DrawGameMenu( UWORD *ptrmenu, WORD justone )
 
 void	SetVolumes(LONG Music, LONG Sample, LONG Line, LONG CD, LONG Master )
 {
+	/*
+	 * FIXED: LBA.EXE compares where it means to assign, so that its wait
+	 * for the next tick waits only while TimerRef is 0. The wait is
+	 * dropped. Taken from LbaWin 0.8.1.
+	 */
+#ifndef	FIXES
 	static	ULONG	lasttimer ;
 
 
 	while (lasttimer == TimerRef ) ;
 	lasttimer == TimerRef ;
-
+#endif
 	if (!MixMusic)
 	{
 		MaxVolume = Music ;
@@ -2646,7 +2717,19 @@ void	GameAskChoice( WORD nummess )
 
 	GameChoiceMenu[0] = 0 ;
 	GameChoiceMenu[1] = GameNbChoices ;
+	/*
+	 * FIXED: LBA.EXE puts a menu's first box 35 from the top whatever
+	 * its answers, so that the sixth box, from 290 to 340, covers the
+	 * dialogue's window, from 334. A menu of six answers or more is
+	 * centred on y 191, its sixth box ending at 331. Taken from LbaWin
+	 * 0.7.6.
+	 */
+#ifdef	FIXES
+	if( GameNbChoices >= 6 )	GameChoiceMenu[2] = 191 ;
+	else				GameChoiceMenu[2] = 0 ;
+#else
 	GameChoiceMenu[2] = 0 ;
+#endif
 	GameChoiceMenu[3] = START_FILE_ISLAND+Island ;
 	for(n=0; n<GameNbChoices; n++ )
 	{

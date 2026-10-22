@@ -81,7 +81,7 @@ usage::
 	@echo '  clean        remove build/ and dist/'
 
 # NEW: the translations of the game's assembly into C, which asmoracle
-# holds to the assembly and lint reads.
+# holds to the assembly, and the game's new C, which lint reads.
 NEW=\
 	lib386/lib_3d/p_anim.c\
 	lib386/lib_3d/p_func.c\
@@ -107,8 +107,10 @@ NEW=\
 	sources/cpymask.c\
 	sources/fire.c\
 	sources/func.c\
+	sources/gridfix.c\
 	sources/grille_a.c\
 	sources/mcga.c\
+	sources/textfix.c\
 
 # The game's modules whose .def files make defs writes.
 DEFS=\

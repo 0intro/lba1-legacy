@@ -251,7 +251,16 @@ RotList		proc	near
 
 		mov	[compteur], cx
 
+		; FIXED: LBA.EXE turns 65536 points for a count of 0, past the
+		; 500 of List_Anim_Point. A count of 0 returns at once. Taken
+		; from DotEmu's Android 1.06.
+ifdef	FIXES
+		test	cx, cx
+		jnz	short start
+		ret
+else
 		jmp	short start
+endif
 
 rl0:		mov	esi, [Save1]
 		add	edi, 6
@@ -315,7 +324,16 @@ TransRotList	proc	near
 
 		mov	[compteur], cx
 
+		; FIXED: LBA.EXE turns 65536 points for a count of 0, past the
+		; 500 of List_Anim_Point. A count of 0 returns at once. Taken
+		; from DotEmu's Android 1.06.
+ifdef	FIXES
+		test	cx, cx
+		jnz	short start
+		ret
+else
 		jmp	short start
+endif
 
 rl0:		mov	esi, [Save1]
 		add	edi, 6

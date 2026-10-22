@@ -197,6 +197,14 @@ PatchObjet	proc uses esi ebx ebp,\
 		mov	cx, [esi]
 		add	esi, 2
 
+		; FIXED: LBA.EXE decrements the count before it tests it, so
+		; that for a body of no group it scales the parents of 65535
+		; groups, past the body's own. One of 0 groups returns at
+		; once. Taken from DotEmu's Android 1.06.
+ifdef	FIXES
+		or	cx, cx
+		jz	exit
+endif
 		dec	cx			; - groupe 0
 		jz	exit
 
@@ -346,6 +354,14 @@ b_poly:
 		mov	[Ptr1], edi		; memo start poly somm
 
 		xor	eax, eax
+		; FIXED: LBA.EXE decrements the count after each point, so
+		; that a polygon of none reads 256, past the body's end and
+		; List_Entity's. One of 0 points skips to its facing test.
+		; Taken from DotEmu's Android 1.06.
+ifdef	FIXES
+		or	ch, ch
+		jz	testpoly
+endif
 	EVEN
 p0:             lodsw				; index point sur List_Point
 		mov	edx, [eax+offset List_Point]; index déjà *SIZE_LIST_POINT
@@ -382,6 +398,14 @@ polyflat:	sub	cl, 7
 
 		mov	bp, -32000		; ZMax
 
+		; FIXED: LBA.EXE decrements the count after each point, so
+		; that a polygon of none reads 256, past the body's end and
+		; List_Entity's. One of 0 points skips to its facing test.
+		; Taken from DotEmu's Android 1.06.
+ifdef	FIXES
+		or	ch, ch
+		jz	testpoly
+endif
 	EVEN
 p0f:		lodsw				; index point sur List_Point
 		mov	edx, [eax+offset List_Point]; index déjà *SIZE_LIST_POINT
@@ -475,16 +499,39 @@ polygouraud:    ;cmp	[FlagLight], 0
 
 		shr	ecx, 8			; cl = nbp, ch = coul1
 
+		; FIXED: LBA.EXE adds the colour to the intensity within the low
+		; byte (add dl, ch), so that the shades of a face whose points
+		; pass FFh run down through the whole palette, and a point
+		; clipped between two such takes a shade from its middle. Add
+		; the colour's whole word (coul2:coul1), its low byte the shade
+		; LBA.EXE gives. Taken from DotEmu's Android 1.06.
+ifdef	FIXES
+		mov	ebx, ecx
+		shr	ebx, 8			; bx = coul2:coul1
+endif
+
 		mov	bp, -32000		; ZMax
 
 		mov	[Ptr1], edi		; memo start poly somm
 
 		xor	eax, eax
+		; FIXED: LBA.EXE decrements the count after each point, so
+		; that a polygon of none reads 256, past the body's end and
+		; List_Entity's. One of 0 points skips to its facing test.
+		; Taken from DotEmu's Android 1.06.
+ifdef	FIXES
+		or	cl, cl
+		jz	testpoly
+endif
 	EVEN
 p0g:
 		mov	ax, [esi]		; normal point
 		mov	dx, word ptr[List_Normal+eax*2]
+ifdef	FIXES
+		add	dx, bx
+else
 		add	dl, ch
+endif
 		mov	word ptr[edi], dx	; stock intensity point
 
 		mov	ax, [esi+2]		; index point sur List_Point
@@ -907,8 +954,17 @@ aff_E_SPHERE::
 
 		mov	ecx, [esi+4]
 		movzx	ebp, cx			; rayon
+		; FIXED: LBA.EXE takes the sphere's centre unsigned, so that one
+		; left of or above the screen counts as far right or below, and
+		; the sphere is not drawn. Take it signed. Taken from DotEmu's
+		; Android 1.06.
+ifdef	FIXES
+		sar	ecx, 16			; x
+		movsx	edi, word ptr[esi+8]	; y
+else
 		shr	ecx, 16			; x
 		movzx	edi, word ptr[esi+8]	; y
+endif
 
 		cmp	word ptr[TypeProj], TYPE_3D
 		jnz	isosph
@@ -1191,6 +1247,14 @@ AnimNuage	proc	near
 ; rotations/translations/zooms des groupes
 
 		mov	cx, [NbGroupes]
+		; FIXED: LBA.EXE decrements the count before it tests it, so
+		; that a body of no group turns 65535 after the first, past its
+		; own and TabMat. One of 0 groups turns the first alone. Taken
+		; from DotEmu's Android 1.06.
+ifdef	FIXES
+		or	cx, cx
+		jz	ag0f
+endif
 		dec	cx			; - groupe 0
 		jz	ag0f
 
@@ -1241,6 +1305,15 @@ project:     	mov	cx, [NbPoints]
 
 		mov	esi, offset List_Anim_Point
 		mov	edi, offset List_Point
+
+		; FIXED: LBA.EXE decrements the count after each point, so that
+		; a body of none projects 65536, past List_Anim_Point and
+		; List_Point. One of 0 points skips the projection. Taken from
+		; DotEmu's Android 1.06.
+ifdef	FIXES
+		or	cx, cx
+		jz	projf
+endif
 
 		cmp	word ptr[TypeProj], TYPE_3D
 		jz	boucleproj3d
@@ -1377,8 +1450,17 @@ fixed:		imul	[LFactorX]		; X
 		idiv	ebp
 		add	eax, [XCentre]
 
+		; FIXED: LBA.EXE compares the coordinate with 0FFFFh unsigned,
+		; so that one below 0 is put at -1 and a face crossing the
+		; screen's left or top edge is squashed onto it. Compare it
+		; signed here and for Y, a coordinate below 0 keeping its 16
+		; bits. Taken from DotEmu's Android 1.06.
 		cmp	eax, 0FFFFh
+ifdef	FIXES
+		jg	overX
+else
 		ja	overX
+endif
 fixedX:
 		mov	word ptr[edi], ax	; stock Xp
 
@@ -1395,7 +1477,11 @@ nosxmax3d:
 		add	eax, [YCentre]
 
 		cmp	eax, 0FFFFh
+ifdef	FIXES
+		jg	overY
+else
 		ja	overY
+endif
 fixedY:
 		mov	word ptr[edi+2], ax	; stock Yp
 
@@ -1417,7 +1503,11 @@ pl03d:		dec	word ptr[Count1]
 
 ;*--------------------------------------------------------------------------*
 
+ifdef	FIXES
+projf:		mov	esi, [Save1]
+else
 		mov	esi, [Save1]
+endif
 
 finanim:
 ;	        mov	eax, -1
@@ -1447,6 +1537,14 @@ ComputeAnimNormal:
 		mov	[Ptr2], eax
 
 		mov	cx, [NbGroupes]
+		; FIXED: LBA.EXE decrements the count after each group, so that
+		; a body of no group lights the normals of 65536, past its own
+		; and TabMat. One of 0 groups skips the lighting. Taken from
+		; DotEmu's Android 1.06.
+ifdef	FIXES
+		or	cx, cx
+		jz	nonp
+endif
 		mov	word ptr[Count1], cx
 
 		mov	ebx, [ListGroupe]

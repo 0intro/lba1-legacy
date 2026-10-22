@@ -2880,7 +2880,21 @@ void	AffScene( LONG flagflip )
 		ptranim = HQR_Get( HQR_Anims, ptrobj->Anim ) ;
 		ptrbody = PtrBody[ ptrobj->Body ] ;
 
+		/*
+		 * FIXED: An actor given a body by its script (LM_BODY) is drawn
+		 * that frame before its track gives it an animation, -1, for
+		 * which HQR_Get gives NULL: LBA.EXE poses the body from linear
+		 * address 0. A body with no animation is
+		 * drawn in the pose it last had. Taken from LbaWin 0.7.6.
+		 */
+#ifdef	FIXES
+		if( ptrobj->Anim >= 0 )
+		{
+			SetInterAnimObjet2( ptrobj->Frame, ptranim, ptrbody ) ;
+		}
+#else
 		SetInterAnimObjet2( ptrobj->Frame, ptranim, ptrbody ) ;
+#endif
 
 		err = AffObjetIso(	ptrobj->PosObjX-WorldXCube, ptrobj->PosObjY-WorldYCube, ptrobj->PosObjZ-WorldZCube,
 					0, ptrobj->Beta, 0,

@@ -10,6 +10,7 @@ enum
 /* asmoracle.c */
 void	fatal(char*, ...);
 void	fail(char*, ...);
+int	failures(void);
 unsigned char*	readfile(char*, long*);
 uint32_t	get16(uint8_t*);
 uint32_t	get32(uint8_t*);
@@ -41,3 +42,10 @@ void	testtexture(void);
 void	testobj(void);
 void	testgrille(void);	/* agrille.c */
 void	testsmall(void);	/* amisc.c */
+
+/* the inputs where LBA.EXE's assembly faults, runs on or gives the wrong result, which the fixes mend in both */
+int	fixfunc(void);	/* afunc.c */
+int	fixanim(void);	/* aanim.c */
+int	fixsvga(void);	/* asvga.c */
+int	fixtrigo(void);	/* atrigo.c */
+int	fixgrille(void);	/* agrille.c */

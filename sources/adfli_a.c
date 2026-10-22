@@ -22,6 +22,12 @@ DrawFrame(void *frame, int32_t dx, int32_t dy)
 
 	s = frame;
 	line = Log;
+	/*
+	 * FIXED: LBA.EXE draws 2^32 lines for a frame of 0, from Log on.
+	 * Draw none. Taken from DotEmu's Android 1.06.
+	 */
+	if (dy == 0)
+		return;
 	do {
 		nb = *s++;
 		d = line;
@@ -57,6 +63,12 @@ UpdateFrame(void *frame, int32_t dx)
 	memcpy(&nl, s+2, 2);
 	s += 4;
 	line = Log + (int32_t)y*dx;
+	/*
+	 * FIXED: LBA.EXE draws 65536 lines for a frame of 0, from its first
+	 * line on. Draw none. Taken from DotEmu's Android 1.06.
+	 */
+	if (nl == 0)
+		return;
 	do {
 		nb = *s++;
 		d = line;

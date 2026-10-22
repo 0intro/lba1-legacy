@@ -272,6 +272,14 @@ ni1:		dec	bl
 
 		or	byte ptr[ Fire ], bh
 
+		; FIXED: LBA.EXE, with Ctrl, Alt and Del down together,
+		; writes the BIOS's warm boot flag and returns far to
+		; FFFFh:0, the BIOS's reset in real mode. In protected mode
+		; that far return faults. The three keys set their bits in
+		; Fire alone. Taken from LbaWin 0.8.1.
+ifdef	FIXES
+		jmp	short exit
+else
 		cmp	byte ptr[ Fire ], 4 + 8 + 16	; ctrl alt suppr
 		jnz	exit
 
@@ -281,6 +289,7 @@ reset:		mov	eax, 472h
 		push	0FFFFh
 		push	00000h
 		retf
+endif
 
 relache1:	not	bh
 		and	byte ptr[ Fire ], bh

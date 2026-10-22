@@ -3066,3 +3066,1065 @@ testobj(void)
 	if (objlights(af, si, &drawn))
 		printf("obj: %d lit bodies\n", Nlit);
 }
+
+/* Whether the assembly's screens are ours, else fail with what was called. */
+static int
+asmscreens(char *name, char *args)
+{
+	char *what;
+	int32_t k;
+
+	if (!differs(&what, &k))
+		return 1;
+	fail("fixes: %s %s: %s at byte %d (%d,%d)", name, args, what, k, k%Width, k/Width);
+	return 0;
+}
+
+/* a span lo to hi turned over: hi below lo by 1 to 40, both within min to max */
+static void
+over(int32_t min, int32_t max, int32_t *lo, int32_t *hi)
+{
+	*lo = rndr(min + 1, max);
+	*hi = *lo - rndr(1, 40);
+	if (*hi < min)
+		*hi = min;
+	if (*hi >= *lo)
+		*hi = *lo - 1;
+}
+
+/* a span lo to hi in order within min to max */
+static void
+inorder(int32_t min, int32_t max, int32_t *lo, int32_t *hi)
+{
+	*lo = rndr(min, max);
+	*hi = rndr(*lo, max);
+}
+
+static int
+fixboxes(void)
+{
+	static uint8_t bo[Span], ba[Span];
+	uintptr_t box, sb, rb;
+	int32_t x0, y0, x1, y1, col;
+	char args[128];
+	int r, k, n;
+
+	box = lookup("Box");
+	sb = lookup("SaveBlock");
+	rb = lookup("RestoreBlock");
+	screens();
+	setclip(0, 0, Width-1, Height-1);
+	n = 0;
+	for (r = 0; r < Rounds; r++) {
+		k = rndn(3);
+		if (k == 0 || k == 2)
+			over(0, Height-1, &y0, &y1);
+		else
+			inorder(0, Height-1, &y0, &y1);
+		if (k == 1 || k == 2)
+			over(0, Width-1, &x0, &x1);
+		else
+			inorder(0, Width-1, &x0, &x1);
+		col = rnd();
+		snprintf(args, sizeof args, "%d %d %d %d", x0, y0, x1, y1);
+		acall(box, 5, x0, y0, x1, y1, col);
+		Box(x0, y0, x1, y1, col);
+		if (!asmscreens("Box", args))
+			return 0;
+		fill(bo, Span);
+		memcpy(ba, bo, Span);
+		acall(sb, 6, (int32_t)(uintptr_t)svga[Asm].screen, (int32_t)(uintptr_t)ba, x0, y0, x1, y1);
+		SaveBlock(svga[Ours].screen, bo, x0, y0, x1, y1);
+		if (memcmp(bo, ba, Span) != 0) {
+			fail("fixes: SaveBlock %s: the buffers differ", args);
+			return 0;
+		}
+		acall(rb, 6, (int32_t)(uintptr_t)svga[Asm].log, (int32_t)(uintptr_t)ba, x0, y0, x1, y1);
+		RestoreBlock(svga[Ours].log, bo, x0, y0, x1, y1);
+		if (!asmscreens("RestoreBlock", args))
+			return 0;
+		n++;
+	}
+	printf("fixes: boxes, %d rounds turned over, the same screens and buffers\n", n);
+	return 1;
+}
+
+/*
+ * SizeFont of random strings, characters 1 to 255 and spaces, under
+ * interleaves from 0 to 70000: LBA.EXE's assembly added an interleave of
+ * 256 or more twice. The build's must measure as ours.
+ */
+static int
+fixsizefont(void)
+{
+	static uint8_t graphs[1<<23], font[1<<22];
+	uintptr_t sf, szf;
+	uint8_t s[64];
+	int32_t il, is, a, c;
+	int r, i, n, wide;
+
+	sf = lookup("SetFont");
+	szf = lookup("SizeFont");
+	maskbank(font, graphs, 256, 24, 0);
+	wide = 0;
+	for (r = 0; r < Rounds; r++) {
+		il = rndn(2) == 0 ? rndr(0, 255) : rndr(256, 70000);
+		is = rndn(20);
+		acall(sf, 3, (int32_t)(uintptr_t)font, il, is);
+		SetFont(font, il, is);
+		n = rndn(sizeof s);
+		for (i = 0; i < n; i++)
+			s[i] = rndn(5) == 0 ? ' ' : rndr(1, 255);
+		s[n] = 0;
+		a = acall(szf, 1, (int32_t)(uintptr_t)s);
+		c = SizeFont(s);
+		if (a != c) {
+			fail("fixes: SizeFont of a string of %d, interleave %d, space %d: ours %d, the assembly's %d",
+				n, il, is, c, a);
+			return 0;
+		}
+		wide += il >= 256;
+	}
+	printf("fixes: sizefont, %d strings, %d under an interleave of 256 or more, the same widths\n", r, wide);
+	return 1;
+}
+
+enum
+{
+	Nsphere = 3,	/* the most spheres fixsphere gives a body */
+};
+
+typedef struct Sphereout Sphereout;
+
+/* what a side's AffObjetIso left, copied out of the child that ran it */
+struct Sphereout
+{
+	int32_t	rc;
+	uint8_t	box[4][2];
+	uint8_t	point[6];
+	uint8_t	entity[12*Nsphere];
+	uint8_t	tri[8*Nsphere];	/* the entities' places as offsets in List_Entity */
+	uint8_t	log[Span];
+};
+
+/* how a polygon of 0 points ended in a side's child: nothing shown, shown, or by a signal */
+static char*
+nopointend(int status)
+{
+	if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+		return "nothing shown";
+	if (WIFEXITED(status))
+		return "a polygon";
+	return ends[ended(status)];
+}
+
+/*
+ * ComputePoly of polygons of 0 points over random points and bounds:
+ * LBA.EXE's assembly framed one of 2^32 points, reading TabPoly past
+ * its end. Each side computes in a child that a fault or a quarter
+ * second's alarm ends: the build's must give 0 and leave the bounds, as
+ * ours.
+ */
+static int
+fixnopoint(void)
+{
+	uintptr_t cp;
+	uint8_t *atp, *anp, *ab[4];
+	int16_t pts[Npoly], *ob[4], before[4];
+	int32_t rc;
+	int r, i, s, moved, f0, status[2];
+	pid_t pid;
+
+	cp = lookup("ComputePoly");
+	atp = (uint8_t*)lookup("TabPoly");
+	anp = (uint8_t*)lookup("NbPolyPoints");
+	ab[0] = (uint8_t*)lookup("Xmin");
+	ab[1] = (uint8_t*)lookup("Ymin");
+	ab[2] = (uint8_t*)lookup("Xmax");
+	ab[3] = (uint8_t*)lookup("Ymax");
+	ob[0] = &Xmin;
+	ob[1] = &Ymin;
+	ob[2] = &Xmax;
+	ob[3] = &Ymax;
+	for (r = 0; r < 200; r++) {
+		for (i = 0; i < (int)nelem(pts); i++)
+			pts[i] = rnd();
+		memcpy(TabPoly, pts, sizeof pts);
+		memcpy(atp, pts, sizeof pts);
+		for (i = 0; i < 4; i++) {
+			before[i] = rnd();
+			*ob[i] = before[i];
+			put16(ab[i], before[i]);
+		}
+		NbPolyPoints = 0;
+		put16(anp, 0);
+		for (s = Ours; s <= Asm; s++) {
+			f0 = failures();
+			pid = fork();
+			if (pid < 0)
+				fatal("fixes: cannot fork");
+			if (pid == 0) {
+				setitimer(ITIMER_REAL, &quarter, NULL);
+				rc = s == Ours ? ComputePoly() : acall(cp, 0);
+				moved = 0;
+				for (i = 0; i < 4; i++)
+					moved |= (s == Ours ? *ob[i] : (int16_t)get16(ab[i])) != before[i];
+				_exit(rc != 0 || moved || failures() != f0);
+			}
+			if (waitpid(pid, &status[s], 0) != pid)
+				fatal("fixes: cannot wait");
+		}
+		if (status[Ours] != 0 || status[Asm] != 0) {
+			fail("fixes: ComputePoly of 0 points: ours %s, the assembly's %s",
+				nopointend(status[Ours]), nopointend(status[Asm]));
+			return 0;
+		}
+	}
+	printf("fixes: nopoint, %d polygons of 0 points, nothing shown\n", r);
+	return 1;
+}
+
+/*
+ * A body of one point and n spheres on it, as AffObjetIso reads one: the
+ * header (INFO_ANIM, no info), the point at 0,0,0, a group of it (a
+ * rotation, its parent FFFFh, as each of the game's first), no normals,
+ * polygons or lines, then each sphere's fill type 0, colour, radius of
+ * 40 to 400 and point.
+ */
+static void
+spherebody(uint8_t *b, int n)
+{
+	uint8_t *p;
+	int i;
+
+	memset(b, 0, 72 + 8*Nsphere);
+	put16(b, INFO_ANIM);
+	put16(b + 16, 1);
+	put16(b + 24, 1);
+	put16(b + 26 + 2, 1);
+	put16(b + 26 + 6, 0xFFFF);
+	put16(b + 26 + Bgroup + 6, n);
+	p = b + 72;
+	for (i = 0; i < n; i++) {
+		put16(p + 1, rnd());
+		put16(p + 4, rndr(40, 400));
+		p += 8;
+	}
+}
+
+/*
+ * AffObjetIso of side s, at a, on its body b of n spheres, in a child
+ * that a fault or a quarter second's alarm ends: how it ended, and in o
+ * what it drew and left in its lists.
+ */
+static int
+sphereside(int s, uintptr_t af, int32_t *a, uint8_t *b, int n, Sphereout *o)
+{
+	uint32_t e;
+	int status, k, f0;
+	pid_t pid;
+
+	f0 = failures();
+	pid = fork();
+	if (pid < 0)
+		fatal("fixes: cannot fork");
+	if (pid == 0) {
+		setitimer(ITIMER_REAL, &quarter, NULL);
+		if (s == Ours)
+			o->rc = AffObjetIso(a[0], a[1], a[2], a[3], a[4], a[5], b);
+		else
+			o->rc = acall(af, 7, a[0], a[1], a[2], a[3], a[4], a[5], (int32_t)(uintptr_t)b);
+		for (k = 0; k < 4; k++)
+			memcpy(o->box[k], obj[s].box[k], 2);
+		memcpy(o->point, obj[s].point, sizeof o->point);
+		memcpy(o->entity, obj[s].entity, 12*n);
+		for (k = 0; k < n; k++) {
+			memcpy(o->tri + 8*k, obj[s].tri + 8*k, 4);
+			e = get32(obj[s].tri + 8*k + 4);
+			if (s == Asm)
+				e -= (uint32_t)(uintptr_t)obj[Asm].entity;
+			put32(o->tri + 8*k + 4, e);
+		}
+		memcpy(o->log, span(svga[s].log), Span);
+		_exit(failures() != f0);
+	}
+	if (waitpid(pid, &status, 0) != pid)
+		fatal("fixes: cannot wait");
+	return ended(status);
+}
+
+/*
+ * AffObjetIso in perspective on bodies of one point and 1 to 3 spheres
+ * on it, LFactorX 1024 to 2000, at depths of the game's range, their
+ * centres on the screen and off its edges: LBA.EXE's assembly put a
+ * centre left of or above the screen at -1. Each side draws in a child:
+ * the build's must leave our lists and box, and draw our screen.
+ */
+static int
+fixsphere(void)
+{
+	enum {
+		Nround = 4000,
+	};
+	static uint8_t sb[2][72 + 8*Nsphere];
+	Sphereout *o[2];
+	uintptr_t af, sp, sf, sd;
+	int32_t a[7], d, k, lx, ly, w;
+	int r, s, n, level, oc, oa, off, drawn;
+	char *what;
+
+	af = lookup("AffObjetIso");
+	sp = lookup("SetProjection");
+	sf = lookup("SetFollowCamera");
+	sd = lookup("SetFillDetails");
+	objsides();
+	for (s = 0; s < 2; s++) {
+		o[s] = mmap(NULL, sizeof *o[s], PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+		if (o[s] == MAP_FAILED)
+			fatal("fixes: cannot map");
+	}
+	off = drawn = 0;
+	for (r = 0; r < Nround; r++) {
+		if (r % 500 == 0)
+			screens();
+		if (rndn(4) == 0)
+			randclip();
+		else
+			setclip(0, 0, Width-1, Height-1);
+		level = rndn(3);
+		acall(sd, 1, level);
+		SetFillDetails(level);
+		k = rndn(2) == 0 ? 128 : rndr(100, 400);
+		lx = rndr(1024, 2000);
+		ly = rndr(1024, 2000);
+		acall(sp, 5, 320, 240, k, lx, ly);
+		SetProjection(320, 240, k, lx, ly);
+		acall(sf, 7, 0, 0, 0, 0, 0, 0, 0);
+		SetFollowCamera(0, 0, 0, 0, 0, 0, 0);
+		d = rndr(k+1, 32000);
+		n = rndr(1, Nsphere);
+		spherebody(sb[Ours], n);
+		memcpy(sb[Asm], sb[Ours], sizeof sb[Ours]);
+		w = d > 0 ? d/4 : 1000;
+		a[0] = rndr(-w, w);
+		a[1] = rndr(-w, w);
+		a[2] = k - d;
+		a[3] = a[4] = a[5] = 0;
+		oc = sphereside(Ours, 0, a, sb[Ours], n, o[Ours]);
+		oa = sphereside(Asm, af, a, sb[Asm], n, o[Asm]);
+		if (oc != Drawn || oa != Drawn) {
+			fail("fixes: AffObjetIso at %d %d, depth %d, KFactor %d, LFactorX %d, %d sphere(s): ours %s,"
+				" the assembly's %s", a[0], a[1], d, k, lx, n, ends[oc], ends[oa]);
+			return 0;
+		}
+		what = NULL;
+		if (o[Ours]->rc != o[Asm]->rc)
+			what = "the result";
+		else if (memcmp(o[Ours]->box, o[Asm]->box, sizeof o[Ours]->box) != 0)
+			what = "the box";
+		else if (memcmp(o[Ours]->point, o[Asm]->point, sizeof o[Ours]->point) != 0)
+			what = "List_Point";
+		else if (memcmp(o[Ours]->entity, o[Asm]->entity, 12*n) != 0)
+			what = "List_Entity";
+		else if (memcmp(o[Ours]->tri, o[Asm]->tri, 8*n) != 0)
+			what = "List_Tri";
+		else if (memcmp(o[Ours]->log, o[Asm]->log, Span) != 0)
+			what = "the screen";
+		if (what != NULL) {
+			fail("fixes: AffObjetIso at %d %d, depth %d, KFactor %d, LFactorX %d, %d sphere(s): %s differs",
+				a[0], a[1], d, k, lx, n, what);
+			return 0;
+		}
+		off += (int16_t)get16(o[Ours]->point) < 0 || (int16_t)get16(o[Ours]->point + 2) < 0;
+		drawn += memcmp(o[Ours]->log, span(svga[Ours].log), Span) != 0;
+	}
+	setclip(0, 0, Width-1, Height-1);
+	printf("fixes: sphere, %d bodies of 1 to %d spheres, %d centred left of or above the screen, %d drawn,"
+		" the same lists, boxes and screens\n", r, Nsphere, off, drawn);
+	for (s = 0; s < 2; s++)
+		munmap(o[s], sizeof *o[s]);
+	return 1;
+}
+
+/*
+ * A body of n points in one group, a normal at each, and a Gouraud
+ * polygon of material mat over them, as AffObjetIso reads one: the
+ * points on an ellipse about the origin, in one order or the other, the
+ * normals of random directions over a divisor of 100 to 200, lit 0 to
+ * about 40, and the polygon's colour 0F0h to 0FFh in its low byte, so
+ * that some of its points pass FFh.
+ */
+static void
+gouraudbody(uint8_t *b, int n, int mat)
+{
+	uint8_t *p, *g;
+	int32_t rx, rz;
+	double t;
+	int i, back;
+
+	memset(b, 0, 512);
+	put16(b, INFO_ANIM);
+	put16(b + 16, n);
+	p = b + 18;
+	rx = rndr(200, 1500);
+	rz = rndr(200, 1500);
+	back = rnd() & 1;
+	for (i = 0; i < n; i++) {
+		t = 2*M_PI*(back ? n-1-i : i)/n;
+		put16(p, lround(rx*cos(t)));
+		put16(p + 2, rndr(-50, 50));
+		put16(p + 4, lround(rz*sin(t)));
+		p += 6;
+	}
+	put16(p, 1);
+	g = p + 2;
+	put16(g + 2, n);
+	put16(g + 6, 0xFFFF);
+	put16(g + 18, n);
+	p = g + Bgroup;
+	put16(p, n);
+	p += 2;
+	for (i = 0; i < n; i++) {
+		put16(p, rndr(-64, 64));
+		put16(p + 2, rndr(-64, 64));
+		put16(p + 4, rndr(-64, 64));
+		put16(p + 6, rndr(100, 200));
+		p += 8;
+	}
+	put16(p, 1);
+	p[2] = mat;
+	p[3] = n;
+	put16(p + 4, rndn(256) << 8 | (0xF0 + rndn(16)));
+	p += 6;
+	for (i = 0; i < n; i++) {
+		put16(p, i);
+		put16(p + 2, 6*i);
+		p += 4;
+	}
+}
+
+/*
+ * AffObjetIso in isometry on bodies of a Gouraud polygon whose points
+ * lie either side of FFh, under random lights, at every level of
+ * detail: LBA.EXE's assembly added a point's colour within the low
+ * byte, so that its shades ran down through the whole palette. The
+ * build's must leave our lists, box and screen.
+ */
+static int
+fixgouraud(void)
+{
+	static uint8_t gb[2][512];
+	uintptr_t af, si, sl, sd;
+	uint32_t pa, pc;
+	uint16_t c, w;
+	int32_t a[6], ra, rc, at;
+	int r, n, k, level, drawn, wrapped, carry, plain;
+	char *what;
+
+	af = lookup("AffObjetIso");
+	si = lookup("SetIsoProjection");
+	sl = lookup("SetLightVector");
+	sd = lookup("SetFillDetails");
+	objsides();
+	screens();
+	setclip(0, 0, Width-1, Height-1);
+	drawn = wrapped = 0;
+	for (r = 0; r < 4000; r++) {
+		level = rndn(3);
+		acall(sd, 1, level);
+		SetFillDetails(level);
+		a[0] = rndr(200, 440);
+		a[1] = rndr(150, 330);
+		acall(si, 3, a[0], a[1], 512);
+		SetIsoProjection(a[0], a[1], 512);
+		for (k = 0; k < 3; k++)
+			a[k] = (int16_t)rndr(-1024, 1024);
+		acall(sl, 3, a[0], a[1], a[2]);
+		SetLightVector(a[0], a[1], a[2]);
+		n = rndr(3, 8);
+		gouraudbody(gb[Ours], n, 9 + rndn(2));
+		memcpy(gb[Asm], gb[Ours], sizeof gb[Ours]);
+		for (k = 0; k < 3; k++)
+			a[k] = rndr(-300, 300);
+		for (; k < 6; k++)
+			a[k] = rndr(-1024, 1024);
+		ra = acall(af, 7, a[0], a[1], a[2], a[3], a[4], a[5], (int32_t)(uintptr_t)gb[Asm]);
+		rc = AffObjetIso(a[0], a[1], a[2], a[3], a[4], a[5], gb[Ours]);
+		what = NULL;
+		for (k = 0; k < 4; k++)
+			if (memcmp(obj[Asm].box[k], obj[Ours].box[k], 2) != 0)
+				what = boxnames[k];
+		if (ra != rc)
+			what = "the result";
+		else if (memcmp(obj[Asm].point, obj[Ours].point, 6*n) != 0)
+			what = "List_Point";
+		else if (memcmp(obj[Asm].entity, obj[Ours].entity, 2*Nentity) != 0)
+			what = "List_Entity";
+		else if (rc == 0) {
+			pa = get32(obj[Asm].tri + 4);
+			pc = get32(obj[Ours].tri + 4);
+			if (memcmp(obj[Asm].tri, obj[Ours].tri, 4) != 0 || pa - (uint32_t)(uintptr_t)obj[Asm].entity != pc)
+				what = "List_Tri";
+		}
+		if (what == NULL && differs(&what, &at) == 0)
+			what = NULL;
+		if (what != NULL) {
+			fail("fixes: AffObjetIso of a Gouraud polygon of %d points at %d %d %d turned %d %d %d, level %d: %s"
+				" differs", n, a[0], a[1], a[2], a[3], a[4], a[5], level, what);
+			return 0;
+		}
+		c = get16(obj[Ours].entity + 2);
+		carry = plain = 0;
+		for (k = 0; k < n; k++) {
+			w = get16(obj[Ours].entity + 4 + 6*k) - c;
+			if ((w & 0xFF) + (c & 0xFF) > 0xFF)
+				carry = 1;
+			else
+				plain = 1;
+		}
+		wrapped += rc == 0 && carry && plain;
+		drawn += rc == 0;
+	}
+	printf("fixes: gouraud, %d bodies of a Gouraud polygon, %d drawn, %d of them with points either side of FFh,"
+		" the same lists, boxes and screens\n", r, drawn, wrapped);
+	return 1;
+}
+
+/* how a frame of 0 lines ended in a side's child: nothing drawn, drawn, or by a signal */
+static char*
+frameend(int status)
+{
+	if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+		return "nothing drawn";
+	if (WIFEXITED(status))
+		return "drawn";
+	return ends[ended(status)];
+}
+
+/*
+ * A body of kind into b, as AffObjetIso reads one, each list after its
+ * count: the points, the groups of 38 bytes, the normals, the polygons,
+ * the lines and the spheres. Its kinds:
+ *
+ *	0	no point, and one group of none
+ *	1	n points and no group, then the 38 bytes AnimNuage turns as
+ *		the first (no point, no parent), and no normal, polygon,
+ *		line or sphere
+ *	2	the same with a normal of 0, 0, 0, 1, which FinNuage, reading
+ *		on from the normals' count where no group lit them, takes for
+ *		no polygon, line or sphere
+ *	3	n points, one group of them, their n normals, and two
+ *		polygons, the first of no point and of material mat, the
+ *		second Gouraud, of every point
+ */
+static void
+nonebody(uint8_t *b, int kind, int n, int mat)
+{
+	uint8_t *p, *g;
+	int i;
+
+	memset(b, 0, 512);
+	put16(b, INFO_ANIM);
+	p = b + 16;
+	if (kind == 0)
+		n = 0;
+	put16(p, n);
+	p += 2;
+	for (i = 0; i < n; i++) {
+		put16(p, rndr(-1500, 1500));
+		put16(p + 2, rndr(-50, 50));
+		put16(p + 4, rndr(-1500, 1500));
+		p += 6;
+	}
+	put16(p, kind == 0 || kind == 3);
+	g = p + 2;
+	put16(g + 6, 0xFFFF);
+	p = g + Bgroup;
+	if (kind == 2) {
+		put16(p, 1);
+		put16(p + 8, 1);
+		return;
+	}
+	if (kind != 3)
+		return;
+	put16(g + 2, n);
+	put16(g + 18, n);
+	put16(p, n);
+	p += 2;
+	for (i = 0; i < n; i++) {
+		put16(p, rndr(-64, 64));
+		put16(p + 2, rndr(-64, 64));
+		put16(p + 4, rndr(-64, 64));
+		put16(p + 6, rndr(100, 200));
+		p += 8;
+	}
+	put16(p, 2);
+	p[2] = mat;
+	p[3] = 0;
+	put16(p + 4, rndn(256) << 8 | rndn(256));
+	p += 6;
+	if (mat == 7 || mat == 8) {
+		put16(p, rndn(n));
+		p += 2;
+	}
+	p[0] = 9;
+	p[1] = n;
+	put16(p + 2, rndn(256) << 8 | (0xF0 + rndn(16)));
+	p += 4;
+	for (i = 0; i < n; i++) {
+		put16(p, i);
+		put16(p + 2, 6*i);
+		p += 4;
+	}
+}
+
+static char *nonenames[] = {"of no point", "of no group", "of no group and a normal", "with a polygon of no point"};
+
+/*
+ * AffObjetIso, in isometry and in perspective, on bodies of no point,
+ * of no group with and without normals, and with a polygon of no point
+ * of every material, and PatchObjet on bodies of no group: LBA.EXE's
+ * assembly projected 65536 points, turned 65535 groups after the first
+ * and lit the normals of 65536, read 256 points of a polygon, and
+ * scaled the parents of 65535 groups, past the body and the lists.
+ * Each round runs both sides in a child that a fault or a quarter
+ * second's alarm ends: the build's must leave our lists and box, draw
+ * our screen and patch our body.
+ */
+static int
+fixnone(void)
+{
+	static uint8_t nb[2][512], pb[2][8192];
+	uintptr_t af, pf, si, sp, sf, sl, sd;
+	int32_t a[6], ra, rc, at;
+	int r, k, n, kind, mat, persp, f0, status;
+	char *what;
+	pid_t pid;
+
+	af = lookup("AffObjetIso");
+	pf = lookup("PatchObjet");
+	si = lookup("SetIsoProjection");
+	sp = lookup("SetProjection");
+	sf = lookup("SetFollowCamera");
+	sl = lookup("SetLightVector");
+	sd = lookup("SetFillDetails");
+	objsides();
+	setuppoly();
+	screens();
+	setclip(0, 0, Width-1, Height-1);
+	memcpy(obj[Asm].point, obj[Ours].point, 6*Npoint);
+	memcpy(obj[Asm].anim, obj[Ours].anim, 6*Npoint);
+	memcpy(obj[Asm].entity, obj[Ours].entity, 2*Nentity);
+	memcpy(poly[Asm].tabpoly, poly[Ours].tabpoly, 2*Npoly);
+	for (r = 0; r < 400; r++) {
+		kind = r % 4;
+		persp = r/4 % 2;
+		n = rndr(3, 8);
+		mat = rndn(11);
+		nonebody(nb[Ours], kind, n, mat);
+		memcpy(nb[Asm], nb[Ours], sizeof nb[Ours]);
+		k = rndn(3);
+		acall(sd, 1, k);
+		SetFillDetails(k);
+		for (k = 0; k < 3; k++)
+			a[k] = (int16_t)rndr(-1024, 1024);
+		acall(sl, 3, a[0], a[1], a[2]);
+		SetLightVector(a[0], a[1], a[2]);
+		if (persp) {
+			acall(sp, 5, 320, 240, 128, 1024, 1024);
+			SetProjection(320, 240, 128, 1024, 1024);
+			acall(sf, 7, 0, 0, 0, 0, 0, 0, 0);
+			SetFollowCamera(0, 0, 0, 0, 0, 0, 0);
+			a[0] = rndr(-300, 300);
+			a[1] = rndr(-300, 300);
+			a[2] = rndr(2000, 5000);
+		} else {
+			acall(si, 3, 320, 240, 512);
+			SetIsoProjection(320, 240, 512);
+			for (k = 0; k < 3; k++)
+				a[k] = rndr(-300, 300);
+		}
+		for (k = 3; k < 6; k++)
+			a[k] = rndr(-1024, 1024);
+		f0 = failures();
+		pid = fork();
+		if (pid < 0)
+			fatal("fixes: cannot fork");
+		if (pid == 0) {
+			setitimer(ITIMER_REAL, &quarter, NULL);
+			ra = acall(af, 7, a[0], a[1], a[2], a[3], a[4], a[5], (int32_t)(uintptr_t)nb[Asm]);
+			rc = AffObjetIso(a[0], a[1], a[2], a[3], a[4], a[5], nb[Ours]);
+			_exit(ra != rc || objasm(n, 0) != NULL || differs(&what, &at) || failures() != f0);
+		}
+		if (waitpid(pid, &status, 0) != pid)
+			fatal("fixes: cannot wait");
+		if (status != 0) {
+			fail("fixes: AffObjetIso of a body %s in %s, material %d: %s", nonenames[kind],
+				persp ? "perspective" : "isometry", mat,
+				WIFEXITED(status) ? "drawn otherwise" : ends[ended(status)]);
+			return 0;
+		}
+	}
+	for (k = 0; k < 100; k++) {
+		memset(pb, 0, sizeof pb);
+		nonebody(pb[Ours], 1, rndr(3, 8), 0);
+		memcpy(pb[Asm], pb[Ours], sizeof pb[Ours]);
+		f0 = failures();
+		pid = fork();
+		if (pid < 0)
+			fatal("fixes: cannot fork");
+		if (pid == 0) {
+			setitimer(ITIMER_REAL, &quarter, NULL);
+			acall(pf, 1, (int32_t)(uintptr_t)pb[Asm]);
+			PatchObjet(pb[Ours]);
+			_exit(memcmp(pb[Asm], pb[Ours], sizeof pb[Ours]) != 0 || failures() != f0);
+		}
+		if (waitpid(pid, &status, 0) != pid)
+			fatal("fixes: cannot wait");
+		if (status != 0) {
+			fail("fixes: PatchObjet of a body of no group: %s",
+				WIFEXITED(status) ? "patched otherwise" : ends[ended(status)]);
+			return 0;
+		}
+	}
+	printf("fixes: none, %d bodies of no point, of no group and with a polygon of no point drawn, %d of no group"
+		" patched, the same lists, boxes, screens and bodies\n", r, k);
+	return 1;
+}
+
+/*
+ * DrawFrame and UpdateFrame of frames of 0 lines, from random bytes:
+ * LBA.EXE's assembly drew 2^32 and 65536 lines from Log on, reading the
+ * frame past its end. Each side draws in a child that a fault or a
+ * quarter second's alarm ends: the build's must draw nothing, as ours.
+ */
+static int
+fixframe(void)
+{
+	static uint8_t frame[1<<16], before[Span];
+	uintptr_t f[2];
+	int r, k, s, f0, status[2];
+	pid_t pid;
+
+	f[0] = lookup("DrawFrame");
+	f[1] = lookup("UpdateFrame");
+	for (r = 0; r < 200; r++) {
+		screens();
+		memcpy(before, span(svga[Ours].log), Span);
+		k = rnd() & 1;
+		fill(frame, sizeof frame);
+		if (k) {
+			put16(frame, rndn(200));
+			put16(frame + 2, 0);
+		}
+		for (s = Ours; s <= Asm; s++) {
+			f0 = failures();
+			pid = fork();
+			if (pid < 0)
+				fatal("fixes: cannot fork");
+			if (pid == 0) {
+				setitimer(ITIMER_REAL, &quarter, NULL);
+				if (s == Ours && k)
+					UpdateFrame(frame, 320);
+				else if (s == Ours)
+					DrawFrame(frame, 320, 0);
+				else if (k)
+					acall(f[1], 2, (int32_t)(uintptr_t)frame, 320);
+				else
+					acall(f[0], 3, (int32_t)(uintptr_t)frame, 320, 0);
+				_exit(memcmp(span(svga[s].log), before, Span) != 0 || failures() != f0);
+			}
+			if (waitpid(pid, &status[s], 0) != pid)
+				fatal("fixes: cannot wait");
+		}
+		if (!WIFEXITED(status[Ours]) || WEXITSTATUS(status[Ours]) != 0
+		|| !WIFEXITED(status[Asm]) || WEXITSTATUS(status[Asm]) != 0) {
+			fail("fixes: %s of a frame of 0 lines: ours %s, the assembly's %s", k ? "UpdateFrame" : "DrawFrame",
+				frameend(status[Ours]), frameend(status[Asm]));
+			return 0;
+		}
+	}
+	printf("fixes: frame, %d frames of 0 lines, nothing drawn\n", r);
+	return 1;
+}
+
+/*
+ * CopyMask of random masks 255 wide at most, clipped by random boxes,
+ * from Screen or from another screen: LBA.EXE's assembly copied from
+ * Screen whatever the source, and clipped a run of 128 or more wrong.
+ * The build's must draw as ours.
+ */
+static int
+fixcopymask(void)
+{
+	static uint8_t graphs[1<<21], masks[1<<21], *other[2];
+	uintptr_t cm;
+	uint8_t *src[2];
+	int32_t num, x, y;
+	char args[128];
+	int r, fromscreen;
+
+	cm = lookup("CopyMask");
+	screens();
+	if (other[0] == NULL) {
+		other[0] = screenbuf();
+		other[1] = screenbuf();
+	}
+	fill(span(other[Ours]), Span);
+	memcpy(span(other[Asm]), span(other[Ours]), Span);
+	for (r = 0; r < Rounds; r++) {
+		if (r % 500 == 0)
+			maskbank(masks, graphs, Ngraph, 255, 0);
+		randclip();
+		num = rndn(Ngraph);
+		x = rndr(-300, Width+50);
+		y = rndr(-200, Height+50);
+		fromscreen = rndn(2);
+		src[Ours] = fromscreen ? svga[Ours].screen : other[Ours];
+		src[Asm] = fromscreen ? svga[Asm].screen : other[Asm];
+		acall(cm, 5, num, x, y, (int32_t)(uintptr_t)masks, (int32_t)(uintptr_t)src[Asm]);
+		CopyMask(num, x, y, masks, src[Ours]);
+		snprintf(args, sizeof args, "mask %d at %d %d from %s, clip %d %d %d %d", num, x, y,
+			fromscreen ? "Screen" : "another screen", ClipXmin, ClipYmin, ClipXmax, ClipYmax);
+		if (!asmscreens("CopyMask", args))
+			return 0;
+	}
+	setclip(0, 0, Width-1, Height-1);
+	printf("fixes: copymask, %d masks 255 wide at most, clipped, from Screen or another screen, the same\n", r);
+	return 1;
+}
+
+enum
+{
+	Nzero = 32,	/* graphs and masks of a bank of zerobank's */
+};
+
+/* what a graph or mask of zerobank's holds */
+enum
+{
+	Znone,
+	Zline,	/* a line of 0 blocks or runs */
+	Zlines,	/* 0 lines */
+};
+
+/*
+ * A bank of n graphs at graphs and of n masks at masks, each of 0 lines
+ * once in eight, its lines else of 0 blocks or runs once in four, the
+ * others' blocks as graphbank's and runs as CalcGraphMsk's, adding up to
+ * the width. What each holds in kinds: 0 lines, a line of 0 or neither.
+ */
+static void
+zerobank(uint8_t *graphs, uint8_t *masks, int n, int *kinds)
+{
+	uint8_t *p, *q, *nb, *nr;
+	int i, j, w, h, y, x, k, op, run;
+
+	p = graphs + 4*n;
+	q = masks + 4*n;
+	for (i = 0; i < n; i++) {
+		put32(graphs + 4*i, p - graphs);
+		put32(masks + 4*i, q - masks);
+		w = rndr(1, 255);
+		h = rndn(8) == 0 ? 0 : rndr(1, 120);
+		p[0] = q[0] = w;
+		p[1] = q[1] = h;
+		p[2] = q[2] = rndn(64);
+		p[3] = q[3] = rndn(64);
+		p += 4;
+		q += 4;
+		kinds[i] = h == 0 ? Zlines : Znone;
+		for (y = 0; y < h; y++) {
+			nb = p++;
+			nr = q++;
+			*nb = 0;
+			*nr = 0;
+			if (rndn(4) == 0) {
+				kinds[i] = Zline;
+				continue;
+			}
+			for (x = 0; x < w; x += k) {
+				k = rndr(1, 64);
+				if (k > w-x)
+					k = w - x;
+				op = rndn(3);
+				*p++ = op<<6 | (k - 1);
+				if (op == 2)
+					*p++ = rnd();
+				else if (op == 1)
+					for (j = 0; j < k; j++)
+						*p++ = rndn(4) == 0 ? 0 : rnd();
+				(*nb)++;
+			}
+			for (x = 0, run = 0; x < w; x += k, run ^= 1) {
+				k = rndr(run, 40);
+				if (k > w-x || *nr == 254)
+					k = w - x;
+				*q++ = k;
+				(*nr)++;
+			}
+		}
+	}
+}
+
+/* A number from lo to hi kept within min to max, or from min to max where none is. */
+static int32_t
+around(int32_t lo, int32_t hi, int32_t min, int32_t max)
+{
+	if (lo < min)
+		lo = min;
+	if (hi > max)
+		hi = max;
+	if (lo > hi)
+		return rndr(min, max);
+	return rndr(lo, hi);
+}
+
+/* Graph or mask num drawn by side i (k: AffGraph, AffMask, CopyMask), in a child: how it ended, the screen it drew in out. */
+static int
+zeroside(int i, uintptr_t fn, int k, int32_t num, int32_t x, int32_t y, uint8_t *bank, uint8_t *out)
+{
+	int status, f0;
+	pid_t pid;
+
+	f0 = failures();
+	pid = fork();
+	if (pid < 0)
+		fatal("fixes: cannot fork");
+	if (pid == 0) {
+		setitimer(ITIMER_REAL, &quarter, NULL);
+		if (i == Ours && k == 0)
+			AffGraph(num, x, y, bank);
+		else if (i == Ours && k == 1)
+			AffMask(num, x, y, bank);
+		else if (i == Ours)
+			CopyMask(num, x, y, bank, svga[Ours].screen);
+		else if (k == 2)
+			acall(fn, 5, num, x, y, (int32_t)(uintptr_t)bank, (int32_t)(uintptr_t)svga[Asm].screen);
+		else
+			acall(fn, 4, num, x, y, (int32_t)(uintptr_t)bank);
+		memcpy(out, span(svga[i].log), Span);
+		_exit(failures() != f0);
+	}
+	if (waitpid(pid, &status, 0) != pid)
+		fatal("fixes: cannot wait");
+	return ended(status);
+}
+
+/*
+ * Graph or mask num at x0 y0, whose screen whole holds drawn whole with
+ * lines of 0, drawn again into other with the clip box's right side at
+ * x-1, which takes it the clipped way: whether the screens agree but for
+ * column x of its h lines from y, and for the pixels of colour 0 that a
+ * clipped graph leaves undrawn.
+ */
+static int
+zerowhole(int k, int32_t num, int32_t x0, int32_t y0, uint8_t *bank, uint8_t *whole, uint8_t *other, int32_t x, int32_t y, int32_t h)
+{
+	int32_t i;
+
+	setclip(ClipXmin, ClipYmin, x - 1, ClipYmax);
+	if (zeroside(Ours, 0, k, num, x0, y0, bank, other) != Drawn)
+		return 0;
+	for (i = 0; i < h; i++)
+		other[Slack + Width*(y+i) + x] = whole[Slack + Width*(y+i) + x];
+	for (i = 0; i < Span; i++)
+		if (whole[i] != other[i] && whole[i] != 0)
+			return 0;
+	return 1;
+}
+
+/*
+ * AffGraph, AffMask and CopyMask of graphs and masks of 0 lines and
+ * with lines of 0 blocks or runs, drawn whole and clipped, the lines
+ * above the clip box among them: LBA.EXE's assembly drew 256 lines of a
+ * graph of 0 and read 256 blocks or runs of a line of 0. Each side draws
+ * in a child, the build's screens must be ours, and a graph or mask of
+ * 0 lines draws nothing. One with lines of 0 drawn whole is drawn again
+ * less its last column, by the clipped way: the two agree but for it, so
+ * that a line of 0 moves no line after it.
+ */
+static int
+fixzero(void)
+{
+	static char *names[] = {"AffGraph", "AffMask", "CopyMask"};
+	static uint8_t graphs[1<<21], masks[1<<21];
+	uintptr_t fn[3];
+	uint8_t *c, *d, *bank;
+	int32_t num, x, y, x0, y0;
+	int kinds[Nzero], n[3], r, k, oc, oa, clipped, whole, w, h;
+
+	for (k = 0; k < 3; k++)
+		fn[k] = lookup(names[k]);
+	screens();
+	acall(lookup("CoulMask"), 1, 0x55);
+	CoulMask(0x55);
+	c = mmap(NULL, Span, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+	d = mmap(NULL, Span, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+	if (c == MAP_FAILED || d == MAP_FAILED)
+		fatal("fixes: cannot map");
+	memset(n, 0, sizeof n);
+	clipped = 0;
+	whole = 0;
+	for (r = 0; r < 3000; r++) {
+		if (r % 300 == 0)
+			zerobank(graphs, masks, Nzero, kinds);
+		if (rndn(2) == 0)
+			setclip(0, 0, Width-1, Height-1);
+		else
+			randclip();
+		num = rndn(Nzero);
+		k = rndn(3);
+		bank = k == 0 ? graphs : masks;
+		x = around(ClipXmin - 200, ClipXmax - 40, -200, Width - 320);
+		y = around(ClipYmin - 100, ClipYmax - 40, -150, Height - 185);
+		oc = zeroside(Ours, 0, k, num, x, y, bank, c);
+		oa = zeroside(Asm, fn[k], k, num, x, y, bank, d);
+		if (oc != Drawn || oa != Drawn || memcmp(c, d, Span) != 0) {
+			fail("fixes: %s of %s %d (%s) at %d %d, clip %d %d %d %d: ours %s, the assembly's %s%s",
+				names[k], k ? "mask" : "graph", num,
+				kinds[num] == Zlines ? "0 lines" : kinds[num] == Zline ? "a line of 0" : "no line of 0",
+				x, y, ClipXmin, ClipYmin, ClipXmax, ClipYmax, ends[oc], ends[oa],
+				oc == Drawn && oa == Drawn ? ", the screens apart" : "");
+			return 0;
+		}
+		if (kinds[num] == Zlines && memcmp(c, span(svga[Ours].log), Span) != 0) {
+			fail("fixes: %s of %s %d of 0 lines at %d %d: drawn", names[k], k ? "mask" : "graph", num, x, y);
+			return 0;
+		}
+		n[kinds[num]]++;
+		x0 = x + bank[get32(bank + 4*num) + 2];
+		y0 = y + bank[get32(bank + 4*num) + 3];
+		w = bank[get32(bank + 4*num)];
+		h = bank[get32(bank + 4*num) + 1];
+		if (x0 >= ClipXmin && y0 >= ClipYmin && x0 + w - 1 <= ClipXmax && y0 + h - 1 <= ClipYmax) {
+			whole++;
+			if (kinds[num] == Zline && w > 1 && !zerowhole(k, num, x, y, bank, c, d, x0 + w - 1, y0, h)) {
+				fail("fixes: %s of %s %d with a line of 0 at %d %d: whole and clipped apart",
+					names[k], k ? "mask" : "graph", num, x, y);
+				return 0;
+			}
+		} else if (memcmp(c, span(svga[Ours].log), Span) != 0)
+			clipped++;
+	}
+	setclip(0, 0, Width-1, Height-1);
+	munmap(c, Span);
+	munmap(d, Span);
+	printf("fixes: zero, %d graphs and masks, %d of 0 lines, %d with lines of 0 blocks or runs, %d drawn whole,"
+		" %d drawn clipped, the same screens\n", r, n[Zlines], n[Zline], whole, clipped);
+	return 1;
+}
+
+/*
+ * The drawing modules' fixes (asmoracle.c's fixes): boxes and blocks
+ * turned over, spheres centred off the screen, Gouraud faces whose
+ * points lie either side of FFh, a movie's frames of 0 lines, strings
+ * measured under interleaves of 256 or more, masks copied clipped from
+ * another screen and with runs of 128 or more, graphs and masks of 0
+ * lines and with lines of 0 blocks or runs.
+ */
+int
+fixsvga(void)
+{
+	return fixboxes() && fixnopoint() && fixsphere() && fixgouraud() && fixnone() && fixframe()
+		&& fixsizefont() && fixcopymask() && fixzero();
+}

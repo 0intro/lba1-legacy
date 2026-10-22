@@ -29,6 +29,12 @@ DrawFrame		proc	uses	esi edi ebx,\
 			mov	edi, Log
 			mov	edx, edi
 			xor	eax, eax
+			; FIXED: LBA.EXE draws 2^32 lines for a frame of 0, from
+			; Log on. Draw none. Taken from DotEmu's Android 1.06.
+IFDEF	FIXES
+			cmp	[deltay], eax
+			je	short EndDrawFrame
+ENDIF
 NewLine:
 			lodsb                   	; Nb Block
 			or	al, al
@@ -84,6 +90,13 @@ UpdateFrame		proc	uses	esi edi ebx,\
 			mov	edx, edi
 			lodsw
 			mov	[cptline], ax
+			; FIXED: LBA.EXE draws 65536 lines for a frame of 0, from
+			; its first line on. Draw none. Taken from DotEmu's Android
+			; 1.06.
+IFDEF	FIXES
+			test	ax, ax
+			je	short EndUpdateFrame
+ENDIF
 			xor	eax, eax
 NewLine:
 			lodsb                   	; Nb Block

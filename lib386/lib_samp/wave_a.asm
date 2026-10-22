@@ -1872,6 +1872,21 @@ okfilter:	push	eax
 	; real sampling frequency instead of that stupid sr number in .VOC !
 	; :-(
 
+	; FIXED: The CD's drivers take 256 less sr in a byte, 0 for an sr of
+	; 0, and divide 1000000 by it in 16 bits, which faults on a rate past
+	; 65535 Hz, an sr of 241 or more. This divides in 32 bits. Taken from
+	; LbaWin 0.8.1.
+
+IFDEF	FIXES
+		mov     eax, 1000000
+		xor     edx, edx
+
+		movzx   ecx, byte ptr[esi + 4]          ; ecx = sr
+		mov     ebx, 256
+		sub     ebx, ecx                        ; ebx = 256 - sr
+
+		div     ebx
+ELSE
 		mov     dx, 0Fh
 		mov     ax, 4240h                       ; dx:ax = 1000000
 
@@ -1880,11 +1895,16 @@ okfilter:	push	eax
 		neg     bl                              ; bl = 256 - sr
 
 		div     bx
+ENDIF
 
 		shl     dx, 1
 		adc     ax, 0                           ; round to nearest
 
+IFDEF	FIXES
+		mov     ebx, eax
+ELSE
 		mov     bx, ax
+ENDIF
 
 	; ebx = real sampling rate
 	; up to here ! and then avoid this ^ div !

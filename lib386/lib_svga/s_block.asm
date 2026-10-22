@@ -150,6 +150,15 @@ SaveBlock		proc	uses esi edi ebx ebp,\
 			sub	edx, ebx		; DX = DeltaY
 			inc	ecx
 			inc	edx
+			; FIXED: LBA.EXE copies 2^32 lines on a height of 0 or
+			; less, and faults on a negative width. Copy none. Taken
+			; from the Classic 3.2.3.
+IFDEF	FIXES
+			or	edx, edx
+			jle	SaveBlock_End
+			or	ecx, ecx
+			jle	SaveBlock_End
+ENDIF
 			mov	esi, TabOffLine[ebx*4]
 			add	esi, eax
 			add	esi, screen		; SI Offset Src
@@ -184,7 +193,11 @@ odd:
 			dec	edx
 			jne	Again
 
+IFDEF	FIXES
+SaveBlock_End:		ret
+ELSE
 			ret
+ENDIF
 SaveBlock		endp
 
 comment	@
@@ -253,6 +266,15 @@ RestoreBlock		proc	uses esi edi ebx ebp,\
 			sub	edx, ebx		; DX = DeltaY
 			inc	ecx
 			inc	edx
+			; FIXED: LBA.EXE copies 2^32 lines on a height of 0 or
+			; less, and faults on a negative width. Copy none. Taken
+			; from the Classic 3.2.3.
+IFDEF	FIXES
+			or	edx, edx
+			jle	RestoreBlock_End
+			or	ecx, ecx
+			jle	RestoreBlock_End
+ENDIF
 			mov	edi, TabOffLine[ebx*4]
 			add	edi, eax		; SI Offset Src
 			add	edi, screen
@@ -272,7 +294,11 @@ Again:
 			dec	edx
 			jne	Again
 
+IFDEF	FIXES
+RestoreBlock_End:	ret
+ELSE
 			ret
+ENDIF
 RestoreBlock		endp
 ;----------------------------------------------------------------------------
 ;				The

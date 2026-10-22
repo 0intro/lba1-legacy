@@ -3,7 +3,7 @@
 # extract: the files of the game's discs where the tests and the oracles
 # read them.
 #
-#     tools/extract [pc]
+#     tools/extract [pc] [ps]
 #
 # pc is the PC CD, its data track little_big_adventure_1.iso in $LBAISO
 # (../iso by default): its files go into $LBATMP/pc as the CD holds them,
@@ -11,7 +11,9 @@
 # 6901 fixups checked, and each of the CD's drivers into
 # $LBATMP/elf/dll, with the names and regions of its map in re/ where it
 # has one (re/*.dll.sym).
-# By default extract makes pc.
+# ps is the PlayStation's disc, SLES-00698, the Redump image in $LBAISO:
+# its texts (TEXT.HQR) go into $LBATMP/ps, where tools/texts.py reads
+# them. By default extract makes pc.
 
 set -Eeuo pipefail
 
@@ -21,9 +23,10 @@ TOP=$(cd -- "$REPO/.." && pwd)
 LBATMP=${LBATMP:-$TOP/lba1-tmp}
 ISO=${LBAISO:-$TOP/iso}
 PCISO=$ISO/little_big_adventure_1.iso
+PSBIN="$ISO/Little Big Adventure (Europe) (En,Fr,De,Es,It) (Track 01).bin"
 
 usage() {
-	echo 'usage: extract [pc]' >&2
+	echo 'usage: extract [pc] [ps]' >&2
 	exit 2
 }
 
@@ -59,10 +62,21 @@ pc() {
 	done
 }
 
+ps() {
+	[[ -f $PSBIN ]] || fail "no $PSBIN"
+	rm -rf -- "$LBATMP/ps.new"
+	mkdir -p "$LBATMP/ps.new"
+	python3 -I "$TOOLS/isocat.py" -o "$LBATMP/ps.new" "$PSBIN" /TEXT.HQR
+	[[ -s $LBATMP/ps.new/TEXT.HQR ]] || fail "$PSBIN: no TEXT.HQR"
+	rm -rf -- "$LBATMP/ps"
+	mv -- "$LBATMP/ps.new" "$LBATMP/ps"
+}
+
 (( $# )) || set -- pc
 for d; do
 	case $d in
 	pc) pc ;;
+	ps) ps ;;
 	*) usage ;;
 	esac
 done

@@ -1,10 +1,11 @@
 """isocat.py: list or copy files out of an ISO 9660 image.
 
 The image is either cooked, 2048 bytes a sector (the PC CD), or raw, 2352
-bytes a sector as a cue/bin dump keeps it (mode 2 form 1, whose user data
-starts 24 bytes into each sector). Only the data track is in the file: a
-directory entry that points past its end is listed, and a copy of it
-fails.
+bytes a sector as a cue/bin dump keeps it (the PlayStation CD, mode 2 form
+1, whose user data starts 24 bytes into each sector). Only the data track
+is in the file: a directory entry that points past its end, as the
+PlayStation disc's TRACKn.WAV do into the audio tracks, is listed, and a
+copy of it fails.
 
     isocat.py -l image                 list every file: size, sector, date, path
     isocat.py image path               write one file to standard output

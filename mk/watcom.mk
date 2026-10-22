@@ -35,7 +35,7 @@ DOSASFLAGS=-c -q -X -Cx -Zg -W0 -Sa -DNoLanguage=SYSCALL -Djumps= $(DOSFIXES:%=-
 DOSGAME=$(addprefix sources/,\
 	version perso object global flipbox diskfunc grille_a fiche extra\
 	incrust grille func cpymask balance message ambiance fire gamemenu\
-	geretrak gerelife holomap adfli_a playfla mcga)
+	geretrak gerelife holomap adfli_a playfla mcga $(if $(DOSFIXES),gridfix textfix))
 DOSSYS=$(addprefix lib386/lib_sys/,\
 	files malloc loadmall loadsave def_file system timer_a timer buffer_a\
 	divers keyb keyboard expand hq_ress hqr dllload adeline hq_mem hq_r_m\
@@ -230,11 +230,13 @@ ifneq ($(DOSFIXES),)
 # test, with the fixes: the build's sums against the reference, the
 # oracle on its image (its rand, srand and qsort against ours,
 # Watcom C 9's being LBA.EXE's), asmoracle on it (its assembly against
-# the translations into C), and its run to No CD.
+# the translations into C, the fixes where LBA.EXE's faults among them),
+# and its run to No CD.
 test: all oracles
 	diff dos/$(CC)$(if $(FIXES),-fixes).sums $(O)/lba0.sums
 	$(ORACLE)/oracle $(O)/lba0.elf $(O)/lba0.sym
 	$(ORACLE)/asmoracle $(O)/lba0.elf $(O)/lba0.sym
+	$(ORACLE)/asmoracle $(O)/lba0.elf $(O)/lba0.sym fixes
 	dos/nodata -g $(DOS4GW) -x $(O)/lba0.exe
 
 # check, with the fixes: lint and test, then asmoracle on the game's

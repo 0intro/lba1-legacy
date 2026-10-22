@@ -278,7 +278,20 @@ void	DrawNextFrameFla()
 				ptr_donnee += sizeof(T_FLA_SAMPLE_STOP)	;/* Jump header type */
 				if ( SamplesEnable == TRUE )
 				{
+					/*
+					 * FIXED: Numero is a UWORD, which C
+					 * widens to an int that -1 never
+					 * equals, so that the stop of every
+					 * sample stopped none. Watcom C 9.01,
+					 * as LBA.EXE has it, compares the word
+					 * with 0xFFFF, and so does this. Taken
+					 * from DotEmu's Android 1.06.
+					 */
+#ifdef	FIXES
+					if ( HeaderSampleStopFlaNew.Numero == 0xFFFF )
+#else
 					if ( HeaderSampleStopFlaNew.Numero == -1 )
+#endif
 					{
 						HQ_StopSample();
 					}
@@ -373,11 +386,21 @@ WORD	InitFla( char *name )
 
 	HandleFla = OpenRead( name )	;
 
+	/*
+	 * FIXED: The source tests the open for its DEBUG_TOOLS and DEMO
+	 * builds alone, so that LBA.EXE reads the movie from handle 0 when
+	 * its file fails to open. Every build tests it. Taken from LbaWin
+	 * 0.8.1.
+	 */
+#ifdef	FIXES
+	if ( !HandleFla ) return(FALSE)	;	// protect CD ?
+#else
 #ifdef	DEBUG_TOOLS
 	if ( !HandleFla ) return(FALSE)	;	// protect CD ?
 #endif
 #ifdef	DEMO
 	if ( !HandleFla ) return(FALSE)	;	// protect CD ?
+#endif
 #endif
 
 	if( SamplesEnable )

@@ -79,6 +79,19 @@ AffMask_Asm		proc
 			xor	edx, edx
 			mov	dl, [esi]	; Delta X
 			mov	al, [esi+1]	; Nb Line ( Delta Y )
+			; FIXED: LBA.EXE counts a mask's lines and a line's runs in
+			; bytes it decrements before testing them, so that a mask
+			; of 0 lines draws 256 and a line of 0 runs reads 256 runs
+			; from the bytes after it. Draw nothing of a mask of 0
+			; lines, and pass over a line of 0 runs at NextLine and
+			; NextL. Taken from DotEmu's Android 1.06, but for a line
+			; of 0 runs, where DotEmu moves the lines after it left by
+			; the mask's width or, clipped, copies the buffer of the
+			; line before.
+IFDEF	FIXES
+			test	al, al
+			jz	EndMask
+ENDIF
 			add	esi, 4		; Jump HotX & HotY
 
 ;----------------------------------------------- Test Clipping
@@ -116,6 +129,10 @@ AffMask_Asm		proc
 ;----------------------------------------------- Init NbBlock for this line
 NextLine:		mov	bl, [esi]	; BL = Nb Block for this line
 			inc	esi
+IFDEF	FIXES
+			test	bl, bl
+			jz	NoRun
+ENDIF
 ;----------------------------------------------- Manage One Line
 SameLine:		mov	cl, [esi]     	; Nb Zero to Jump
 			add	edi, ecx	; Incrust
@@ -139,6 +156,12 @@ EndBlock:
 			dec	bh		; NbLine--
 			jne	NextLine	; Next Line
 			ret
+IFDEF	FIXES
+NoRun:			add	edi, Screen_X	; EDI at the line's start
+			dec	bh		; NbLine--
+			jne	NextLine	; Next Line
+			ret
+ENDIF
 
 ;-------------------------------------------------------------------- Clipping
 ;		Graph : ( EBX, ECX ) ( EDX, EAX )
@@ -219,6 +242,12 @@ PasDroit:
 NextL:			lea	edi, BufferClip		; EDI = BUFFERCLIP
 			mov	bl, [esi]		; NbBlock
 			inc	esi
+IFDEF	FIXES
+			test	bl, bl
+			jnz	SameL
+			push	esi
+			jmp	NoPix
+ENDIF
 SameL:			mov	cl, [esi]
 			xor	ax, ax
 			shr	ecx, 1
@@ -251,7 +280,11 @@ Again:			lodsb
 Incrust:		inc	edi
 			dec	ecx
 			jnz	Again
+IFDEF	FIXES
+NoPix:			add	ebp, 640
+ELSE
 			add	ebp, 640
+ENDIF
 			pop	esi
 			dec	bh
 			jne	NextL

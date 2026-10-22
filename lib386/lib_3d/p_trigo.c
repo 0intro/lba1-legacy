@@ -269,7 +269,7 @@ get16(uint8_t *p)
 /*
  * The n points of 3 words at src (a body's, at any address) turned by
  * mat into dst, X0, Y0 and Z0 added in 16 bits, each first moved by
- * lAlpha, lBeta and lGamma if trans. n of 0 is 65536.
+ * lAlpha, lBeta and lGamma if trans.
  */
 static void
 rotlist(LONG *mat, uint8_t *src, WORD *dst, uint16_t n, int trans)
@@ -277,6 +277,13 @@ rotlist(LONG *mat, uint8_t *src, WORD *dst, uint16_t n, int trans)
 	int32_t x, y, z;
 
 	compteur = n;
+	/*
+	 * FIXED: LBA.EXE turns 65536 points for a count of 0, past the 500
+	 * of List_Anim_Point. A count of 0 returns at once. Taken from
+	 * DotEmu's Android 1.06.
+	 */
+	if (n == 0)
+		return;
 	do {
 		x = get16(src);
 		y = get16(src + 2);

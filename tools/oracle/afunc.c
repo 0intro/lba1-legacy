@@ -17,6 +17,7 @@ enum
 
 uint32_t	TimerRef;	/* p_func.c's clock */
 
+uint32_t	Sqr(uint32_t);
 void	InitRealValue(int16_t, int16_t, int16_t, void*);
 void	InitRealAngle(int16_t, int16_t, int16_t, void*);
 void	InitRealAngleConst(int32_t, int32_t, int32_t, void*);
@@ -29,6 +30,7 @@ int32_t	Distance3D(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t);
 int32_t	GetAngle(int32_t, int32_t, int32_t, int32_t);
 void	Rot2D(int32_t, int32_t, int32_t);
 extern int32_t	Distance, EX0, EY0;
+extern int16_t	P_SinTab[1024];
 
 /*
  * Whether LBA.EXE's GetRealValue, or with angle its GetRealAngle, faults
@@ -68,6 +70,61 @@ coord(void)
 		return rndr(-(1<<20), 1<<20);
 	}
 	return rnd();
+}
+
+/*
+ * m1994angle is LBA.EXE's GetAngle, the tag's assembly, which seeks the
+ * sine by halving byte addresses, not entries, so that its last halvings
+ * read words across two entries.
+ */
+static int32_t
+m1994angle(int32_t x0, int32_t z0, int32_t x1, int32_t z1)
+{
+	int32_t dx, dz, big, small, d, a;
+	uint32_t xx, zz, lo, hi, mid;
+	int16_t s, w, v;
+
+	dz = (uint32_t)z1 - (uint32_t)z0;
+	dx = (uint32_t)x1 - (uint32_t)x0;
+	xx = (uint32_t)dx * (uint32_t)dx;
+	zz = (uint32_t)dz * (uint32_t)dz;
+	if (xx >= zz) {
+		big = dx & -2;
+		small = dz;
+	} else {
+		big = dz | 1;
+		small = dx;
+	}
+	d = Sqr(xx + zz);
+	if (d == 0)
+		return 0;
+	s = (int32_t)((uint32_t)small << 14) / d;
+	lo = 384 * 2;
+	hi = 640 * 2;
+	for (;;) {
+		mid = (lo + hi) >> 1;
+		memcpy(&w, (uint8_t*)P_SinTab + mid, 2);
+		if (s > w)
+			hi = mid;
+		else {
+			lo = mid;
+			if (s == w)
+				goto found;
+		}
+		if (hi-lo == 1)
+			break;
+	}
+	memcpy(&w, (uint8_t*)P_SinTab + lo, 2);
+	memcpy(&v, (uint8_t*)P_SinTab + hi, 2);
+	if ((int16_t)((w + v) >> 1) <= s)
+		lo = hi;
+found:
+	a = (lo - 256*2) >> 1;
+	if (big < 0)
+		a = -a;
+	if (big & 1)
+		a = 256 - a;
+	return a & 1023;
 }
 
 /*
@@ -208,3 +265,38 @@ testpfunc(void)
 		allangles(ga, ad);
 }
 
+/*
+ * GetAngle over the game's coordinates, where LBA.EXE's search of the
+ * sine table gives half the angles a step off the nearer one: ours and
+ * the build's assembly, which searches by entries.
+ */
+static int
+fixangle(void)
+{
+	uintptr_t ga;
+	int32_t a[4], y, z;
+	int r, i, apart;
+
+	ga = lookup("GetAngle");
+	apart = 0;
+	for (r = 0; r < 10*Rounds; r++) {
+		for (i = 0; i < 4; i++)
+			a[i] = rndr(0, 32767);
+		y = GetAngle(a[0], a[1], a[2], a[3]);
+		z = acall(ga, 4, a[0], a[1], a[2], a[3]);
+		if (y != z) {
+			fail("fixes: GetAngle %d %d %d %d: ours %d, the assembly's %d", a[0], a[1], a[2], a[3], y, z);
+			return 0;
+		}
+		apart += y != m1994angle(a[0], a[1], a[2], a[3]);
+	}
+	printf("fixes: angle, %d angles, %d of them apart from LBA.EXE's, the same\n", r, apart);
+	return 1;
+}
+
+/* p_func's fixes (asmoracle.c's fixes). */
+int
+fixfunc(void)
+{
+	return fixangle();
+}

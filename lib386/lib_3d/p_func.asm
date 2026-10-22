@@ -965,6 +965,20 @@ carre:
 		cdq
 		idiv    edi
 
+		; FIXED: LBA.EXE halves byte addresses in its search, not
+		; entries, so that its last steps read words across two entries
+		; and half the angles come out a step off the nearer one. Halve
+		; entries and take the nearer of the last two. Taken from
+		; DotEmu's Android 1.06.
+IFDEF	FIXES
+		mov     esi, 384
+		mov	edi, 640
+
+ga2:            lea     ebx, [esi+edi]
+		shr     ebx, 1
+
+		cmp     ax, word ptr [P_SinTab+ebx*2]
+ELSE
 		mov     esi, offset P_SinTab + 384 * 2
 		lea	edi, [esi+256*2]
 
@@ -973,6 +987,7 @@ ga2:            mov     ebx, esi
 		shr     ebx, 1
 
 		cmp     ax, [ebx]
+ENDIF
 		jle     ga0
 		mov     edi, ebx
 		jmp     short ga1
@@ -984,17 +999,29 @@ ga1:		sub	ebx, esi
 		dec	ebx
 		jnz	short ga2
 
+IFDEF	FIXES
+		movsx	ebx, word ptr [P_SinTab+esi*2]
+		movsx	edx, word ptr [P_SinTab+edi*2]
+ELSE
 		movsx	ebx, word ptr [esi]
 		movsx	edx, word ptr [edi]
+ENDIF
 		add	ebx, edx
 		sar	ebx, 1
 		cmp	bx, ax
+IFDEF	FIXES
+		jl	short fgaloop
+		mov	esi, edi
+
+fgaloop:	lea     eax, [esi-256]
+ELSE
 		jg	short fgaloop
 		mov	esi, edi
 
 fgaloop:	sub     esi, offset P_SinTab + 256 * 2
 		mov     eax, esi
 		shr     eax, 1
+ENDIF
 
 		or      ebp, ebp
 		jns     short fga

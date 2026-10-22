@@ -94,7 +94,15 @@ PlusLoin0:
 			mov	edx, [InterLeave]
 			add	[DxFont], edx
 
+			; FIXED: LBA.EXE replaces EDX's low byte alone by the
+			; character's width, so that an interleave of 256 or more
+			; is added again. Take the width alone. Taken from DotEmu's
+			; Android 1.06.
+IFDEF	FIXES
+			movzx	edx, byte ptr[edi]
+ELSE
 			mov	dl, byte ptr[edi]
+ENDIF
 
 			add	[DxFont], edx
 

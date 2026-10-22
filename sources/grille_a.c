@@ -11,7 +11,8 @@
  * coordinate is 512 a cell along x and z, from half a cell before, and
  * 256 along y. What the assembly returned in AL it returned in EAX: where
  * EAX still held a coordinate of the map, its upper bytes came back with
- * AL, and the callers that take a LONG see them, as they do here.
+ * AL, and the callers that take a LONG see them, as they do here from
+ * WorldCodeBrick.
  */
 
 enum
@@ -56,8 +57,7 @@ brick(uint32_t off)
 /*
  * WorldColBrickFull is grille_a.asm's WorldColBrickFull: the brick at
  * xw,yw,zw, or 1 if a cell above, up to ymax over it and to the top, is
- * not empty. Outside the map along x or z the coordinate comes back
- * with a low byte of 0, below it the coordinate with 1. Above the top,
+ * not empty. Outside the map along x or z 0, below it 1. Above the top,
  * no cell is tested past the cell's own.
  */
 int32_t
@@ -69,16 +69,29 @@ WorldColBrickFull(int32_t xw, int32_t yw, int32_t zw, int32_t ymax)
 	XMap = ((uint32_t)xw + 256) >> 9;
 	YMap = yw >> 8;
 	ZMap = ((uint32_t)zw + 256) >> 9;
+	/*
+	 * FIXED: LBA.EXE sets AL alone on these three ways out, so that a
+	 * caller taking a LONG reads a coordinate's upper bytes with it,
+	 * 0x7FFF00 past the map's left edge. These give the byte alone.
+	 * Taken from DotEmu's Android 1.06, which tests below the map first.
+	 */
 	if (XMap >= 64)
-		return XMap & ~0xFF;
+		return 0;
 	off = 50 * XMap;
 	if (YMap <= -1)
-		return (YMap & ~0xFF) | 1;
+		return 1;
 	off += 2 * YMap;
 	if (ZMap >= 64)
-		return ZMap & ~0xFF;
+		return 0;
 	off += 3200 * ZMap;
 	v = brick(off);
+	/*
+	 * FIXED: LBA.EXE counts the cells above unsigned, so that a height
+	 * of 0 or less tests every cell up to the top. Such a height
+	 * returns at once. Taken from DotEmu's Android 1.06.
+	 */
+	if (ymax <= 0)
+		return v;
 	n = ((uint32_t)ymax + 255) >> 8;
 	for (y = YMap; y < 24; ) {
 		off += 2;

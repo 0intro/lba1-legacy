@@ -48,7 +48,11 @@ WORD	FlaFromCD = FALSE ;
 
 UBYTE	PathFla[_MAX_PATH] ;
 
+#ifdef	FIXES
+LONG	Version_US = FALSE ;	// FIXED: FALSE, which Def_ReadValue2 keeps without setup.lst or its key, where LBA.EXE takes Def_ReadValue's -1 for TRUE. Taken from LbaWin 0.8.1.
+#else
 LONG	Version_US = TRUE ;
+#endif
 
 /*--------- ressources ---------------------------*/
 

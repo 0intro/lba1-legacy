@@ -97,10 +97,17 @@ frame(uint8_t *anim, uint32_t n)
 	return anim + 8 + (8*get16(anim + 2) + 8) * n;
 }
 
-/* n groups' moving bytes from s to d, sstep and dstep apart (8 in a frame, 38 in a body). 0 is 65536. */
+/* n groups' moving bytes from s to d, sstep and dstep apart (8 in a frame, 38 in a body). */
 static void
 copygroups(uint8_t *d, uint32_t dstep, uint8_t *s, uint32_t sstep, uint16_t n)
 {
+	/*
+	 * FIXED: LBA.EXE moves 65536 groups for a count of 0, over the body
+	 * and past it. A count of 0 returns at once. Taken from DotEmu's
+	 * Android 1.06.
+	 */
+	if (n == 0)
+		return;
 	do {
 		memcpy(d, s, Gwords);
 		d += dstep;
@@ -366,8 +373,13 @@ SetInterAnimObjet(LONG framedest, void *ptranimdest, void *ptrobj)
 		return 1;
 	}
 	intersteps(f, t, time);
-	if (--n != 0)
-		patch(g + Group, s + 16, f + 16, n, t, time);
+	/*
+	 * FIXED: LBA.EXE moves the 65535 groups after the first for a count
+	 * of 0, over the body and past it. A count of 0 moves the first
+	 * group alone. Taken from DotEmu's Android 1.06.
+	 */
+	if (n > 1)
+		patch(g + Group, s + 16, f + 16, n - 1, t, time);
 	return 0;
 }
 
@@ -397,8 +409,13 @@ SetInterAnimObjet2(LONG framedest, void *ptranimdest, void *ptrobj)
 		setframe(o, f);
 		return 1;
 	}
-	if (--n != 0)
-		patch(g + Group, s + 16, f + 16, n, t, time);
+	/*
+	 * FIXED: LBA.EXE moves the 65535 groups after the first for a count
+	 * of 0, over the body and past it. A count of 0 moves the first
+	 * group alone. Taken from DotEmu's Android 1.06.
+	 */
+	if (n > 1)
+		patch(g + Group, s + 16, f + 16, n - 1, t, time);
 	return 0;
 }
 

@@ -561,3 +561,63 @@ out:
 	printf("trigo: %d rounds\n", r);
 }
 
+/*
+ * RotList and TransRotList of a count of 0, the high half of ECX at
+ * random: LBA.EXE's assembly turned 65536 points, past the 500 of
+ * List_Anim_Point. The build's must turn none, as ours, and leave
+ * compteur as ours.
+ */
+static int
+fixrot(void)
+{
+	enum {
+		Big = 3*65536 + 64,	/* words: room for what LBA.EXE turned */
+	};
+	static int16_t src[Big], dst[2][Big];
+	uintptr_t f[2], ac;
+	Regs g;
+	int32_t m[9];
+	uint32_t n;
+	int r, t, i;
+
+	f[0] = lookup("RotList");
+	f[1] = lookup("TransRotList");
+	ac = lookup("compteur");
+	for (r = 0; r < 200; r++) {
+		t = rnd() & 1;
+		for (i = 0; i < 9; i++)
+			m[i] = rnd();
+		for (i = 0; i < Big; i++) {
+			src[i] = rnd();
+			dst[0][i] = dst[1][i] = rnd();
+		}
+		n = rnd() << 16;
+		memset(&g, 0, sizeof g);
+		g.eax = (uint32_t)(uintptr_t)m;
+		g.esi = (uint32_t)(uintptr_t)src;
+		g.edi = (uint32_t)(uintptr_t)dst[1];
+		g.ecx = n;
+		regcall(f[t], &g);
+		if (t)
+			TransRotList(m, src, dst[0], n);
+		else
+			RotList(m, src, dst[0], n);
+		if (memcmp(dst[0], dst[1], sizeof dst[0]) != 0) {
+			fail("fixes: %s of ECX %#x: the lists differ", t ? "TransRotList" : "RotList", n);
+			return 0;
+		}
+		if (memcmp((void*)ac, &compteur, 2) != 0) {
+			fail("fixes: %s of ECX %#x: compteur differs", t ? "TransRotList" : "RotList", n);
+			return 0;
+		}
+	}
+	printf("fixes: rot, %d lists of 0 points, none turned\n", r);
+	return 1;
+}
+
+/* p_trigo's fixes (asmoracle.c's fixes). */
+int
+fixtrigo(void)
+{
+	return fixrot();
+}

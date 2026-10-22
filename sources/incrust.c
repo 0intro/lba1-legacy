@@ -17,6 +17,41 @@ void	InitIncrustDisp(	WORD type,
 	T_INCRUST_DISP	*ptrdisp ;
 	WORD	n ;
 
+	/*
+	 * FIXED: LBA.EXE gives each object picture a slot of its own, so
+	 * that pictures shown at once share one box and one angle: the
+	 * last slot's covers the others, a newer picture hidden behind an
+	 * older, and the object turns as many times as fast. A new object
+	 * picture takes the slot of the one shown. Taken from DotEmu's
+	 * Android 1.06.
+	 */
+#ifdef	FIXES
+	if( type == INCRUST_OBJ )
+	{
+		ptrdisp = ListIncrustDisp ;
+
+		for( n=0; n<MAX_INCRUST_DISP; n++, ptrdisp++ )
+		{
+			if( (ptrdisp->Num != -1)
+			AND (ptrdisp->Type == INCRUST_OBJ) )
+			{
+				ptrdisp->Num = num ;
+
+				ptrdisp->X = x ;
+				ptrdisp->Y = y ;
+
+				ptrdisp->Info = info ;
+
+				ptrdisp->Move = move ;
+
+				ptrdisp->TimerEnd = TimerRef + 50 * timeout ;
+
+				return ;
+			}
+		}
+	}
+#endif
+
 	ptrdisp = ListIncrustDisp ;
 
 	for( n=0; n<MAX_INCRUST_DISP; n++, ptrdisp++ )

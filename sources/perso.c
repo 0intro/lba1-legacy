@@ -474,6 +474,18 @@ startloop:
 			SaveTimer() ;
 			TestRestoreModeSVGA( TRUE ) ;
 			Inventory() ;
+			/*
+			 * FIXED: LBA.EXE acts on the object chosen at the clock
+			 * the inventory held, so that the time it was open counts
+			 * in what the choice times: the clover's picture and the
+			 * Meca-Penguin's 30 seconds last that much longer. The
+			 * clock is given back and held again, as the list of
+			 * places does. Taken from DotEmu's Android 1.06.
+			 */
+#ifdef	FIXES
+			RestoreTimer() ;
+			SaveTimer() ;
+#endif
 			switch( InventoryAction )
 			{
 			case 0:	// holomap
@@ -633,7 +645,11 @@ startloop:
 		{
 			SaveTimer() ;
 			TestRestoreModeSVGA( TRUE ) ;
+#ifdef	FIXES
+			MenuComportement( TRUE ) ;
+#else
 			MenuComportement() ;
+#endif
 			RestoreTimer() ;
 			AffScene(TRUE) ;
 		}
@@ -645,7 +661,11 @@ startloop:
 			SaveTimer() ;
 			TestRestoreModeSVGA( TRUE ) ;
 			SetComportement( C_NORMAL + MyKey - K_F1 ) ;
+#ifdef	FIXES
+			MenuComportement( FALSE ) ;
+#else
 			MenuComportement() ;
+#endif
 			RestoreTimer() ;
 			AffScene(TRUE) ;
 		}
@@ -1257,7 +1277,17 @@ int	main( int argc, char *argv[] )
 
 	ReadVolumeSettings() ;
 
+	/*
+	 * FIXED: LBA.EXE takes Def_ReadValue's -1, which a missing setup.lst
+	 * or Version_US gives, for the North American version, its
+	 * Relentless bumpers and its credits' first line. Version_US starts
+	 * FALSE and the key alone sets it. Taken from LbaWin 0.8.1.
+	 */
+#ifdef	FIXES
+	Def_ReadValue2( "setup.lst", "Version_US", &Version_US ) ;
+#else
 	Version_US = Def_ReadValue( "setup.lst", "Version_US" ) ;
+#endif
 
 	InitLanguage() ;	// multilangue
 

@@ -254,12 +254,21 @@ void	DoFuncLife( T_OBJET *ptrobj )
 		case LF_USE_INVENTORY:
 			num = *PtrPrg++ ;	// flag game
 
+			/*
+			 * FIXED: LBA.EXE sets FALSE for an object of 28 or
+			 * more, then reads ListFlagInventory and ListFlagGame
+			 * for it anyway, so that the bound is lost. It keeps
+			 * FALSE. Taken from the Classic 3.2.3.
+			 */
 			if( num >= MAX_INVENTORY )	// a bon ?
 			{
 				Value = FALSE ;
 			}
-
+#ifdef	FIXES
+			else if( ListFlagGame[FLAG_CONSIGNE] )
+#else
 			if( ListFlagGame[FLAG_CONSIGNE] )
+#endif
 			{
 				Value = 0 ;
 			}
@@ -335,7 +344,17 @@ WORD    DoTest()
 {
 	UBYTE	test ;
 	WORD	valueword ;
+	/*
+	 * FIXED: LBA.EXE reads a test's byte signed, so that the five tests
+	 * of the scripts with an operand of 128 or more, in scenes 7, 12,
+	 * 15 and 113, are never true. This reads it unsigned. Taken from
+	 * LbaWin 0.8.1.
+	 */
+#ifdef	FIXES
+	UBYTE	valuebyte ;
+#else
 	BYTE	valuebyte ;
+#endif
 	UBYTE	*ptrstring ;
 
 	test = *PtrPrg++ ;
@@ -1053,8 +1072,22 @@ void	DoLife( WORD numobj )
 				Dial( PeekWord( PtrPrg ) ) ;
 				PtrPrg += 2 ;
 				NormalWinDial() ;
+				/*
+				 * FIXED: LBA.EXE draws the scene before it gives
+				 * back the clock the message held, so that it draws
+				 * it as at the message's end: a picture whose time
+				 * the message outlasts dies unseen, the Book of Bû's
+				 * among them. The clock is given back first, as the
+				 * other messages give it. Taken from DotEmu's Android
+				 * 1.06.
+				 */
+#ifdef	FIXES
+				RestoreTimer() ;
+				AffScene(TRUE)	;
+#else
 				AffScene(TRUE)	;
 				RestoreTimer() ;
+#endif
 				WaitReleaseSpace() ;
 				break ;
 

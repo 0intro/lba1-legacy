@@ -337,6 +337,13 @@ ComputePoly(void)
 	uint32_t n;
 	uint8_t i0, i1;
 
+	/*
+	 * FIXED: LBA.EXE frames a polygon of 0 points as one of 2^32,
+	 * reading TabPoly past its end. One of 0 points returns 0 at
+	 * once. Taken from DotEmu's Android 1.06.
+	 */
+	if (NbPolyPoints == 0)
+		return 0;
 	offtabpoly[0] = TabPoly;
 	offtabpoly[1] = TabPolyClip;
 	boucle = NbPolyPoints;

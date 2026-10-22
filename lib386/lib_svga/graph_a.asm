@@ -60,6 +60,19 @@ AffGraph		proc	uses esi edi ebx ebp,\
 			add	ecx, eax
 			mov	dl, [esi]		; Delta X
 			mov	al, [esi+1]		; Nb Line ( Delta Y )
+			; FIXED: LBA.EXE counts a graph's lines and a line's blocks
+			; in bytes it decrements before testing them, so that a
+			; graph of 0 lines draws 256 and a line of 0 blocks reads
+			; 256 blocks from the bytes after it. Draw nothing of a
+			; graph of 0 lines, and pass over a line of 0 blocks at
+			; NextLine, NextH and NextL. Taken from DotEmu's Android
+			; 1.06, but for a line of 0 blocks, where DotEmu moves the
+			; lines after it left by the graph's width or, clipped,
+			; copies the buffer of the line before.
+IFDEF	FIXES
+			test	al, al
+			jz	EndGraph
+ENDIF
 			add	esi, 4			; Jump Hot X & Hot Y
 
 ;----------------------------------------------- Test Clipping
@@ -98,6 +111,10 @@ AffGraph		proc	uses esi edi ebx ebp,\
 
 NextLine:		mov	bl, [esi]	; BL = Nb Block for this line
 			inc	esi
+IFDEF	FIXES
+			test	bl, bl
+			jz	NoBlock
+ENDIF
 
 ;----------------------------------------------- Manage One Line
 
@@ -154,6 +171,12 @@ JumpZero:		inc	esi
 			dec	bh		; NbLine--
 			jne	NextLine	; Next Line
 			ret
+IFDEF	FIXES
+NoBlock:		add	edi, Screen_X	; EDI at the line's start
+			dec	bh		; NbLine--
+			jne	NextLine	; Next Line
+			ret
+ENDIF
 
 ;-------------------------------------------------------------------- Clipping
 ;		Graph : ( EBX, ECX ) ( EDX, EAX )
@@ -179,6 +202,10 @@ ClippingGraph:
 
 NextH:			mov	bh, [esi]
 			inc	esi
+IFDEF	FIXES
+			test	bh, bh
+			jz	NoBlockH
+ENDIF
 SameH:			mov	al, [esi]
 			inc	esi
 			test	al, 11000000b
@@ -191,7 +218,11 @@ SameH:			mov	al, [esi]
 AquiH:			lea	esi, [esi+ecx+1]
 JumpzH:			dec	bh
 			jne	SameH
+IFDEF	FIXES
+NoBlockH:		dec	bl
+ELSE
 			dec	bl
+ENDIF
 			jne	NextH
 
 			mov	ecx, ClipYmin		; New Y Haut
@@ -237,6 +268,12 @@ PasDroit:
 NextL:			lea	edi, BufferClip		; EDI = BUFFERCLIP
 			mov	bl, [esi]
 			inc	esi
+IFDEF	FIXES
+			test	bl, bl
+			jnz	SameL
+			mov	ebp, esi
+			jmp	NoPix
+ENDIF
 SameL:			mov	al, [esi]
 			inc	esi
 			mov	cl, al
@@ -292,7 +329,11 @@ Again:			mov	al, [esi]
 Incrust:		inc	edi
 			dec	ecx
 			jnz	Again
+IFDEF	FIXES
+NoPix:			add	edx, 640
+ELSE
 			add	edx, 640
+ENDIF
 			mov	esi, ebp
 			dec	bh
 			jne	NextL

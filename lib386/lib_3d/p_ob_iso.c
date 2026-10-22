@@ -105,7 +105,13 @@ PatchObjet(void *ptrobj)
 	p += 2 + 6*get16(p);
 	n = get16(p);
 	p += 2;
-	if (--n == 0)
+	/*
+	 * FIXED: LBA.EXE decrements the count before it tests it, so that
+	 * for a body of no group it scales the parents of 65535 groups,
+	 * past the body's own. One of 0 groups returns at once. Taken
+	 * from DotEmu's Android 1.06.
+	 */
+	if (n == 0 || --n == 0)
 		return;
 	do {
 		p += Group;
@@ -179,9 +185,8 @@ TranslateGroupe(uint8_t *g, LONG *mat, int32_t a, int32_t b, int32_t c)
  * The projection of AnimNuage: each point of List_Anim_Point moved by
  * the body's position into List_Point, in isometry or perspective, and
  * the screen's box widened to it. In isometry the depth is that of
- * the iso view, in 16 bits. In perspective a coordinate beyond 16 bits
- * unsigned becomes its high word or 7FFF, so that one below 0 becomes
- * -1, and the depth plus KFactor, if not above 0, 7FFFFFFF.
+ * the iso view, in 16 bits. In perspective a coordinate past 65535
+ * becomes 7FFF, and the depth plus KFactor, if not above 0, 7FFFFFFF.
  */
 static void
 project(void)
@@ -194,6 +199,14 @@ project(void)
 	s = (uint8_t*)List_Anim_Point;
 	d = (uint8_t*)List_Point;
 	n = NbPoints;
+	/*
+	 * FIXED: LBA.EXE counts the points in a word it decrements after
+	 * each, so that a body of none projects 65536, past List_Anim_Point
+	 * and List_Point. One of 0 points returns at once. Taken from
+	 * DotEmu's Android 1.06.
+	 */
+	if (n == 0)
+		return;
 	do {
 		x = (int16_t)get16(s) + (uint32_t)PosXWr;
 		y = (int16_t)get16(s + 2) + (uint32_t)PosYWr;
@@ -219,11 +232,19 @@ project(void)
 			 * keep the low 32.
 			 */
 			a = (uint32_t)((int64_t)(int32_t)x * LFactorX / k) + (uint32_t)XCentre;
-			v = a > 0xFFFF ? a >> 16 | 0x7FFF : a;
+			/*
+			 * FIXED: LBA.EXE compares the coordinate with 0FFFFh
+			 * unsigned, so that one below 0 is put at -1 and a face
+			 * crossing the screen's left or top edge is squashed
+			 * onto it. This and the Y below compare signed, a
+			 * coordinate below 0 keeping its 16 bits. Taken from
+			 * DotEmu's Android 1.06.
+			 */
+			v = (int32_t)a > 0xFFFF ? a >> 16 | 0x7FFF : a;
 			put16(d, v);
 			boxx(v);
 			a = (uint32_t)((int64_t)(int32_t)(0u - y) * LFactorY / k) + (uint32_t)YCentre;
-			v = a > 0xFFFF ? a >> 16 | 0x7FFF : a;
+			v = (int32_t)a > 0xFFFF ? a >> 16 | 0x7FFF : a;
 			put16(d + 2, v);
 			boxy(v);
 			put16(d + 4, (uint32_t)k > 0xFFFF ? (uint32_t)k >> 16 | 0x7FFF : (uint32_t)k);
@@ -260,6 +281,14 @@ ComputeAnimNormal(uint8_t *p)
 	n[2] = NormalZLight;
 	g = ListGroupe + 18;
 	k = NbGroupes;
+	/*
+	 * FIXED: LBA.EXE counts the groups in a word it decrements after
+	 * each, so that a body of no group lights the normals of 65536, past
+	 * its own and TabMat. One of 0 groups returns at once. Taken from
+	 * DotEmu's Android 1.06.
+	 */
+	if (k == 0)
+		return p;
 	do {
 		if (get16(g) != 0) {
 			compteur = get16(g);
@@ -313,7 +342,13 @@ AnimNuage(uint8_t *p)
 	RotateGroupe(p, TabMat, lAlpha, lBeta, lGamma);
 	g = p + Group;
 	n = NbGroupes - 1;
-	if (n != 0) {
+	/*
+	 * FIXED: LBA.EXE counts the groups after the first in a word it
+	 * decrements before it tests it, so that a body of no group turns
+	 * 65535 of them, past its own and TabMat. One of 0 groups turns the
+	 * first alone. Taken from DotEmu's Android 1.06.
+	 */
+	if (NbGroupes != 0 && n != 0) {
 		m = TabMat + Mat;
 		do {
 			type = get16(g + 8);
@@ -524,7 +559,7 @@ affline(uint8_t *e)
 
 /*
  * aff_E_SPHERE: a sphere, its radius projected in 16 bits, the screen's
- * box widened to it, its centre taken unsigned.
+ * box widened to it.
  */
 static void
 affsphere(uint8_t *e)
@@ -554,7 +589,13 @@ affsphere(uint8_t *e)
 		ScreenYmax = y + rr;
 	if ((int16_t)(y - rr) < ScreenYmin)
 		ScreenYmin = y - rr;
-	if (ComputeSphere(x, y, r) != 0)
+	/*
+	 * FIXED: LBA.EXE takes the sphere's centre unsigned, so that one left
+	 * of or above the screen counts as far right or below, and the
+	 * sphere is not drawn. The centre is taken signed. Taken from
+	 * DotEmu's Android 1.06.
+	 */
+	if (ComputeSphere((int16_t)x, (int16_t)y, r) != 0)
 		FillVertic(e[0], get16(e + 1));
 }
 
@@ -562,15 +603,15 @@ affsphere(uint8_t *e)
  * A polygon of the body into List_Entity at e, its points' x and y from
  * List_Point. Its depth, the greatest of its points'. Past it, or NULL
  * if it is turned away. A material from 9 (MAT_GOURAUD) is a Gouraud
- * fill, its points' intensities their normals' plus the colour's low
- * byte. 7 and 8 (MAT_FLAT) one colour plus a normal's intensity.
+ * fill, its points' intensities their normals' plus the colour's word.
+ * 7 and 8 (MAT_FLAT) are one colour plus a normal's intensity.
  */
 static uint8_t*
 poly(uint8_t **pp, uint8_t *e, int16_t *zmax)
 {
 	uint8_t *p, *first;
 	uint32_t c;
-	uint16_t w, off, col;
+	uint16_t w, off;
 	uint8_t mat, n;
 	int32_t a, b;
 
@@ -585,17 +626,33 @@ poly(uint8_t **pp, uint8_t *e, int16_t *zmax)
 		p += 2;
 		e += 4;
 		first = e;
-		col = c >> 16 & 0xFF;
-		do {
-			w = List_Normal[get16(p)];
-			put16(e, (w & 0xFF00) | (uint8_t)(w + col));
-			off = get16(p + 2);
-			p += 4;
-			put32(e + 2, get32(pt(List_Point, off)));
-			e += 6;
-			if ((int16_t)get16(pt(List_Point, off + 4)) > *zmax)
-				*zmax = get16(pt(List_Point, off + 4));
-		} while (--n != 0);
+		/*
+		 * FIXED: LBA.EXE counts a polygon's points in a byte it
+		 * decrements after each, so that a polygon of none reads 256,
+		 * past the body's end and List_Entity's. One of 0 points skips
+		 * to its facing test. Taken from DotEmu's Android 1.06.
+		 */
+		if (n != 0)
+			do {
+				w = List_Normal[get16(p)];
+				/*
+				 * FIXED: LBA.EXE adds the colour to the
+				 * intensity within the low byte (add dl, ch),
+				 * so that the shades of a face whose points
+				 * pass FFh run down through the whole palette,
+				 * and a point clipped between two such takes a
+				 * shade from its middle. This adds the colour's
+				 * whole word, its low byte the shade LBA.EXE
+				 * gives. Taken from DotEmu's Android 1.06.
+				 */
+				put16(e, w + (c >> 16));
+				off = get16(p + 2);
+				p += 4;
+				put32(e + 2, get32(pt(List_Point, off)));
+				e += 6;
+				if ((int16_t)get16(pt(List_Point, off + 4)) > *zmax)
+					*zmax = get16(pt(List_Point, off + 4));
+			} while (--n != 0);
 	} else {
 		if (mat >= 7) {
 			put16(e, (c & 0xFF00) | (uint8_t)(mat - 7));
@@ -607,14 +664,21 @@ poly(uint8_t **pp, uint8_t *e, int16_t *zmax)
 		}
 		e += 4;
 		first = e;
-		do {
-			off = get16(p);
-			p += 2;
-			put32(e + 2, get32(pt(List_Point, off)));
-			e += 6;
-			if ((int16_t)get16(pt(List_Point, off + 4)) > *zmax)
-				*zmax = get16(pt(List_Point, off + 4));
-		} while (--n != 0);
+		/*
+		 * FIXED: LBA.EXE counts a polygon's points in a byte it
+		 * decrements after each, so that a polygon of none reads 256,
+		 * past the body's end and List_Entity's. One of 0 points skips
+		 * to its facing test. Taken from DotEmu's Android 1.06.
+		 */
+		if (n != 0)
+			do {
+				off = get16(p);
+				p += 2;
+				put32(e + 2, get32(pt(List_Point, off)));
+				e += 6;
+				if ((int16_t)get16(pt(List_Point, off + 4)) > *zmax)
+					*zmax = get16(pt(List_Point, off + 4));
+			} while (--n != 0);
 	}
 	*pp = p;
 	b = (int16_t)(get16(first + 4) - get16(first + 16)) * (int16_t)(get16(first + 8) - get16(first + 2));

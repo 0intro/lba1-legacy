@@ -39,6 +39,17 @@ AffMask(int32_t num, int32_t x, int32_t y, void *bank)
 	w = m[0];
 	h = m[1];
 	m += 4;
+	/*
+	 * FIXED: LBA.EXE counts a mask's lines and a line's runs in bytes
+	 * it decrements before testing them, so that a mask of 0 lines
+	 * draws 256 and a line of 0 runs reads 256 runs from the bytes
+	 * after it. A mask of 0 lines returns at once, and a line of 0 runs
+	 * is passed over. Taken from DotEmu's Android 1.06, but for a line
+	 * of 0 runs, where DotEmu moves the lines after it left by the
+	 * mask's width or, clipped, copies the buffer of the line before.
+	 */
+	if (h == 0)
+		return;
 	x1 = x + w - 1;
 	y1 = y + h - 1;
 	if (x >= ClipXmin && y >= ClipYmin && x1 <= ClipXmax && y1 <= ClipYmax) {
@@ -46,6 +57,10 @@ AffMask(int32_t num, int32_t x, int32_t y, void *bank)
 		nl = h;
 		do {
 			nb = *m++;
+			if (nb == 0) {
+				d += Screen_X;
+				continue;
+			}
 			for (;;) {
 				d += *m;
 				if (--nb == 0) {
@@ -81,6 +96,10 @@ AffMask(int32_t num, int32_t x, int32_t y, void *bank)
 	do {
 		d = clip;
 		nb = *m++;
+		if (nb == 0) {
+			line += 640;
+			continue;
+		}
 		for (;;) {
 			n = *m;
 			memset(d, 0, n);

@@ -57,6 +57,14 @@ void	AddOptBox( WORD x0, WORD y0, WORD x1, WORD y1 )
 			return ;
 		}
 	}
+	/*
+	 * FIXED: LBA.EXE appends past the list's end once it is full. A box
+	 * is then dropped, here and in AddPhysBox. Taken from the Classic
+	 * 3.2.3.
+	 */
+#ifdef	FIXES
+	if( NbOptPhysBox >= (LONG)(sizeof(OptListBox)/sizeof(T_PHYSBOX)) )	return ;
+#endif
 	ptr->x0 = x0 ;
 	ptr->y0 = y0 ;
 	ptr->x1 = x1 ;
@@ -76,6 +84,9 @@ void	AddPhysBox( WORD x0, WORD y0, WORD x1, WORD y1 )
 	if( y1 > 479 )	y1 = 479 ;
 	if( x1 < x0 )	return ;
 	if( y1 < y0 )	return ;
+#ifdef	FIXES
+	if( NbPhysBox >= (LONG)(sizeof(NewListBox)/sizeof(T_PHYSBOX)) )	return ;
+#endif
 
 	ptr = &NewListBox[NbPhysBox] ;
 	ptr->x0 = x0 ;

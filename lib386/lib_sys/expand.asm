@@ -16,6 +16,14 @@ Expand	PROC USES ESI EDI EBX EBP,\
 					; et puis j'ai plus besoin de lire
 					; d'autre parametres... d'ou BP !
 					; BP = decomp size
+	; FIXED: LBA.EXE compares the count with zero after each item
+	; alone, so that a count of 0 expands some 2^32 bytes, past the
+	; stream and the destination. A count of 0 returns at once. Taken
+	; from DotEmu's Android 1.06.
+IFDEF	FIXES
+	or	ebp, ebp
+	jz	termine
+ENDIF
 boucle:
 	mov	dx, 8			; 1 octet info pour 8 data de 8 ou
 					; 16 bits (ca depend du bit...)

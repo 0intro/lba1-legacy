@@ -379,6 +379,14 @@ ComputePoly_A	proc	uses	edi ebx
 
 	movzx	ecx, word ptr [NbPolyPoints]
 
+		; FIXED: LBA.EXE frames a polygon of 0 points as one of 2^32,
+		; reading TabPoly past its end. One of 0 points returns 0 at
+		; once. Taken from DotEmu's Android 1.06.
+IFDEF	FIXES
+		or	ecx, ecx
+		jz	fin_poly
+ENDIF
+
 	mov	esi, offset TabPoly
 
 		mov	[offtabpoly  ], esi

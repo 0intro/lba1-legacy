@@ -18,6 +18,14 @@ Expand(void *src, void *dest, uint32_t count)
 	unsigned flags, w, n;
 	int i;
 
+	/*
+	 * FIXED: LBA.EXE compares the count with zero after each item
+	 * alone, so that a count of 0 expands some 2^32 bytes, past the
+	 * stream and the destination. A count of 0 returns at once. Taken
+	 * from DotEmu's Android 1.06.
+	 */
+	if (count == 0)
+		return;
 	s = src;
 	d = dest;
 	for (;;) {

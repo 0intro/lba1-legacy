@@ -23,6 +23,9 @@ void	Text( WORD x,WORD y,char *msk, ... )
 {
 //	ULONG	*pt = (ULONG *)&str_in ;
 	WORD	l ;
+#ifdef	FIXES
+	WORD	n ;
+#endif
 	char	c ;
 	char	str[256] ;
 	char	tempo[34] ;
@@ -102,14 +105,45 @@ void	Text( WORD x,WORD y,char *msk, ... )
 
 	ptr = str ;
 
+	/*
+	 * FIXED: Text gives AffString the bytes past the string's end,
+	 * past str by up to the clip's left side over 8, where all its
+	 * characters lie left of that side, and with %F copies a box of
+	 * no width where the clip's right side leaves no character. Where
+	 * the clip leaves no character, Text returns at once, and l counts
+	 * the characters it leaves, which %F copies. Taken from DotEmu's
+	 * Android 1.06.
+	 */
 	if( x + l*8 - 1 > ClipXmax )
 	{
+#ifdef	FIXES
+		n = (ClipXmax-x)/8 ;
+		if( n == 0 )
+		{
+			va_end(ap);
+			return ;
+		}
+		ptr[ n ] = 0 ;
+		l = n ;
+#else
 		ptr[ (ClipXmax-x)/8 ] = 0 ;
+#endif
 	}
 
 	if( x < ClipXmin )
 	{
+#ifdef	FIXES
+		n = (ClipXmin-x)/8 ;
+		if( l <= n )
+		{
+			va_end(ap);
+			return ;
+		}
+		ptr += n ;
+		l -= n ;
+#else
 		ptr += (ClipXmin-x)/8 ;
+#endif
 		x += ClipXmin-x ;
 	}
 
@@ -117,7 +151,11 @@ void	Text( WORD x,WORD y,char *msk, ... )
 
 	if( flagflip )
 	{
+#ifdef	FIXES
+		CopyBlockPhys( x,y, x+l*8-1, y+7 ) ;
+#else
 		CopyBlockPhys( x,y, x+strlen(ptr)*8-1, y+7 ) ;
+#endif
 	}
 	va_end(ap);
 }

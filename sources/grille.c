@@ -27,6 +27,11 @@ UBYTE	GetColBrick( WORD xm, WORD ym, WORD zm ) ;
 ULONG	CreateMaskGph( UBYTE *pt, UBYTE *dest )	;
 /*-------------------------------------------------------------------------*/
 
+#ifdef	FIXES
+extern	UBYTE	gridfixes[]	;/* the cells CopyMapToCube writes, gridfix.c */
+extern	UBYTE	gridlayouts[]	;/* the layouts InitGrille names, gridfix.c */
+#endif
+
 LONG	StartXCube = 0	;
 LONG	StartYCube = 0	;
 LONG	StartZCube = 0	;
@@ -258,6 +263,24 @@ LONG	InitGrille( UWORD numcube )
 	Load_HQR( NameHqrGri, BufMap, numcube )		;
 //	Mshrink( BufMap, sizegri )			;
 
+	/*
+	 * FIXED: the North American CD's grid 72 names in its last 32
+	 * bytes the layouts its own cells use, and the European cells
+	 * that CopyMapToCube writes at the ends of its ramp use two
+	 * more, 29 and 56, whose bricks LoadUsedBrick would leave
+	 * unloaded. Each layout gridlayouts brings to the grid is named
+	 * in its bits before LoadUsedBrick reads them. Taken from the
+	 * European CD.
+	 */
+#ifdef	FIXES
+	for ( pt = gridlayouts ; *pt != 255 ; pt += 2 )
+	{
+		if ( pt[0] != numcube )	continue	;
+
+		BufMap[sizegri-32+(pt[1]>>3)] |= 1<<(7-(pt[1]&7)) ;
+	}
+#endif
+
 	sizebll = Size_HQR( NameHqrBll, numcube )	;/*	BLL	*/
 	HQM_Alloc( sizebll, &TabBlock ) ;
 	CHECK_MEMORY
@@ -454,6 +477,9 @@ void	CopyMapToCube()
 	UBYTE	*pts, *ptd, *ptb	;
 	LONG	x, y, z, blk, pos, nb	;
 	LONG	flg=1			;
+#ifdef	FIXES
+	LONG	i, n			;
+#endif
 
 /*-------------- Copy -------------------------*/
 	for ( z = 0 ; z < SIZE_CUBE_Z ; z++ )
@@ -465,6 +491,64 @@ void	CopyMapToCube()
 			DecompColonne( pts, ptd )		;
 		}
 	}
+
+	/*
+	 * FIXED: three faults of the scenes' grids. In scene 5 the
+	 * hall's plants and the chest are steps over its low walls,
+	 * which Twinsen jumps into the next room. In scene 8 the border
+	 * rocks are a stair to the top of the border, which runs to the
+	 * map's open edge, where he falls to his death. In scene 43 the
+	 * grate to the sewers, which rides down by day too, lies a walk
+	 * from the lift room's door, a way to the museum's treasures
+	 * that passes over the red card, which no one gives once they
+	 * are taken, so that FunFrock's headquarters stay shut.
+	 * Invisible cells cap the plants, the chest and the rocks and
+	 * raise the walls and the balustrades, and nine barrels about
+	 * the grate close its direct ways, each column written where
+	 * the grid holds the cells it replaces, so that a grid fixed
+	 * already keeps its own. A patch laid over the scene keeps
+	 * them, its empty runs leaving the cube's cells. Taken from the
+	 * PlayStation version, SLES_006.98.
+	 */
+	/*
+	 * FIXED: scene 109's upper level ends at a ledge over a trench,
+	 * off which Twinsen walking south drops into the trench and,
+	 * walking on, into the pool, where he drowns. The concrete
+	 * block east of the ledge runs west over its edge, its top a
+	 * cell above the ledge, so that its wall stops him there, five
+	 * columns written where the grid holds the cells they replace.
+	 * Taken from the PlayStation version, SLES_006.98.
+	 */
+	/*
+	 * FIXED: the North American CD's grids leave two places where
+	 * Twinsen falls to his death: a hole in scene 5's floor by the
+	 * house's south wall and, in DotEmu's DOS copy too, an open
+	 * corner in scene 76's courtyard. The European CD's cells,
+	 * Adeline's later ones, close them, put slopes at the ends of
+	 * scene 72's ramp and mend four columns of scenes 4 and 39,
+	 * each column written where the grid holds the North American
+	 * cells. Taken from the European CD.
+	 */
+#ifdef	FIXES
+	for ( pts = gridfixes ; *pts != 255 ; pts += 5+n*4 )
+	{
+		n = pts[4]			;
+		if ( pts[0] != NumCube )	continue	;
+
+		ptd = GetAdrColonneCube( pts[1], pts[2] ) + pts[3]*2 ;
+
+		for ( i = 0 ; i < n*2 ; i++ )
+		{
+			if ( ptd[i] != pts[5+i] )	break	;
+		}
+		if ( i < n*2 )	continue	;
+
+		for ( i = 0 ; i < n*2 ; i++ )
+		{
+			ptd[i] = pts[5+n*2+i]	;
+		}
+	}
+#endif
 }
 /*──────────────────────────────────────────────────────────────────────────*/
 

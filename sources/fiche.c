@@ -164,6 +164,14 @@ void	GereAnimAction( T_OBJET *ptrobj, WORD numobj )
 	anim = ptrobj->Anim ;
 
 	ptrc = ptrobj->PtrAnimAction ;
+	/*
+	 * FIXED: LBA.EXE walks the action list of an animation that has none,
+	 * from address 0, when HitObj calls this for an actor hit again. Return
+	 * at once. Taken from LbaWin 0.7.3.
+	 */
+#ifdef	FIXES
+	if( ptrc == 0 )	return ;
+#endif
 
 	nb = *ptrc++ ;
 	for( n=0; n<nb; n++ )

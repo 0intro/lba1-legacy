@@ -184,6 +184,97 @@ if( n==5 )
 		ListZone = (T_ZONE*)PtrSce ;
 		PtrSce += NbZones * 12 * 2 ;
 
+		/*
+		 * FIXED: four faults of the scenes' data. Scene 9's hidden
+		 * mine, actor 21, lies by the way in from scene 62, so that
+		 * Twinsen may not get in there. Scene 12's door halves,
+		 * actors 28 and 29, overlap by 33, so that the fort's door
+		 * may not open. Scene 77's ladder, zone 6, ends 28 short of
+		 * Tippet's secret passage. Scene 105's zone 11 takes zone 7's
+		 * number 3, so that the action key by the safe runs the
+		 * hero's sequence of zone 3, and Twinsen is stuck. The mine
+		 * is moved, actor 29 put at Z 1795, the ladder ended at
+		 * Z 3616 and zone 11 numbered 50. Taken from LbaWin 0.7.9
+		 * (the doors, the zone) and 0.8.0 (the mine, the ladder).
+		 */
+#ifdef	FIXES
+		switch( numscene )
+		{
+			case 9:
+				ListObjet[21].OldPosX = ListObjet[21].PosObjX = 6912 ;
+				ListObjet[21].OldPosZ = ListObjet[21].PosObjZ = 768 ;
+				/*
+				 * FIXED: scene 9's actor 11, the snow bunker's
+				 * gun, stands 176 too high, its barrel showing
+				 * above the bunker's roof as it turns. It is put
+				 * at Y 1024. Taken from the PlayStation version,
+				 * SLES_006.98.
+				 */
+				ListObjet[11].OldPosY = ListObjet[11].PosObjY = 1024 ;
+				break ;
+
+			case 12:
+				ListObjet[29].OldPosZ = ListObjet[29].PosObjZ = 1795 ;
+				/*
+				 * FIXED: scene 12's actor 18, the turret's gun,
+				 * stands 128 above its slot's floor, its barrel
+				 * against the dome over the slot. It is put on
+				 * the floor, at Y 2048. Taken from the
+				 * PlayStation version, SLES_006.98.
+				 */
+				ListObjet[18].OldPosY = ListObjet[18].PosObjY = 2048 ;
+				break ;
+
+			case 20:
+				/*
+				 * FIXED: scene 20's zone 4, a bonus, lies wholly
+				 * over a cupboard that a jump does not top, so
+				 * that Twinsen may not get into it. Its X1 is put
+				 * at 24305, the floor beside the cupboard. Taken
+				 * from DotEmu's Android 1.06.
+				 */
+				PokeUWord( (UBYTE*)ListZone + 4*sizeof(T_ZONE)
+					   + offsetof(T_ZONE, X1), 24305 ) ;
+				break ;
+
+			case 42:
+				/*
+				 * FIXED: scene 42's actor 22, the rabbibunny who
+				 * greets Twinsen coming from the museum, stands
+				 * on the harbour building's roof, and his first
+				 * walk takes him off its edge, a fall of 1792.
+				 * He is put on the walkway before the arch.
+				 * Taken from the PlayStation version,
+				 * SLES_006.98.
+				 */
+				ListObjet[22].OldPosY = ListObjet[22].PosObjY = 3584 ;
+				ListObjet[22].OldPosZ = ListObjet[22].PosObjZ = 3508 ;
+				break ;
+
+			case 58:
+				/*
+				 * FIXED: scene 58's actor 1, Julia, has an
+				 * armour of 1, so that Twinsen's blows wear her
+				 * life down and kill her, gone until the scene
+				 * loads again. Her armour is put at 51, above
+				 * his strongest blow. Taken from the PlayStation
+				 * version, SLES_006.98.
+				 */
+				ListObjet[1].Armure = 51 ;
+				break ;
+
+			case 77:
+				PokeUWord( (UBYTE*)ListZone + 6*sizeof(T_ZONE)
+					   + offsetof(T_ZONE, Z1), 3616 ) ;
+				break ;
+
+			case 105:
+				PokeUWord( (UBYTE*)ListZone + 11*sizeof(T_ZONE)
+					   + offsetof(T_ZONE, Num), 50 ) ;
+				break ;
+		}
+#endif
+
 // point track: TRACK
 
 		NbBrickTrack = GET_WORD ;

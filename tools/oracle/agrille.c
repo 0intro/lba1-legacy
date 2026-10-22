@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include "abi.h"
 #include "asmoracle.h"
 
 /*
@@ -134,7 +133,7 @@ testgrille(void)
 {
 	static uint8_t col[Ncol], ad[Ncol], cd[Ncol];
 	uintptr_t full, wcb, code, adr, m2s, dec, mix;
-	int32_t x, y, z, m, ra, rc, a[4];
+	int32_t x, y, z, m, ra, rc;
 	uint8_t *p;
 	char args[128];
 	int r, k;
@@ -164,14 +163,7 @@ testgrille(void)
 		if (rndn(4) == 0)
 			m = 256*rndn(12) + rndr(-1, 1);
 		snprintf(args, sizeof args, "%d %d %d %d", x, y, z, m);
-		a[0] = x;
-		a[1] = y;
-		a[2] = z;
-		a[3] = m;
-		ra = abicall(full, 4, a);
-		/* the assembly's returns with EBX changed for a brick above, which the C keeps (grille_a.c) */
-		abibroke &= ~1;
-		abiok("WorldColBrickFull");
+		ra = acall(full, 4, x, y, z, m);
 		rc = WorldColBrickFull(x, y, z, m);
 		if (ra != rc) {
 			fail("WorldColBrickFull %s: ours %#x, the assembly's %#x", args, rc, ra);
@@ -244,3 +236,55 @@ testgrille(void)
 	printf("grille: %d rounds\n", r);
 }
 
+/*
+ * WorldColBrickFull at positions in, on the edges of and outside the map,
+ * under heights from -300 to 3000: LBA.EXE's assembly returned AL over a
+ * coordinate's upper bytes outside the map, and for a height of 0 or less
+ * tested every cell up to the top. The build's must give ours and leave
+ * the map coordinates ours.
+ */
+static int
+fixcolfull(void)
+{
+	uintptr_t full;
+	int32_t a[4], rc, ra;
+	char args[128];
+	int r, k, out, low;
+
+	full = lookup("WorldColBrickFull");
+	for (k = 0; k < 3; k++)
+		amap[k] = (uint8_t*)lookup(mapnames[k]);
+	scene();
+	BufCube = cube;
+	TabBlock = blocks;
+	put32((uint8_t*)lookup("BufCube"), (uint32_t)(uintptr_t)cube);
+	put32((uint8_t*)lookup("TabBlock"), (uint32_t)(uintptr_t)blocks);
+	out = low = 0;
+	for (r = 0; r < Rounds; r++) {
+		a[0] = rndr(-3000, 64*512+3000);
+		a[1] = rndr(-2000, 25*256+2000);
+		a[2] = rndr(-3000, 64*512+3000);
+		a[3] = rndn(2) == 0 ? rndr(-300, 0) : rndr(-300, 3000);
+		snprintf(args, sizeof args, "%d %d %d %d", a[0], a[1], a[2], a[3]);
+		ra = acall(full, 4, a[0], a[1], a[2], a[3]);
+		rc = WorldColBrickFull(a[0], a[1], a[2], a[3]);
+		if (ra != rc) {
+			fail("fixes: WorldColBrickFull %s: ours %#x, the assembly's %#x", args, rc, ra);
+			return 0;
+		}
+		if (!samemap("fixes: WorldColBrickFull", args))
+			return 0;
+		out += XMap >= 64 || ZMap >= 64 || YMap <= -1;
+		low += a[3] <= 0;
+	}
+	printf("fixes: colfull, %d positions, %d outside the map, %d under a height of 0 or less, the same\n",
+		r, out, low);
+	return 1;
+}
+
+/* grille_a's fixes (asmoracle.c's fixes). */
+int
+fixgrille(void)
+{
+	return fixcolfull();
+}

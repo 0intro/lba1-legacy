@@ -60,6 +60,18 @@ CopyMask		proc	uses esi edi ebx ebp,\
 			xor	edx, edx
 			mov	dl, [ebp]	; Delta X
 			mov	al, [ebp+1]	; Nb Line ( Delta Y )
+			; FIXED: LBA.EXE counts a mask's lines and a line's runs in
+			; bytes it decrements before testing them, so that a mask
+			; of 0 lines copies 256 and a line of 0 runs reads 256 runs
+			; from the bytes after it. Copy nothing of a mask of 0
+			; lines, and pass over a line of 0 runs at NextLine and
+			; start. Taken from DotEmu's Android 1.06, but for a whole
+			; line of 0 runs, where DotEmu moves the lines after it
+			; left by the mask's width.
+IFDEF	FIXES
+			test	al, al
+			jz	EndMask
+ENDIF
 			add	ebp, 4		; Jump Hot X & Hot Y
 
 ;----------------------------------------------- Test Clipping
@@ -98,6 +110,10 @@ CopyMask		proc	uses esi edi ebx ebp,\
 ;----------------------------------------------- Init NbBlock for this line
 NextLine:		mov	bl, [ebp]	; BL = Nb Block for this line
 			inc	ebp
+IFDEF	FIXES
+			test	bl, bl
+			jz	NoRun
+ENDIF
 ;----------------------------------------------- Manage One Line
 SameLine:		mov	cl, [ebp]      	; Nb Zero to Jump
 			add	edi, ecx	; Incrust on Log
@@ -130,11 +146,24 @@ EndBlock:
 			dec	bh		; NbLine--
 			jne	NextLine	; Next Line
 			ret
+IFDEF	FIXES
+NoRun:			add	edi, Screen_X	; EDI and ESI at the line's start
+			add	esi, Screen_X
+			dec	bh		; NbLine--
+			jne	NextLine	; Next Line
+			ret
+ENDIF
 
 ;-------------------------------------------------------------------- Clipping
 ;		Graph : ( EBX, ECX ) ( EDX, EAX )
 
 ClippingMask:
+			; FIXED: LBA.EXE copies from Screen when clipped, whatever
+			; ptsrc is. Keep ptsrc, which ESI holds, for the copy.
+			; Taken from DotEmu's Android 1.06.
+IFDEF	FIXES
+			mov	[save_esi], esi
+ENDIF
 			cmp	ebx, ClipXmax
 			jg      EndMask
 			cmp	ecx, ClipYmax
@@ -209,7 +238,11 @@ PasDroit:	; ESI debut data Y ok pas X
 
 		mov	eax, edx		; good Y offset screen
 		add	edx, Log
+IFDEF	FIXES
+		add	eax, [save_esi]		; ptsrc
+ELSE
 		add	eax, Screen		; Screen
+ENDIF
 
 		sub	ebx, ecx
 
@@ -242,6 +275,10 @@ start:
 		mov	edi, edx		; new pos screen
 
 		mov	bl, [ebp]		; nb blocs
+IFDEF	FIXES
+		test	bl, bl
+		jz	aplus2
+ENDIF
 
 l0:		inc	ebp
 		dec	bl
@@ -265,9 +302,19 @@ l0:		inc	ebp
 		ret
 rptj:
 						; cl = - nb pix to jump
+		; FIXED: LBA.EXE compares the pixels left to draw with a run's
+		; pixels to leave signed, here and at okjump, so that from 128
+		; on a run is clipped wrong. Compare them unsigned. Taken from
+		; DotEmu's Android 1.06.
+IFDEF	FIXES
+		neg	cl
+		sub	bh, cl			; reste à ecrire
+		jbe	aplus
+ELSE
 		add	bh, cl			; reste à ecrire
 		jle	aplus
 		neg	cl
+ENDIF
 		jmp	okdraw2
 
 rgtc:
@@ -285,7 +332,11 @@ okjump:		inc	ebp
 		jz	aplus2
 		mov	cl, [ebp]		; nb pix to jump
 		sub	bh, cl			; reste à ecrire
+IFDEF	FIXES
+		jbe	aplus			; fini
+ELSE
 		jle	aplus			; fini
+ENDIF
 okdraw2:
 		add	edi, ecx
 		add	esi, ecx

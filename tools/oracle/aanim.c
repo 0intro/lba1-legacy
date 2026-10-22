@@ -550,3 +550,174 @@ out:
 	free(aarena);
 	free(carena);
 }
+
+/* a body for CopyInterAnim: animated, 8 bytes of information, np points, ng groups */
+static void
+copybody(uint8_t *b, uint32_t len, uint32_t np, uint32_t ng)
+{
+	uint8_t *p;
+
+	fill(b, len);
+	put16(b, INFO_ANIM);
+	put16(b + 14, 8);
+	p = b + 24;
+	put16(p, np);
+	p += 2 + 6*np;
+	put16(p, ng);
+}
+
+
+enum
+{
+	Many = 65536,	/* the groups LBA.EXE moved for a count of 0 */
+	Countbody = 24 + 2 + 6*8 + 2 + Group*Many + 64,
+	Countanim = 8 + 2*(8 + 8*Many) + 64,
+};
+
+/* a body of np points and ng groups, as copybody makes, its frame none */
+static void
+countbody(uint8_t *b, uint32_t np, uint32_t ng)
+{
+	copybody(b, Countbody, np, ng);
+	put32(b + Info, 0);
+}
+
+/* an animation of 2 frames of ng groups, each lasting time */
+static void
+countanim(uint8_t *a, uint32_t ng, uint32_t time)
+{
+	uint32_t i;
+
+	fill(a, Countanim);
+	put16(a, 2);
+	put16(a + 2, ng);
+	put16(a + 4, 0);
+	for (i = 0; i < 2; i++)
+		put16(a + 8 + (8*ng + 8)*i, time);
+}
+
+/* p_anim's globals of the frame's steps and turns, the assembly's names and ours */
+static char *countnames[] = {
+	"AnimStepX", "AnimStepY", "AnimStepZ", "AnimMasterRot",
+	"AnimStepAlpha", "AnimStepBeta", "AnimStepGamma",
+};
+static int16_t *countours[] = {
+	&AnimStepX, &AnimStepY, &AnimStepZ, &AnimMasterRot,
+	&AnimStepAlpha, &AnimStepBeta, &AnimStepGamma,
+};
+
+/* whether ours and the assembly's are the same */
+static int
+countvars(void)
+{
+	uint32_t i;
+
+	for (i = 0; i < nelem(countnames); i++)
+		if (memcmp((void*)lookup(countnames[i]), countours[i], 2) != 0)
+			return 0;
+	return 1;
+}
+
+/* the assembly's made ours, which the cases before may have left apart */
+static void
+countsync(void)
+{
+	uint32_t i;
+
+	for (i = 0; i < nelem(countnames); i++)
+		memcpy((void*)lookup(countnames[i]), countours[i], 2);
+}
+
+/*
+ * SetAnimObjet, SetInterAnimObjet and SetInterAnimObjet2 (on the way to
+ * the frame and there), StockInterAnim and CopyInterAnim, for bodies and
+ * animations of which one has no group: LBA.EXE's assembly moved 65536
+ * groups for a count of 0 (65535 after the first on the way to a frame),
+ * over the body and past it. The build's must move none, as ours: the
+ * bodies, the frames and the globals the same, the frame a body comes
+ * from aside, its address in the one and its offset in the other.
+ */
+static int
+fixcount(void)
+{
+	static uint8_t body[2][Countbody], other[2][Countbody], anim[2][Countanim];
+	static char *names[] = {
+		"SetAnimObjet", "SetInterAnimObjet", "SetInterAnimObjet2", "StockInterAnim", "CopyInterAnim",
+	};
+	uintptr_t f[nelem(names)];
+	uint8_t *keep;
+	uint32_t *atimer, time, np, nb, na;
+	int32_t rc, ra, frame;
+	int r, op, there;
+
+	for (op = 0; op < (int)nelem(names); op++)
+		f[op] = lookup(names[op]);
+	atimer = (uint32_t*)lookup("TimerRef");
+	keep = carena;
+	carena = body[0];
+	countsync();
+	for (r = 0; r < 200; r++) {
+		op = rndn(nelem(names));
+		np = rndr(1, 8);
+		nb = op >= 3 || rndn(2) == 0 ? 0 : rndr(1, 5);
+		na = nb == 0 ? rndr(0, 5) : 0;
+		time = rndr(2, 100);
+		there = rndn(2);
+		countbody(body[0], np, nb);
+		memcpy(body[1], body[0], Countbody);
+		countanim(anim[0], na, time);
+		memcpy(anim[1], anim[0], Countanim);
+		countbody(other[0], rndr(1, 8), op == 4 ? (uint32_t)rndr(1, 5) : 0);
+		memcpy(other[1], other[0], Countbody);
+		TimerRef = *atimer = there ? 2*time + rndn(100) : time + rndn(time);
+		frame = rndn(2);
+		rc = ra = 0;
+		switch (op) {
+		case 0:
+			acall(f[op], 3, frame, (int32_t)(uintptr_t)anim[1], (int32_t)(uintptr_t)body[1]);
+			SetAnimObjet(frame, anim[0], body[0]);
+			break;
+		case 1:
+			ra = acall(f[op], 3, frame, (int32_t)(uintptr_t)anim[1], (int32_t)(uintptr_t)body[1]);
+			rc = SetInterAnimObjet(frame, anim[0], body[0]);
+			break;
+		case 2:
+			ra = acall(f[op], 3, frame, (int32_t)(uintptr_t)anim[1], (int32_t)(uintptr_t)body[1]);
+			rc = SetInterAnimObjet2(frame, anim[0], body[0]);
+			break;
+		case 3:
+			ra = (int16_t)acall(f[op], 2, (int32_t)(uintptr_t)other[1], (int32_t)(uintptr_t)body[1]);
+			rc = StockInterAnim(other[0], body[0]);
+			break;
+		case 4:
+			acall(f[op], 2, (int32_t)(uintptr_t)body[1], (int32_t)(uintptr_t)other[1]);
+			CopyInterAnim(body[0], other[0]);
+			break;
+		}
+		if (!abiok("fixes: p_anim's count of 0"))
+			return 0;
+		memset(body[0] + Info, 0, 4);
+		memset(body[1] + Info, 0, 4);
+		if (op == 4) {
+			memset(other[0] + Info, 0, 4);
+			memset(other[1] + Info, 0, 4);
+		}
+		if (rc != ra || memcmp(body[0], body[1], Countbody) != 0 || memcmp(other[0], other[1], Countbody) != 0
+		|| memcmp(anim[0], anim[1], Countanim) != 0 || !countvars()) {
+			fail("fixes: %s of a body of %u groups, an animation of %u, frame %d, %s it: ours %d, the"
+				" assembly's %d, the bodies, frames or globals apart", names[op], nb, na, frame,
+				there ? "at" : "on the way to", rc, ra);
+			return 0;
+		}
+	}
+	carena = keep;
+	printf("fixes: count, %d calls on bodies or animations of no group, none moved\n", r);
+	return 1;
+}
+
+/* p_anim's fixes (asmoracle.c's fixes). */
+int
+fixanim(void)
+{
+	return fixcount();
+}

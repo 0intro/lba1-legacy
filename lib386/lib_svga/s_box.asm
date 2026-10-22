@@ -64,6 +64,15 @@ OkNoClip:
 			mov	edx, ecx		; Init Delta X
 			sub	edx, eax
 			inc	edx
+			; FIXED: LBA.EXE fills 2^32 lines on a height of 0 or
+			; less, and faults on a negative width. Fill none. Taken
+			; from DotEmu's Android 1.06.
+IFDEF	FIXES
+			or	ebx, ebx
+			jle	Box_End
+			or	edx, edx
+			jle	Box_End
+ENDIF
 ;----------------------
 			mov	al, byte ptr [Col]
 			mov	ah, al			; Init Color

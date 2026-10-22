@@ -262,11 +262,22 @@ void	FadeToBlack( UBYTE *ptrpal )
 
 	if( !FlagBlackPal )
 	{
+		/*
+		 * FIXED: LBA.EXE lets the clock run through the fade, so that
+		 * the world moves on at once by the fade's time after it. This
+		 * holds the clock. Taken from LbaWin 0.8.0.
+		 */
+#ifdef	FIXES
+		SaveTimer() ;
+#endif
 		for( n=100; n>=0; n-=2 )
 		{
 			Vsync() ;
 			FadePal( 0,0,0, ptrpal, n ) ;
 		}
+#ifdef	FIXES
+		RestoreTimer() ;
+#endif
 	}
 	FlagBlackPal = TRUE ;
 }
@@ -276,6 +287,15 @@ void	WhiteFade()
 	UBYTE	workpal[768] ;
 	LONG	n,m ;
 
+	/*
+	 * FIXED: LBA.EXE keeps FlagBlackPal through this fade, which ends
+	 * lit, so that after a fade to black the flag keeps saying black
+	 * and the next FadeToBlack passes by, the screen cut to black. It
+	 * is cleared. Taken from the Classic 3.2.3.
+	 */
+#ifdef	FIXES
+	FlagBlackPal = FALSE ;
+#endif
 	for( n=0; n<=255; n++ )
 	{
 		memset( workpal, n, 768 ) ;
@@ -288,22 +308,51 @@ void	FadeWhiteToPal( UBYTE *ptrpal )
 {
 	LONG	n ;
 
+	/*
+	 * FIXED: LBA.EXE keeps FlagBlackPal through this fade, which ends
+	 * lit, so that after a fade to black the flag keeps saying black
+	 * and the next FadeToBlack passes by, the screen cut to black. It
+	 * is cleared. Taken from the Classic 3.2.3.
+	 */
+#ifdef	FIXES
+	FlagBlackPal = FALSE ;
+	/*
+	 * FIXED: LBA.EXE lets the clock run through the fade, so that the
+	 * world moves on at once by the fade's time after it. This holds
+	 * the clock. Taken from LbaWin 0.8.0.
+	 */
+	SaveTimer() ;
+#endif
 	for( n=0; n<=100; n+=1 )
 	{
 		Vsync() ;
 		FadePal( 255,255,255, ptrpal, n ) ;
 	}
+#ifdef	FIXES
+	RestoreTimer() ;
+#endif
 }
 
 void	FadeToPal( UBYTE *ptrpal )
 {
 	LONG	n ;
 
+	/*
+	 * FIXED: LBA.EXE lets the clock run through the fade, so that the
+	 * world moves on at once by the fade's time after it. This holds
+	 * the clock. Taken from LbaWin 0.8.0.
+	 */
+#ifdef	FIXES
+	SaveTimer() ;
+#endif
 	for( n=0; n<=100; n+=2 )
 	{
 		Vsync() ;
 		FadePal( 0,0,0, ptrpal, n ) ;
 	}
+#ifdef	FIXES
+	RestoreTimer() ;
+#endif
 	FlagBlackPal = FALSE ;
 }
 
@@ -334,28 +383,73 @@ void	FadePalToPal( UBYTE *ptrpal, UBYTE *ptrpal1 )
 		Vsync() ;
 		Palette( workpal ) ;
 	}
+	/*
+	 * FIXED: LBA.EXE keeps FlagBlackPal through this fade, which ends
+	 * lit, so that after a fade to black the flag keeps saying black
+	 * and the next FadeToBlack passes by, the screen cut to black. It
+	 * is cleared. Taken from the Classic 3.2.3.
+	 */
+#ifdef	FIXES
+	FlagBlackPal = FALSE ;
+#endif
 }
 
 void	FadeToRed( UBYTE *ptrpal )
 {
 	LONG	n ;
 
+	/*
+	 * FIXED: LBA.EXE lets the clock run through the fade, so that the
+	 * world moves on at once by the fade's time after it. This holds
+	 * the clock. Taken from LbaWin 0.8.0.
+	 */
+#ifdef	FIXES
+	SaveTimer() ;
+#endif
 	for( n=100; n>=0; n-=2 )
 	{
 		Vsync() ;
 		FadePal( 255,0,0, ptrpal, n ) ;
 	}
+#ifdef	FIXES
+	RestoreTimer() ;
+	/*
+	 * FIXED: LBA.EXE keeps FlagBlackPal through this fade, which ends
+	 * lit, so that after a fade to black the flag keeps saying black
+	 * and the next FadeToBlack passes by, the screen cut to black. It
+	 * is cleared. Taken from the Classic 3.2.3.
+	 */
+	FlagBlackPal = FALSE ;
+#endif
 }
 
 void	FadeRedToPal( UBYTE *ptrpal )
 {
 	LONG	n ;
 
+	/*
+	 * FIXED: LBA.EXE lets the clock run through the fade, so that the
+	 * world moves on at once by the fade's time after it. This holds
+	 * the clock. Taken from LbaWin 0.8.0.
+	 */
+#ifdef	FIXES
+	SaveTimer() ;
+#endif
 	for( n=0; n<=100; n+=2 )
 	{
 		Vsync() ;
 		FadePal( 255,0,0, ptrpal, n ) ;
 	}
+#ifdef	FIXES
+	RestoreTimer() ;
+	/*
+	 * FIXED: LBA.EXE keeps FlagBlackPal through this fade, which ends
+	 * lit, so that after a fade to black the flag keeps saying black
+	 * and the next FadeToBlack passes by, the screen cut to black. It
+	 * is cleared. Taken from the Classic 3.2.3.
+	 */
+	FlagBlackPal = FALSE ;
+#endif
 }
 
 /*══════════════════════════════════════════════════════════════════════════*

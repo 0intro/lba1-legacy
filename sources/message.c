@@ -181,6 +181,10 @@ static	UBYTE   *PtText=0L	;
 static  LONG    SizeText        ;
 
 UWORD   *BufOrder = 0L  	;
+#ifdef	FIXES
+extern	UBYTE	textfixes[]	;/* the texts InitDial replaces, textfix.c */
+extern	char	*fixedtexts[]	;/* the texts it writes in their place */
+#endif
 
 LONG    FlagSpeak=FALSE	        	;//	cf InitLanguage
 //------------------------------
@@ -254,6 +258,58 @@ void	TimeBar( ULONG max, ULONG val )
 
 void	InitLanguage()
 {
+#ifdef	FIXES
+	UBYTE	*string ;
+	LONG	n ;
+
+	/*
+	 * FIXED: LBA.EXE copies Def_ReadString's answer untested, so that a
+	 * lba.cfg lacking Language, LanguageCD, FlagKeepVoice or
+	 * FlagDisplayText makes it copy from address 0.
+	 * Each answer is tested, a missing key leaving its setting as it
+	 * was, its default. Taken from LbaWin 0.8.1.
+	 */
+	string = Def_ReadString( PathConfigFile, "Language" ) ;
+
+	if( string )
+	{
+		for( n=0; n<NB_LANGUAGES; n++ )
+		{
+			if( !stricmp( string, TabLanguage[n] ) )
+			{
+				Language = n 	;
+				break		;
+			}
+		}
+	}
+
+#ifdef	CDROM
+	string = Def_ReadString( PathConfigFile, "LanguageCD" ) ;
+
+	if( string )
+	{
+		FlagSpeak = FALSE	;
+
+		for( n=0; n<NB_LANGUAGES; n++ )
+		{
+			if( !stricmp( string, TabLanguage[n] ) )
+			{
+				LanguageCD = n	;
+				FlagSpeak = TRUE;
+				break		;
+			}
+		}
+	}
+
+	if ( !Wave_Driver_Enable ) FlagSpeak = FALSE	;// No Sound PC
+
+	string = Def_ReadString( PathConfigFile, "FlagKeepVoice" ) ;
+	if ( string AND !strcmpi( string, "ON" ))	FlagKeepVoice = 1	;
+
+	string = Def_ReadString( PathConfigFile, "FlagDisplayText" ) ;
+	if ( string AND !strcmpi( string, "OFF" ))	FlagDisplayText = 0	;
+#endif
+#else
 	UBYTE	string[256] ;
 	LONG	n ;
 
@@ -292,6 +348,7 @@ void	InitLanguage()
 	strcpy( string, Def_ReadString( PathConfigFile, "FlagDisplayText" ) ) ;
 	if ( !strcmpi( string, "OFF" ))	FlagDisplayText = 0	;
 	else				FlagDisplayText = 1	;// default
+#endif
 #endif
 }
 
@@ -849,6 +906,11 @@ void    InitDial( LONG file )
 	LONG offset0	;
 	LONG offset1	;
 	LONG code	;
+#ifdef	FIXES
+	UBYTE	*ptf	;
+	ULONG	crc	;
+	LONG	n, k, end ;
+#endif
 
 	if ( LastFileInit == file )	return	;
 	LastFileInit = file			;
@@ -891,6 +953,57 @@ void    InitDial( LONG file )
 			  ( Language*MAX_TEXT_LANG*2)+(file*2)+1) ;
 
 
+#endif
+
+	/*
+	 * FIXED: the North American CD's texts, which DotEmu's DOS copy
+	 * holds too, are Adeline's before the European CD's, which mend
+	 * the credits' Torroella and 31 German texts and revise the
+	 * Spanish and Italian translations. DotEmu's texts, which the
+	 * Classic and the Enhanced Edition ship, cut the keys' names
+	 * from the help. The European texts keep typos, faults of
+	 * punctuation and a hint's count of the clovers that the
+	 * PlayStation version corrects in 20 texts of English, French,
+	 * German and Spanish, its changes of its own left out of seven
+	 * of them. A text of the bank whose CRC-32 is that of a form
+	 * textfixes gives is replaced by its fixed text, the texts
+	 * after it moved. Taken from the European CD and the
+	 * PlayStation version, SLES_006.98.
+	 */
+#ifdef	FIXES
+	for ( ptf = textfixes, n = 0 ; *ptf != 255 ; ptf += 5+ptf[4]*4, n++ )
+	{
+		if ( ptf[0] != Language OR ptf[1] != file )	continue ;
+
+		i = FindText( ptf[2]+ptf[3]*256 )	;
+		if ( i == -1 )	continue		;
+
+		offset0 = PeekUWord( BufText+(i+0)*2 )	;
+		offset1 = PeekUWord( BufText+(i+1)*2 )	;
+
+		crc = 0xFFFFFFFF			;
+		for ( j = offset0 ; j < offset1 ; j++ )
+		{
+			crc ^= BufText[j]		;
+			for ( k = 0 ; k < 8 ; k++ )
+				crc = (crc>>1) ^ (0xEDB88320 & -(crc&1)) ;
+		}
+		crc = ~crc				;
+
+		for ( k = 0 ; k < ptf[4] ; k++ )
+		{
+			if ( PeekULong( ptf+5+k*4 ) == crc )	break ;
+		}
+		if ( k == ptf[4] )	continue	;
+
+		size = strlen( fixedtexts[n] )+1	;
+		end = PeekUWord( BufText+MaxText*2 )	;
+		memmove( BufText+offset0+size, BufText+offset1, end-offset1 ) ;
+		memcpy( BufText+offset0, fixedtexts[n], size ) ;
+
+		for ( j = i+1 ; j <= MaxText ; j++ )
+			PokeUWord( BufText+j*2, PeekUWord( BufText+j*2 )+offset0+size-offset1 ) ;
+	}
 #endif
 
 #ifdef	CDROM

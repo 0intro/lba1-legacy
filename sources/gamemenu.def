@@ -6,7 +6,11 @@ extern void DrawCadre(int16_t ,int16_t ,int16_t ,int16_t );
 extern void DrawComportement(int16_t ,int16_t ,int16_t );
 extern void DrawInfoMenu(int16_t ,int16_t );
 extern void DrawMenuComportement(int16_t );
+#ifdef	FIXES
+extern void MenuComportement(int16_t );
+#else
 extern void MenuComportement(void);
+#endif
 extern void Draw3dObject(int16_t ,int16_t ,int16_t *,int16_t ,int16_t );
 extern void DrawOneInventory(int16_t );
 extern void DrawListInventory(void);

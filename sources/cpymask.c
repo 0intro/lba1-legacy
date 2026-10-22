@@ -8,15 +8,14 @@
  * CopyMask is cpymask.asm's CopyMask: through mask num of bank, the
  * pixels of src at x,y copied to the same place in Log. A mask has a
  * graph's header (see graph_a.c), then a line at a time a count of runs
- * and the runs, alternately of pixels to leave and to copy. Clipped, the
- * pixels come from Screen whatever src is, lines go 640 apart, and the
- * state machine below is the assembly's: its counts are bytes, compared
- * as its flags say, unsigned or, at two places, signed.
+ * and the runs, alternately of pixels to leave and to copy. Clipped,
+ * lines go 640 apart, and the state machine below is the assembly's,
+ * its counts bytes compared unsigned.
  */
 void
 CopyMask(int32_t num, int32_t x, int32_t y, void *bank, void *src)
 {
-	uint8_t *m, *s, *d, *sl, *dl, nb, nl, cl, left, r;
+	uint8_t *m, *s, *d, *sl, *dl, nb, nl, cl, left;
 	uint32_t moff;
 	int32_t w, h, x1, y1, off, npix;
 	int borrow;
@@ -28,6 +27,17 @@ CopyMask(int32_t num, int32_t x, int32_t y, void *bank, void *src)
 	w = m[0];
 	h = m[1];
 	m += 4;
+	/*
+	 * FIXED: LBA.EXE counts a mask's lines and a line's runs in bytes
+	 * it decrements before testing them, so that a mask of 0 lines
+	 * copies 256 and a line of 0 runs reads 256 runs from the bytes
+	 * after it. A mask of 0 lines returns at once, and a line of 0
+	 * runs is passed over. Taken from DotEmu's Android 1.06, but for
+	 * a whole line of 0 runs, where DotEmu moves the lines after it
+	 * left by the mask's width.
+	 */
+	if (h == 0)
+		return;
 	x1 = x + w - 1;
 	y1 = y + h - 1;
 	if (x >= ClipXmin && y >= ClipYmin && x1 <= ClipXmax && y1 <= ClipYmax) {
@@ -36,6 +46,11 @@ CopyMask(int32_t num, int32_t x, int32_t y, void *bank, void *src)
 		nl = h;
 		do {
 			nb = *m++;
+			if (nb == 0) {
+				s += Screen_X;
+				d += Screen_X;
+				continue;
+			}
 			for (;;) {
 				s += *m;
 				d += *m;
@@ -70,7 +85,11 @@ CopyMask(int32_t num, int32_t x, int32_t y, void *bank, void *src)
 	if (x1 > ClipXmax)
 		npix -= x1 - ClipXmax;
 	dl = Log + TabOffLine[y] + x + off;
-	sl = Screen + TabOffLine[y] + x + off;
+	/*
+	 * FIXED: LBA.EXE copies from Screen when clipped, whatever src is.
+	 * Copy from src. Taken from DotEmu's Android 1.06.
+	 */
+	sl = (uint8_t*)src + TabOffLine[y] + x + off;
 	nl = y1 + 1 - y;
 	for (;;) {
 		cl = off;
@@ -78,6 +97,8 @@ CopyMask(int32_t num, int32_t x, int32_t y, void *bank, void *src)
 		s = sl;
 		d = dl;
 		nb = *m;
+		if (nb == 0)
+			goto nextline;
 	l0:
 		m++;
 		if (--nb == 0)
@@ -100,12 +121,17 @@ CopyMask(int32_t num, int32_t x, int32_t y, void *bank, void *src)
 			goto l0;
 		goto nextline;
 	rptj:
-		r = left + cl;
-		borrow = (int8_t)left + (int8_t)cl <= 0;
-		left = r;
+		/*
+		 * FIXED: LBA.EXE compares the pixels left to draw with a run's
+		 * pixels to leave signed, here and at okjump, so that from 128
+		 * on a run is clipped wrong. They compare unsigned. Taken from
+		 * DotEmu's Android 1.06.
+		 */
+		cl = -cl;
+		borrow = left <= cl;
+		left -= cl;
 		if (borrow)
 			goto aplus;
-		cl = -cl;
 		goto okdraw2;
 	rgtc:
 		cl = -cl;
@@ -126,7 +152,7 @@ CopyMask(int32_t num, int32_t x, int32_t y, void *bank, void *src)
 		if (--nb == 0)
 			goto nextline;
 		cl = *m;
-		borrow = (int8_t)left <= (int8_t)cl;
+		borrow = left <= cl;
 		left -= cl;
 		if (borrow)
 			goto aplus;

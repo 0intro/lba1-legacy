@@ -169,6 +169,14 @@ WorldColBrickFull 	proc	xw:DWORD, yw:DWORD, zw:DWORD, ymax:DWORD
 
 		mov	al, [edx]
 
+		; FIXED: LBA.EXE counts the cells above unsigned, so that a
+		; height of 0 or less tests every cell up to the top. Test
+		; none. Taken from DotEmu's Android 1.06.
+IFDEF	FIXES
+		cmp	ymax, 0
+		jle	short noth0
+ENDIF
+
 		; check full height
 		mov	edx, ymax
 		add	edx, 255
@@ -190,11 +198,23 @@ th0:		cmp	ebx, 24
 
 notesth:	pop	ebx
 
+IFDEF	FIXES
+noth0:		ret
+ELSE
 		ret
+ENDIF
 
 nocol:	;' return *(ptc+1)
 
 		mov	al, byte ptr[ecx+1]	; eventuelle col transparente
+
+		; FIXED: LBA.EXE counts the cells above unsigned, so that a
+		; height of 0 or less tests every cell up to the top. Test
+		; none. Taken from DotEmu's Android 1.06.
+IFDEF	FIXES
+		cmp	ymax, 0
+		jle	short noth1
+ENDIF
 
 		; check full height
 		mov	edx, ymax
@@ -216,13 +236,35 @@ th1:		cmp	ebx, 24
 
 notsth:		pop	ebx
 
+IFDEF	FIXES
+noth1:		ret
+ELSE
+		ret
+ENDIF
+
+; FIXED: LBA.EXE sets AL alone here, below the map, and at ovfw, past it
+; along x or z, so that a caller taking a LONG reads a coordinate's upper
+; bytes with it, 0x7FFF00 past the map's left edge. Give the byte alone.
+; Taken from DotEmu's Android 1.06, which tests below the map first.
+col_1:		; mov	[YMap], 0		; test y-1
+IFDEF	FIXES
+		mov	eax, 1
 		ret
 
-col_1:		; mov	[YMap], 0		; test y-1
+; FIXED: LBA.EXE leaves both loops here for a brick above without the pop ebx
+; they owe, so that EBX comes back as their counter. Pop it. Taken from LbaWin
+; 0.7.5.
+hcol:		pop	ebx
+		mov	al, 1
+		ret
+
+ovfw:		xor	eax, eax
+ELSE
 hcol:		mov	al, 1
 		ret
 
 ovfw:		mov	al, 0
+ENDIF
 		ret
 
 WorldColBrickFull	endp

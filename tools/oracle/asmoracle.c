@@ -1,4 +1,5 @@
 #include <dirent.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -6,6 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/time.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include "abi.h"
 #include "asmoracle.h"
 
@@ -18,14 +22,15 @@
  * lba0.elf is a DOS build's LBA0.EXE (make OS=dos ARCH=386
  * CC=openwatcom or CC=watcom) as tools/le2elf.py makes it, mapped where
  * it was linked, its functions and data named by lba0.sym: its assembly
- * is the tree's, LBA.EXE's byte for byte or by equivalent encodings.
- * Ours are the translations, compiled in. Each test calls a module's
- * functions in both on the same inputs and state, and compares what
- * they return, write and leave, the calling convention checked (abi.c).
- * gamedir holds the game's files, which the tests that read them then
- * take too: the packed entries of its HQR files, its bodies and
- * animations, its movies and its bricks. Without it the tests run on
- * data of their own. -x makes a test exhaustive where it can be.
+ * is the tree's, LBA.EXE's byte for byte or by equivalent encodings but
+ * for the fixes it carries with the C. Ours are the translations,
+ * compiled in. Each test calls a module's functions in both on the same
+ * inputs and state, and compares what they return, write and leave, the
+ * calling convention checked (abi.c). gamedir holds the game's files,
+ * which the tests that read them then take too: the packed entries of
+ * its HQR files, its bodies and animations, its movies and its bricks.
+ * Without it the tests run on data of their own. -x makes a test
+ * exhaustive where it can be.
  *
  * The tests (all of them without arguments):
  *
@@ -95,6 +100,12 @@
  *		HQR_GiveIndex on lists holding each index once or repeated,
  *		and the sine table
  *
+ * One more runs only when named:
+ *
+ *	fixes	the inputs where LBA.EXE's assembly faults, runs on or gives
+ *		the wrong result, which the fixes mend in the assembly and in
+ *		the C alike
+ *
  * A test fails when ours and the assembly differ.
  */
 
@@ -149,6 +160,13 @@ fail(char *fmt, ...)
 	vfprintf(stderr, fmt, arg);
 	fprintf(stderr, "\n");
 	va_end(arg);
+}
+
+/* The failures so far. */
+int
+failures(void)
+{
+	return nfail;
 }
 
 /* xorshift32 */
@@ -488,6 +506,73 @@ testexpand(void)
 	printf("expand: %d entries of the game's, %d differ\n", count, bad);
 }
 
+/* how an expansion of a count of 0 ended in a side's child */
+static char*
+expandend(int status)
+{
+	if (WIFEXITED(status))
+		return WEXITSTATUS(status) == 0 ? "nothing written" : "written";
+	if (WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM)
+		return "no end";
+	return "a fault";
+}
+
+/*
+ * Expand of random streams for a count of 0: LBA.EXE's assembly
+ * expanded some 2^32 bytes, past the stream and the destination. Each
+ * side expands in a child that a fault or a quarter second's alarm
+ * ends: the build's must write nothing, as ours.
+ */
+static int
+fixexpand(void)
+{
+	static struct itimerval quarter = {{0, 0}, {0, 250000}};
+	static uint8_t packed[2*Maxlzs], dest[Maxlzs], before[Maxlzs];
+	uintptr_t aexpand;
+	uint32_t i;
+	int r, s, f0, status[2];
+	pid_t pid;
+
+	aexpand = lookup("Expand");
+	for (r = 0; r < 200; r++) {
+		lzs(packed, 1 + rndn(256));
+		for (i = 0; i < sizeof dest; i++)
+			dest[i] = rnd();
+		memcpy(before, dest, sizeof dest);
+		for (s = 0; s < 2; s++) {
+			f0 = failures();
+			pid = fork();
+			if (pid < 0)
+				fatal("fixes: cannot fork");
+			if (pid == 0) {
+				setitimer(ITIMER_REAL, &quarter, NULL);
+				if (s == 0)
+					Expand(packed, dest, 0);
+				else
+					acall(aexpand, 3, (int32_t)(uintptr_t)packed, (int32_t)(uintptr_t)dest, 0);
+				_exit(memcmp(dest, before, sizeof dest) != 0 || failures() != f0);
+			}
+			if (waitpid(pid, &status[s], 0) != pid)
+				fatal("fixes: cannot wait");
+		}
+		if (status[0] != 0 || status[1] != 0) {
+			fail("fixes: Expand of a count of 0: ours %s, the assembly's %s",
+				expandend(status[0]), expandend(status[1]));
+			return 0;
+		}
+	}
+	printf("fixes: expand, %d streams expanded for a count of 0, nothing written\n", r);
+	return 1;
+}
+
+/* The inputs where LBA.EXE's assembly faults, runs on or gives the wrong result, which the fixes mend in both. */
+static void
+testfixes(void)
+{
+	if (fixsvga() && fixfunc() && fixanim() && fixtrigo() && fixgrille() && fixexpand())
+		printf("fixes: ok\n");
+}
+
 static Test tests[] = {
 	{"sqr", testsqr},
 	{"expand", testexpand},
@@ -512,6 +597,11 @@ static Test tests[] = {
 	{"small", testsmall},
 };
 
+/* the tests run only when named */
+static Test named[] = {
+	{"fixes", testfixes},
+};
+
 static void
 usage(void)
 {
@@ -528,17 +618,20 @@ known(char *name)
 	for (i = 0; i < (int)nelem(tests); i++)
 		if (strcmp(tests[i].name, name) == 0)
 			return 1;
+	for (i = 0; i < (int)nelem(named); i++)
+		if (strcmp(named[i].name, name) == 0)
+			return 1;
 	return 0;
 }
 
-/* Whether a test is among those asked, or none is. */
+/* Whether a test is among those asked, or all is set and none is. */
 static int
-asked(char *name, char **argv, int argc)
+asked(char *name, char **argv, int argc, int all)
 {
 	int i;
 
 	if (argc == 0)
-		return 1;
+		return all;
 	for (i = 0; i < argc; i++)
 		if (strcmp(argv[i], name) == 0)
 			return 1;
@@ -569,8 +662,11 @@ main(int argc, char *argv[])
 	loadsyms(argv[i+1]);
 	i += 2;
 	for (j = 0; j < (int)nelem(tests); j++)
-		if (asked(tests[j].name, argv+i, argc-i))
+		if (asked(tests[j].name, argv+i, argc-i, 1))
 			tests[j].fn();
+	for (j = 0; j < (int)nelem(named); j++)
+		if (asked(named[j].name, argv+i, argc-i, 0))
+			named[j].fn();
 	if (nfail > 0) {
 		fprintf(stderr, "asmoracle: %d failed\n", nfail);
 		return 1;

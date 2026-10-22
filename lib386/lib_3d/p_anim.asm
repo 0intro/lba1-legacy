@@ -358,13 +358,24 @@ ok:
 		mov	edx, esi
 		add     esi, 8                  ; saute Infos frame
 
+		; FIXED: LBA.EXE moves 65536 groups for a count of 0, over the
+		; body and past it. A count of 0 skips the loop. Taken from
+		; DotEmu's Android 1.06.
+IFDEF	FIXES
+		test	cx, cx
+		jz	short sao9
+ENDIF
 sao0:           movsd                           ; type ; alpha
 		movsd                           ; beta ; gamma
 		add     edi, 12+18
 		dec	cx
 		jnz     sao0                    ; set tous groupes
 
+IFDEF	FIXES
+sao9:		mov     esi, edx                ; sur infos frame
+ELSE
 		mov     esi, edx                ; sur infos frame
+ENDIF
 		add     esi, 2                  ; sur stepX
 
 		mov     edi, offset AnimStepX
@@ -593,8 +604,17 @@ ok:
 		add	[Offset_Source], 8
 		add	edi, 38
 
+		; FIXED: LBA.EXE moves the 65535 groups after the first for a
+		; count of 0, over the body and past it. A count of 0 moves
+		; the first group alone. Taken from DotEmu's Android 1.06.
+IFDEF	FIXES
+		cmp	cx, 1
+		jbe	sao4
+		dec	cx
+ELSE
 		dec	cx
 		jz	sao4
+ENDIF
 
 	; suite des groupes
 
@@ -679,13 +699,24 @@ sao2:
 		mov     edx, esi
 		add     esi, 8			; saute infos frame
 
+		; FIXED: LBA.EXE moves 65536 groups for a count of 0, over the
+		; body and past it. A count of 0 skips the loop. Taken from
+		; DotEmu's Android 1.06.
+IFDEF	FIXES
+		test	cx, cx
+		jz	short sao9
+ENDIF
 sao1:           movsd				; type ; alpha
 		movsd				; beta ; gamma
 		add	edi, 12+18
 		dec	cx
 		jnz	sao1			; set tous groupes
 
+IFDEF	FIXES
+sao9:		mov	edi, [StartInfos]
+ELSE
 		mov	edi, [StartInfos]
+ENDIF
 
 		mov	eax, [Offset_Dest]
 		mov	[edi+0], eax		; memo offset
@@ -788,8 +819,17 @@ ok:
 		add	[Offset_Source], 16
 		add	edi, 38
 
+		; FIXED: LBA.EXE moves the 65535 groups after the first for a
+		; count of 0, over the body and past it. A count of 0 moves
+		; the first group alone. Taken from DotEmu's Android 1.06.
+IFDEF	FIXES
+		cmp	cx, 1
+		jbe	sao4
+		dec	cx
+ELSE
 		dec	cx
 		jz	sao4
+ENDIF
 
 	; suite des groupes
 
@@ -844,13 +884,24 @@ serr:		xor     eax, eax		; anim pas finie
 
 sao2:    	add     esi, 8			; saute infos frame
 
+		; FIXED: LBA.EXE moves 65536 groups for a count of 0, over the
+		; body and past it. A count of 0 skips the loop. Taken from
+		; DotEmu's Android 1.06.
+IFDEF	FIXES
+		test	cx, cx
+		jz	short sao9
+ENDIF
 sao1:           movsd				; type ; alpha
 		movsd				; beta ; gamma
 		add     edi, 12+18
 		dec	cx
 		jnz     sao1			; set tous groupes
 
+IFDEF	FIXES
+sao9:		mov     edi, [StartInfos]
+ELSE
 		mov     edi, [StartInfos]
+ENDIF
 
 		mov     eax, [Offset_Dest]
 		mov     [edi+0], eax		; memo offset
@@ -1039,13 +1090,24 @@ cont:   	xor	eax, eax
 		lea     edi, [edi+8]		; fausse frame info
 		lea     esi, [esi+8+2]		; saute groupe info
 
+		; FIXED: LBA.EXE moves 65536 groups for a count of 0, over the
+		; body and past it. A count of 0 returns at once. Taken from
+		; DotEmu's Android 1.06.
+IFDEF	FIXES
+		test	cx, cx
+		jz	short sao9
+ENDIF
 sao1:           movsd				; type ; alpha
 		movsd				; beta ; gamma
 		add     esi, 12+18
 		dec	cx
 		jnz	sao1			; set tous groupes
 
+IFDEF	FIXES
+sao9:		ret
+ELSE
 		ret
+ENDIF
 
 serr:           xor	eax, eax
 		ret
@@ -1098,6 +1160,13 @@ ok:
 		add	esi, 8 + 2
 		add	edi, 8 + 2
 
+		; FIXED: LBA.EXE moves 65536 groups for a count of 0, over the
+		; body and past it. A count of 0 returns at once. Taken from
+		; DotEmu's Android 1.06.
+IFDEF	FIXES
+		test	cx, cx
+		jz	short serr
+ENDIF
 cia0:		movsd
 		movsd
 		add	esi, 22 + 8

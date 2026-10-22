@@ -39,11 +39,7 @@ SetFont(void *font, int32_t il, int32_t is)
 	interspace = is;
 }
 
-/*
- * SizeFont is font_a.asm's SizeFont: the width of s. Each character adds
- * interleave, then interleave again with its low byte replaced by the
- * character's width, as the assembly added them.
- */
+/* SizeFont is font_a.asm's SizeFont: the width of s, as Font draws it. */
 int32_t
 SizeFont(void *s)
 {
@@ -55,8 +51,15 @@ SizeFont(void *s)
 		if (*p == ' ')
 			dx += interspace;
 		else {
+			/*
+			 * FIXED: LBA.EXE adds the interleave, then the interleave
+			 * with its low byte replaced by the character's width, so
+			 * that an interleave of 256 or more measures wider than
+			 * Font draws. Add the width alone. Taken from DotEmu's
+			 * Android 1.06.
+			 */
 			dx += interleave;
-			dx += ((uint32_t)interleave & ~0xFFu) | car(*p)[0];
+			dx += car(*p)[0];
 		}
 	return dx;
 }

@@ -9,8 +9,7 @@
  * offsets, and at a graph's, its width and height, its hot spot, then a
  * line at a time a count of blocks, each a byte and its data: 00 and n
  * give n+1 pixels left as they are, 01 (or 11) and n the n+1 pixels that
- * follow, and 10 and n a colour, n+1 of it. The counts are bytes, and a
- * count of 0 runs 256 times, as the assembly's does.
+ * follow, and 10 and n a colour, n+1 of it. The counts are bytes.
  */
 
 static uint8_t*
@@ -42,6 +41,18 @@ AffGraph(int32_t num, int32_t x, int32_t y, void *bank)
 	x += s[2];
 	y += s[3];
 	s += 4;
+	/*
+	 * FIXED: LBA.EXE counts a graph's lines and a line's blocks in
+	 * bytes it decrements before testing them, so that a graph of 0
+	 * lines draws 256 and a line of 0 blocks reads 256 blocks from the
+	 * bytes after it. A graph of 0 lines returns at once, and a line of
+	 * 0 blocks is passed over. Taken from DotEmu's Android 1.06, but
+	 * for a line of 0 blocks, where DotEmu moves the lines after it
+	 * left by the graph's width or, clipped, copies the buffer of the
+	 * line before.
+	 */
+	if (h == 0)
+		return;
 	x1 = x + w - 1;
 	y1 = y + h - 1;
 	if (x >= ClipXmin && y >= ClipYmin && x1 <= ClipXmax && y1 <= ClipYmax) {
@@ -49,6 +60,10 @@ AffGraph(int32_t num, int32_t x, int32_t y, void *bank)
 		nl = h;
 		do {
 			nb = *s++;
+			if (nb == 0) {
+				d += Screen_X;
+				continue;
+			}
 			do {
 				op = *s;
 				n = (op & 0x3F) + 1;
@@ -73,6 +88,8 @@ AffGraph(int32_t num, int32_t x, int32_t y, void *bank)
 		nl = ClipYmin - y;
 		do {
 			nb = *s++;
+			if (nb == 0)
+				continue;
 			do {
 				op = *s++;
 				if (op & 0xC0)
@@ -92,6 +109,10 @@ AffGraph(int32_t num, int32_t x, int32_t y, void *bank)
 	do {
 		d = clip;
 		nb = *s++;
+		if (nb == 0) {
+			line += 640;
+			continue;
+		}
 		do {
 			op = *s++;
 			n = (op & 0x3F) + 1;
