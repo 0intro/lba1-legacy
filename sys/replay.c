@@ -119,7 +119,10 @@ playing(void)
 	return play != NULL;
 }
 
-/* A byte from the keyboard: the system's, unless playing a record. */
+/*
+ * A byte from the keyboard: the system's, unless playing a record,
+ * recorded, then given to the game but for F4's that altf4 keeps out.
+ */
 void
 keyin(int c)
 {
@@ -127,7 +130,8 @@ keyin(int c)
 		return;
 	if (rec != NULL)
 		fprintf(rec, "%" PRIu64 " k %x\n", pumps(), (unsigned)c);
-	xtcode(c);
+	if (!altf4(c))
+		xtcode(c);
 }
 
 void
@@ -137,7 +141,8 @@ wordin(int w)
 		return;
 	if (rec != NULL)
 		fprintf(rec, "%" PRIu64 " b %x\n", pumps(), (unsigned)w);
-	biosword(w);
+	if (!altf4word(w))
+		biosword(w);
 }
 
 /* The inputs played at this pump, and at the record's end, the run's. */
@@ -147,10 +152,12 @@ replay(uint64_t pump)
 	while (play != NULL && due <= pump) {
 		switch (duekind) {
 		case 'k':
-			xtcode((int)dueval);
+			if (!altf4((int)dueval))
+				xtcode((int)dueval);
 			break;
 		case 'b':
-			biosword((int)dueval);
+			if (!altf4word((int)dueval))
+				biosword((int)dueval);
 			break;
 		default:
 			portexit(0);

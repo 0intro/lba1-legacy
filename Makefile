@@ -204,6 +204,7 @@ PORT=\
 	sys/xmidi.o\
 	sys/yamaha.o\
 	sys/cdimage.o\
+	sys/syskeys.o\
 
 OPL3=\
 	sys/nuked/opl3.o\
@@ -234,6 +235,13 @@ CFGTEST=\
 	sys/modes.o\
 	sys/cdimage.o\
 	sys/lbacfg.o\
+
+# syskeystest: sys/syskeys.c's answers to Alt+F4 and the Windows keys,
+# the hook's and the game's, held to what each event must give
+# (test/syskeystest.c).
+SYSKEYSTEST=\
+	test/syskeystest.o\
+	sys/syskeys.o\
 
 # clocktest: sys/timer.c's clock driven as the game drives it, the
 # retraces each loop of its calls waits for (test/clocktest.c).

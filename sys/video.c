@@ -10,6 +10,10 @@
  * through VESA's banks or 320x200 in mode 13h, and the DAC took 6-bit
  * colours. Here Phys is vram, presented whole (sys/sdl.c), in the mode
  * last set, and the DAC keeps the same 6-bit values.
+ *
+ * On Windows a hook of the keyboard, in place while the window has the
+ * focus, refuses Alt+F4 (LbaWinSettings's 0x40), and the Windows keys
+ * while the screen fills the display (0x80).
  */
 
 enum

@@ -339,6 +339,7 @@ sdlinit(void)
 void
 sdlclose(void)
 {
+	hookkeys(0);
 	endwriter();
 	SDL_Quit();
 }
@@ -377,6 +378,15 @@ sdlfullscreen(int on)
 		if (!SDL_ShowCursor())
 			fprintf(stderr, "lba: SDL_ShowCursor: %s\n", SDL_GetError());
 	}
+	/*
+	 * FEATURE: with refusealtf4, SDL's own close on Alt+F4 (Windows')
+	 * is off before the window shows, so that where the hook lets
+	 * Alt+F4 through, before the window's focus puts it in place, or
+	 * under Wine, which gives it F4 without its Alt flag, syskeys.c's
+	 * altf4 keeps F4 from the game. The port's own.
+	 */
+	if (refusealtf4())
+		SDL_SetHint(SDL_HINT_WINDOWS_CLOSE_ON_ALT_F4, "0");
 	SDL_ShowWindow(window);
 	stale = 1;
 }
@@ -832,6 +842,12 @@ sdlpoll(void)
 		case SDL_EVENT_WINDOW_EXPOSED:
 		case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
 			stale = 1;
+			break;
+		case SDL_EVENT_WINDOW_FOCUS_GAINED:
+			hookkeys(1);
+			break;
+		case SDL_EVENT_WINDOW_FOCUS_LOST:
+			hookkeys(0);
 			break;
 		}
 	}

@@ -9,8 +9,9 @@
  * relative to the screen, 0x40 no Alt+F4, 0x80 no Windows keys. The
  * port reads 1, the original game play at each start, 2, the bump into
  * walls, which the option menu switches,
- * 4, W as the action, 0x10, the fades, and 0x20, the moves relative to
- * the screen. Taken from the Classic 3.2.3, as LbaWin 0.7.4 made it.
+ * 4, W as the action, 0x10, the fades, 0x20, the moves relative to the
+ * screen, and 0x40 and 0x80, Alt+F4 and the Windows keys refused. Taken
+ * from the Classic 3.2.3, as LbaWin 0.7.4 made it.
  */
 
 /*

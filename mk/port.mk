@@ -69,6 +69,7 @@ HOSTPATH=$(HOSTPATH_$(OS))
 TESTS=\
 	emu8ktest\
 	cfgtest\
+	syskeystest\
 	clocktest\
 	filestest\
 	cdimagetest\
@@ -140,6 +141,9 @@ $(O)/emu8ktest$(EXE): $(addprefix $(O)/,$(EMU8KTEST)) $(MANIFEST)
 	$(LINK) -lm
 
 $(O)/cfgtest$(EXE): $(addprefix $(O)/,$(CFGTEST)) $(MANIFEST)
+	$(LINK)
+
+$(O)/syskeystest$(EXE): $(addprefix $(O)/,$(SYSKEYSTEST)) $(MANIFEST)
 	$(LINK)
 
 $(O)/clocktest$(EXE): $(addprefix $(O)/,$(CLOCKTEST)) $(MANIFEST)

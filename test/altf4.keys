@@ -1,0 +1,20 @@
+# Alt+F4 refused, LbaWinSettings: 210, 0x40 set
+# (fixtures/outside: the CD's LBA.CFG and the outside save). The kept
+# Xephyr runs no window manager, so the keys reach the port: Alt+F4
+# leaves the game going, F4 kept out of its input with its release,
+# and Twinsen keeps his normal behaviour. F2 then makes him sporty.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 12
+shot start
+key alt+F4
+sleep 2
+shot altf4
+key F2
+sleep 2
+shot sporty

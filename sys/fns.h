@@ -74,6 +74,14 @@ void	framesync(void);
 void	xtcode(int);
 void	biosword(int);
 
+/* syskeys.c */
+int	refusealtf4(void);
+int	refusewinkeys(void);
+int	hookkey(uint32_t, uint32_t);
+int	altf4(int);
+int	altf4word(int);
+void	hookkeys(int);
+
 /* replay.c */
 void	recordinput(char*);
 void	playinput(char*);
