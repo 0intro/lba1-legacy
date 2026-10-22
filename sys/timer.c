@@ -22,7 +22,10 @@
  * repeats it (replay.c). Unless replaying, the clock is held to the real
  * one, never ahead of it. Behind it by more than Late, as after a load,
  * it gives the lag up, which the sound's streams take as silence
- * (sdllate).
+ * (sdllate). The retrace comes at VGA's frame of the screen's mode, or
+ * with DisplaySync at the display's frames n at a time where n of them
+ * last that frame within one part in Parts (framepace), the display's
+ * presents waiting for its refreshes.
  */
 
 enum
@@ -31,6 +34,11 @@ enum
 	Work = 10000,		/* ns, a pump */
 	Idle = 1000000,		/* ns, an idle */
 	Late = 100000000,	/* ns behind the real clock, given up */
+	Frame = 16683217,	/* ns, VGA's frame at 640x480: 800 dots by 525 lines at 25.175 MHz, 59.94 Hz */
+	Frame13 = 14268123,	/* ns, in mode 13h: 449 lines, 70.09 Hz */
+	Parts = 100,		/* frames within one part in Parts of each other match */
+	Million = 1000000,	/* a display slower by a millionth or less than the pace still keeps to it */
+	Maxsync = 4,		/* the most refreshes a present waits for, DXGI's */
 };
 
 volatile uint32_t	TimerRef;
@@ -45,6 +53,8 @@ static int64_t skew;	/* the real clock when ours was 0 */
 static int fast;
 static uint64_t ticks;
 static uint64_t retrace;	/* the last one the screen was shown at */
+static uint64_t paces[2] = {Frame, Frame13};	/* ns, the retrace's period at 640x480 and in mode 13h: VGA's, or DisplaySync's pace */
+static int synced;	/* DisplaySync ON */
 static uint32_t nshown;
 static uint64_t npump;
 static volatile sig_atomic_t quitting;
@@ -78,14 +88,11 @@ tick(void)
 	Cmpt_18 += 23864;
 }
 
-/*
- * A frame of the display, in ns: VGA's 25.175 MHz dot clock, 800 dots a
- * line, 525 lines at 640x480 (59.94 Hz) and 449 in mode 13h (70.09 Hz).
- */
+/* A frame of the screen's mode, in ns: VGA's, or DisplaySync's pace (paces). */
 static uint64_t
 frame(void)
 {
-	return (uint64_t)800 * (vga.mode == Mcga ? 449 : 525) * 1000000000 / 25175000;
+	return paces[vga.mode == Mcga];
 }
 
 /* A request to end, taken at the next pump. Off Windows, a loop that never pumps dies a second later. */
@@ -199,4 +206,87 @@ framesync(void)
 	if (nshown == last)
 		vsync();
 	last = nshown;
+}
+
+/* Whether a and b differ by one part in Parts of b at most. */
+static int
+within(uint64_t a, uint64_t b)
+{
+	return (a > b ? a - b : b - a) <= b/Parts;
+}
+
+/*
+ * framepace: the game's frame of VGA's frame v on a display of frames d
+ * ns long, 0 for unknown: n of the display's frames where n of them
+ * last v within one part in Parts, so that each of the game's frames
+ * shows for n of the display's, and v otherwise.
+ */
+uint64_t
+framepace(uint64_t v, uint64_t d)
+{
+	uint64_t n;
+
+	if (d == 0)
+		return v;
+	n = (v + d/2) / d;
+	if (within(n*d, v))
+		return n*d;
+	return v;
+}
+
+/*
+ * vsyncframes: the display's refreshes a present waits for at the pace
+ * p on a display of frames d ns long: n where n of them last the pace
+ * within one part in Parts, Maxsync at most, else 1 where the display
+ * is faster than the pace, and 0 where it is slower, by more than a
+ * millionth, or unknown, so that a present keeps to the pace. DXGI's
+ * Present takes a SyncInterval of 4 at most, and SDL's direct3d11 and
+ * direct3d12 renderers take a larger one and fail every present.
+ */
+int
+vsyncframes(uint64_t p, uint64_t d)
+{
+	uint64_t n;
+
+	if (d == 0 || d > p + p/Million)
+		return 0;
+	n = (p + p/Million) / d;
+	if (within(n*d, p))
+		return n > Maxsync ? Maxsync : (int)n;
+	return 1;
+}
+
+/*
+ * FEATURE: SetDisplaySync, lba.cfg's DisplaySync, ON where the key is
+ * missing (modes.c's readplatform): where flag is set, each mode's
+ * frames paced by the display's refresh (framepace of sdlrefresh's
+ * frame) and the presents synchronized with it (displayvsync), and
+ * VGA's frames with presents as they come otherwise, the flag given
+ * back. vsync as the Classic 3.2.3 presents, the pace the port's own,
+ * as LBA2's port paces its own.
+ */
+int32_t
+SetDisplaySync(int32_t flag)
+{
+	uint64_t d;
+
+	synced = flag != 0;
+	d = synced ? sdlrefresh() : 0;
+	paces[0] = framepace(Frame, d);
+	paces[1] = framepace(Frame13, d);
+	displayvsync();
+	return flag;
+}
+
+/*
+ * displayvsync: the presents synchronized with the window's display at
+ * the pace of the screen's mode, as DisplaySync says, and as they come
+ * in a replay, which runs as fast as the machine goes.
+ */
+void
+displayvsync(void)
+{
+	if (fast)
+		return;
+	sdlvsync(synced ? vsyncframes(frame(), sdlwindowframe()) : 0);
 }

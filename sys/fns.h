@@ -69,6 +69,10 @@ uint64_t	pumps(void);
 uint32_t	shown(void);
 void	vsync(void);
 void	framesync(void);
+uint64_t	framepace(uint64_t, uint64_t);
+int	vsyncframes(uint64_t, uint64_t);
+int32_t	SetDisplaySync(int32_t);
+void	displayvsync(void);
 
 /* keyb.c */
 void	xtcode(int);
@@ -106,11 +110,12 @@ int32_t	screenwidth(int, int);
 /* modes.c */
 int	readmode(char*, char*, char**);
 int	readswitch(char*, char*, int);
-void	readplatform(char*);
+void	readplatform(char*, int*);
 int32_t	gamekey(char*, char*);
 char*	gamekeyname(int);
 
 /* video.c */
+int32_t	SetSmoothScaling(int32_t);
 void	videoinit(void);
 void	pushscreen(void);
 void	pushwindow(void);
@@ -205,8 +210,10 @@ void	ClearMidi(void);
 void	miditick(uint64_t);
 
 /* sdl.c */
+void	sdlfilter(int);
 void	fatal(char*, ...);
 void	sdldesktop(int*, int*);
+void	sdldisplay(void);
 void	setdisplay(int, int);
 void	sdlscreen(void);
 void	sdlsize(void);
@@ -214,6 +221,10 @@ void	sdlclose(void);
 uint64_t	sdlnanos(void);
 void	sdlsleep(uint64_t);
 void	sdlshow(void);
+uint64_t	sdlrefresh(void);
+void	setrefresh(uint64_t);
+uint64_t	sdlwindowframe(void);
+void	sdlvsync(int);
 void	sdlpoll(void);
 void	sdlwave(const uint32_t*, int, int);
 void	sdlwavegain(float);

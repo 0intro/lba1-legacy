@@ -25,12 +25,13 @@
  * as they come, each put (its bytes, the bytes queued before it), each
  * query of the bytes queued and each pull (the bytes it lacked, the
  * bytes it asked for). It stalls the thread that opened the stream in
- * SDL_DelayNS, the port's one sleep, at the first sleep past each of
- * the stalls' times (seconds after the open), for their milliseconds,
- * and raises SIGTERM at the first sleep past the end, which ends the
- * port at its next pump. At exit, or at SDL_Quit if it comes first, it
- * writes the bytes put to one file and to the log a line a record,
- * times in ns from the open:
+ * SDL_DelayNS, the port's one sleep, or in SDL_RenderPresent, where the
+ * port waits for the display's vsync with DisplaySync, at the first of
+ * them past each of the stalls' times (seconds after the open), for
+ * their milliseconds, and raises SIGTERM at the first of them past the
+ * end, which ends the port at its next pump. At exit, or at SDL_Quit if
+ * it comes first, it writes the bytes put to one file and to the log a
+ * line a record, times in ns from the open:
  *
  *	open 0 rate devicerate deviceframes
  *	put t bytes queued
@@ -70,6 +71,7 @@ static SDL_AudioStream *(SDLCALL *realopen)(SDL_AudioDeviceID, const SDL_AudioSp
 static bool (SDLCALL *realput)(SDL_AudioStream*, const void*, int);
 static int (SDLCALL *realqueued)(SDL_AudioStream*);
 static void (SDLCALL *realdelay)(Uint64);
+static bool (SDLCALL *realpresent)(SDL_Renderer*);
 static bool (SDLCALL *realformat)(SDL_AudioDeviceID, SDL_AudioSpec*, int*);
 static void (SDLCALL *realquit)(void);
 
@@ -110,6 +112,7 @@ init(void)
 	next(&realput, sizeof realput, "SDL_PutAudioStreamData");
 	next(&realqueued, sizeof realqueued, "SDL_GetAudioStreamQueued");
 	next(&realdelay, sizeof realdelay, "SDL_DelayNS");
+	next(&realpresent, sizeof realpresent, "SDL_RenderPresent");
 	next(&realformat, sizeof realformat, "SDL_GetAudioDeviceFormat");
 	next(&realquit, sizeof realquit, "SDL_Quit");
 }
@@ -283,28 +286,43 @@ SDL_GetAudioStreamQueued(SDL_AudioStream *s)
 	return n;
 }
 
-void SDLCALL
-SDL_DelayNS(Uint64 ns)
+/* The stalls due, and the end, at a sleep or a present of the thread that opened the stream. */
+static void
+stall(void)
 {
 	uint64_t t;
 	int i;
 
-	init();
-	if (music != NULL && SDL_GetCurrentThreadID() == opener) {
-		t = since();
-		for (i = 0; i < nstall; i++)
-			if (stalls[i].start == 0 && t >= stalls[i].at) {
-				stalls[i].start = t;
-				realdelay(stalls[i].ns);
-				stalls[i].end = since();
-				t = stalls[i].end;
-			}
-		if (endat != 0 && ended == 0 && t >= endat) {
-			ended = t;
-			raise(SIGTERM);
+	if (music == NULL || SDL_GetCurrentThreadID() != opener)
+		return;
+	t = since();
+	for (i = 0; i < nstall; i++)
+		if (stalls[i].start == 0 && t >= stalls[i].at) {
+			stalls[i].start = t;
+			realdelay(stalls[i].ns);
+			stalls[i].end = since();
+			t = stalls[i].end;
 		}
+	if (endat != 0 && ended == 0 && t >= endat) {
+		ended = t;
+		raise(SIGTERM);
 	}
+}
+
+void SDLCALL
+SDL_DelayNS(Uint64 ns)
+{
+	init();
+	stall();
 	realdelay(ns);
+}
+
+bool SDLCALL
+SDL_RenderPresent(SDL_Renderer *r)
+{
+	init();
+	stall();
+	return realpresent(r);
 }
 
 void SDLCALL

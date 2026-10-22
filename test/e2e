@@ -3,7 +3,7 @@
 # e2e: record the port playing a scenario, and replay the records to
 # check that a build shows the same screens and leaves the same files.
 #
-#     test/e2e record [-f dir] [-c cd]... [-g game]... [-s scenario] [-D WxH] [-x exe] name
+#     test/e2e record [-f dir] [-c cd]... [-g game]... [-s scenario] [-D WxH] [-R hz] [-x exe] name
 #     test/e2e check [-x exe] [name...]
 #     test/e2e keep [-x exe] [name...]
 #     test/e2e derive [-c cd]... [-g game]... [-k 'key: value']... [-x exe] from name
@@ -53,7 +53,10 @@
 # place of $LBATMP/e2e. A record keeps the display it was made on, which
 # its replays take, so that the wide screen has the record's width on
 # every display: record's -D makes it as on a display of WxH, the
-# Xephyr's otherwise.
+# Xephyr's otherwise. With -R the port takes the display's refresh as
+# hz, 0 for unknown or 1 to 1000, which DisplaySync paces the game and
+# its presents by, and the record keeps its frame, as it keeps the frame
+# of the display it ran on otherwise.
 
 set -Eeuo pipefail
 
@@ -65,7 +68,7 @@ E2E=${E2E:-$LBATMP/e2e}
 RUN=$E2E/run
 
 usage() {
-	echo "usage: e2e record [-f dir] [-c cd]... [-g game]... [-s scenario] [-D WxH] [-x exe] name" >&2
+	echo "usage: e2e record [-f dir] [-c cd]... [-g game]... [-s scenario] [-D WxH] [-R hz] [-x exe] name" >&2
 	echo "       e2e check [-x exe] [name...]" >&2
 	echo "       e2e keep [-x exe] [name...]" >&2
 	echo "       e2e derive [-c cd]... [-g game]... [-k 'key: value']... [-x exe] from name" >&2
@@ -90,6 +93,7 @@ cdirs=()
 gdirs=()
 scenario=
 display=()
+refresh=()
 lines=()
 exe=$REPO/build/linux-amd64-gcc/lba
 while (( $# )); do
@@ -99,6 +103,12 @@ while (( $# )); do
 	-g) gdirs+=("${2:?}"); shift 2 ;;
 	-s) scenario=${2:?}; shift 2 ;;
 	-D) [[ ${2:-} =~ ^[1-9][0-9]*x[1-9][0-9]*$ ]] || usage; display=(-D "$2"); shift 2 ;;
+	-R)
+		[[ ${2:-} =~ ^[0-9]+([.][0-9]+)?$ ]] &&
+			awk -v h="$2" 'BEGIN { exit !(h == 0 || (h >= 1 && h <= 1000)) }' || usage
+		refresh=(-R "$2")
+		shift 2
+		;;
 	-k) [[ ${2:-} =~ ^[A-Za-z][A-Za-z0-9]*: ]] || usage; lines+=("$2"); shift 2 ;;
 	-x) exe=$(cd -- "$(dirname -- "${2:?}")" && pwd)/$(basename -- "$2"); shift 2 ;;
 	-*) usage ;;
@@ -115,6 +125,7 @@ dll=$(dirname -- "$exe")/SDL3.dll
 (( ${#gdirs[@]} == 0 )) || [[ $cmd == record || $cmd == derive ]] || usage
 [[ -z $scenario || $cmd == record ]] || usage
 (( ${#display[@]} == 0 )) || [[ $cmd == record ]] || usage
+(( ${#refresh[@]} == 0 )) || [[ $cmd == record ]] || usage
 (( ${#lines[@]} == 0 )) || [[ $cmd == derive ]] || usage
 (( ${#gdirs[@]} )) || gdirs=(pc/LBA)
 for c in "${cdirs[@]}"; do
@@ -258,7 +269,7 @@ record() {
 	done
 	stage "$RUN/prog" lba
 	SDL_AUDIO_DRIVER=dummy "$TOOLS/xkeys" -c lba -o "$LBATMP/cap/e2e/$name" "$keys" "$RUN/prog/lba" \
-		"${args[@]}" "${display[@]}" -p "$RUN/pref" -r "$E2E/$name.in" -s "$E2E/$name.sums"
+		"${args[@]}" "${display[@]}" "${refresh[@]}" -p "$RUN/pref" -r "$E2E/$name.in" -s "$E2E/$name.sums"
 	left "$RUN/pref" "$E2E/$name.out"
 	echo "$name: recorded, $(screens "$E2E/$name.sums") screens, $(ls "$E2E/$name.out" | wc -l) files"
 }

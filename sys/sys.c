@@ -22,7 +22,7 @@ void
 InitAdelineSystem(char *name, int32_t inits)
 {
 	unsigned char *p;
-	int dw, dh;
+	int dw, dh, sync;
 
 	USED(inits);
 	printf("\nCopyright (c) Adeline Software International 1994, All Rights Reserved.\n\n");
@@ -35,18 +35,21 @@ InitAdelineSystem(char *name, int32_t inits)
 	 * program holds. Taken from LbaWin 0.8.1, the text the port's own.
 	 */
 	bindconfig(name, (char*)lbacfg);
-	readplatform(name);
+	readplatform(name, &sync);
 	p = Def_ReadString((unsigned char*)name, (unsigned char*)"MidiType");
 	if (p != NULL && *p != 0)
 		MidiFM = watcomstricmp((char*)p, "FM") == 0;
+	sdldisplay();
 	sdldesktop(&dw, &dh);
 	recorddisplay(dw, dh);
+	setrefresh(sdlrefresh());
 	Wide_X = screenwidth(dw, dh);
 	if (FlagWideScreen)
 		Screen_X = Wide_X;
 	soundinit();
 	videoinit();
 	clockinit();
+	SetDisplaySync(sync);
 }
 
 void

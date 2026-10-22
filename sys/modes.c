@@ -105,10 +105,12 @@ gamekeyname(int n)
 /*
  * readplatform: the port's keys of the configuration file name, read
  * once its places are set, each the value sys/lba.cfg holds where the
- * file leaves it out (cfgtest holds the two to each other).
+ * file leaves it out (cfgtest holds the two to each other), and
+ * DisplaySync's into *sync, which the clock takes once it knows a
+ * replay.
  */
 void
-readplatform(char *name)
+readplatform(char *name, int *sync)
 {
 	/*
 	 * FEATURE: LbaWin's settings, Hit walls among them, read once the
@@ -129,4 +131,35 @@ readplatform(char *name)
 	 * shape at the start, and 640x480 otherwise. The port's own.
 	 */
 	FlagWideScreen = onoff(name, "WideScreen", 1);
+	/*
+	 * FEATURE: DesiredDisplayNum, the display the window opens on, the
+	 * nth of SDL's counted from 0, read where the Classic 3.2.3's
+	 * InitSvga reads it (TLBA1C.exe 0x4043f0), before the wide screen
+	 * takes its shape from that display. Taken from the Classic 3.2.3.
+	 */
+	Def_ReadValue2((unsigned char*)name, (unsigned char*)"DesiredDisplayNum", &DesiredDisplayNum);
+	/*
+	 * FEATURE: SmoothScaling, the screen scaled through SDL's linear
+	 * filter with ON, the look of the Classic 3.2.3, which gives its
+	 * texture that filter (TLBA1C.exe 0x406b70), and sharp with OFF.
+	 * The switch the port's own.
+	 */
+	SetSmoothScaling(onoff(name, "SmoothScaling", 1));
+	/*
+	 * FEATURE: IntegerScaling, the screen scaled by whole multiples of
+	 * itself with ON, and to the window's height or width with OFF.
+	 * The port's own.
+	 */
+	FlagIntegerScaling = onoff(name, "IntegerScaling", 0);
+	/*
+	 * FEATURE: DisplaySync, each mode's frames paced by the display's
+	 * refresh where n of its frames last VGA's frame of the mode within
+	 * 1%, VGA's frame otherwise, and each present on the display's
+	 * vertical sync with ON, as the Classic 3.2.3's renderer presents
+	 * (TLBA1C.exe 0x406b70), and VGA's frames with the presents at that
+	 * clock alone with OFF, set once the clock knows a replay
+	 * (SetDisplaySync). vsync taken from the Classic 3.2.3, the pace the
+	 * port's own, as LBA2's port paces its own.
+	 */
+	*sync = onoff(name, "DisplaySync", 1);
 }

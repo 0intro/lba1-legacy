@@ -35,6 +35,12 @@ static int dummy;	/* SDL's dummy video, where nothing shows */
 static int winw, winh;	/* the window's first size */
 static int recentre;	/* the window to be centred again as it leaves the whole display */
 static int dispw, disph, dispset;	/* the display setdisplay gave, -D's or a record's */
+static uint64_t dispframe;	/* ns, the display's frame setrefresh gave, 0 unknown */
+static int frameset;
+static int framegiven;	/* -R gave dispframe, which the presents keep to too */
+static int vsyncwant;	/* the refreshes a present waits for, as sdlvsync was last asked */
+static int vsynclast;	/* the renderer's vsync, as made or as last asked */
+static int vsyncsaid;	/* the renderer's refusal said */
 static int textinput;
 static int lastscan;
 static SDL_AtomicInt polled;
@@ -59,17 +65,20 @@ static const char prefapp[] = "lba1";
 #endif
 
 /*
- * The screen's scale mode: SDL 3.4's pixel art mode, which draws each
- * pixel the same size at any scale and blends the line between two,
- * where the headers name it, the nearest pixel otherwise. sdlscreen
- * takes the nearest pixel too from a library older than 3.4, which a
- * build on 3.4's headers may run on.
+ * The screen's scale modes: SDL's linear filter, as the Classic 3.2.3
+ * gives its texture (TLBA1C.exe 0x406b70), where lba.cfg's
+ * SmoothScaling is ON, the default (sdlfilter), and with OFF SDL 3.4's
+ * pixel art mode, which draws each pixel the same size at any scale and
+ * blends the line between two, where the headers name it, the nearest
+ * pixel otherwise. scale takes the nearest pixel too from a library
+ * older than 3.4, which a build on 3.4's headers may run on.
  */
 #if SDL_VERSION_ATLEAST(3, 4, 0)
-static const SDL_ScaleMode scalemode = SDL_SCALEMODE_PIXELART;
+static const SDL_ScaleMode pixelart = SDL_SCALEMODE_PIXELART;
 #else
-static const SDL_ScaleMode scalemode = SDL_SCALEMODE_NEAREST;
+static const SDL_ScaleMode pixelart = SDL_SCALEMODE_NEAREST;
 #endif
+static int smooth = 1;	/* the screen scaled through the linear filter */
 
 /* SDL's scan codes, USB's, to the PC keyboard's (XT set 1) */
 static const uint16_t xt[SDL_SCANCODE_COUNT] = {
@@ -329,16 +338,25 @@ sdlinit(void)
 	if (!SDL_CreateWindowAndRenderer("Little Big Adventure", 2*Screen_X, 2*Screen_Y,
 	    SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN, &window, &renderer))
 		fatal("SDL_CreateWindowAndRenderer: %s", SDL_GetError());
+	SDL_GetRenderVSync(renderer, &vsynclast);
 	SDL_StopTextInput(window);
 	startwriter();
 }
 
-/* The window's display: the one SDL gives it, or the primary. */
+/* The display DesiredDisplayNum chose, or 0 */
+static SDL_DisplayID	wantdisplay;
+
+/*
+ * The window's display: the one DesiredDisplayNum chose while the
+ * window is hidden, else the one SDL gives it, or the primary.
+ */
 static SDL_DisplayID
 windisplay(void)
 {
 	SDL_DisplayID d;
 
+	if (wantdisplay != 0 && (SDL_GetWindowFlags(window) & SDL_WINDOW_HIDDEN) != 0)
+		return wantdisplay;
 	d = SDL_GetDisplayForWindow(window);
 	if (d == 0)
 		d = SDL_GetPrimaryDisplay();
@@ -368,6 +386,36 @@ sdldesktop(int *w, int *h)
 	*h = m->h;
 }
 
+/*
+ * FEATURE: the window, hidden, put in the middle of DesiredDisplayNum's
+ * display: the nth of SDL's from 0, and the first, SDL's primary, when
+ * n lies below 0 or past the last, as the Classic 3.2.3's
+ * SDLViewer::ChooseDisplayMode takes display 0 (TLBA1C.exe 0x4072e0).
+ * SDL's X11 and Wayland move a hidden window as it shows, and give it
+ * the display it was made on until then: wantdisplay keeps the choice
+ * for the window's size and place. Taken from the Classic 3.2.3.
+ */
+void
+sdldisplay(void)
+{
+	SDL_DisplayID *ids, d;
+	int i, n;
+
+	ids = SDL_GetDisplays(&n);
+	if (ids == NULL)
+		return;
+	i = DesiredDisplayNum;
+	if (i < 0 || i >= n)
+		i = 0;
+	d = n > 0 ? ids[i] : 0;
+	SDL_free(ids);
+	if (d == 0)
+		return;
+	wantdisplay = d;
+	SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(d), SDL_WINDOWPOS_CENTERED_DISPLAY(d));
+	SDL_SyncWindow(window);
+}
+
 /* setdisplay: the first call's w by h taken as the display. */
 void
 setdisplay(int w, int h)
@@ -377,6 +425,98 @@ setdisplay(int w, int h)
 	dispw = w;
 	disph = h;
 	dispset = 1;
+}
+
+/*
+ * The frame of the window's display now, in ns, from its mode's rate,
+ * 0 for a rate SDL leaves unknown or on its error.
+ */
+static uint64_t
+sdldisplayframe(void)
+{
+	const SDL_DisplayMode *m;
+	uint64_t num, den;
+
+	m = SDL_GetCurrentDisplayMode(windisplay());
+	if (m == NULL)
+		return 0;
+	if (m->refresh_rate_numerator > 0 && m->refresh_rate_denominator > 0) {
+		num = (uint64_t)m->refresh_rate_numerator;
+		den = (uint64_t)m->refresh_rate_denominator;
+		return (1000000000*den + num/2) / num;
+	}
+	return 0;
+}
+
+/*
+ * FEATURE: the display's frame the run paces its frames by: the one -R
+ * or a record gave (setrefresh), else the window's display's now. The
+ * port's own.
+ */
+uint64_t
+sdlrefresh(void)
+{
+	if (frameset)
+		return dispframe;
+	return sdldisplayframe();
+}
+
+/* setrefresh: the first call's frame, in ns, 0 for unknown, taken as the display's. */
+void
+setrefresh(uint64_t ns)
+{
+	if (frameset)
+		return;
+	dispframe = ns;
+	frameset = 1;
+}
+
+/*
+ * FEATURE: the frame of the display the window shows on, which
+ * DisplaySync's vsync follows: -R's, given where the system gives the
+ * rate wrong, else the window's display's now. The port's own.
+ */
+uint64_t
+sdlwindowframe(void)
+{
+	if (framegiven)
+		return dispframe;
+	return sdldisplayframe();
+}
+
+/* The renderer's vsync as vsyncwant says, 0 while the window is hidden, minimized or occluded. */
+static void
+applyvsync(void)
+{
+	int n, ok;
+
+	n = vsyncwant;
+	if (SDL_GetWindowFlags(window) & (SDL_WINDOW_HIDDEN|SDL_WINDOW_MINIMIZED|SDL_WINDOW_OCCLUDED))
+		n = 0;
+	if (n == vsynclast)
+		return;
+	vsynclast = n;
+	ok = SDL_SetRenderVSync(renderer, n);
+	if (!ok && n > 1)
+		ok = SDL_SetRenderVSync(renderer, 1);
+	if (!ok && !vsyncsaid) {
+		fprintf(stderr, "lba: SDL_SetRenderVSync: %s\n", SDL_GetError());
+		vsyncsaid = 1;
+	}
+}
+
+/*
+ * FEATURE: sdlvsync: the presents synchronized with every nth refresh
+ * of the display, 0 for none, and 0 while the window is hidden,
+ * minimized or occluded, where a present waiting for the display would
+ * hold the game's clock back. A renderer refusing n above 1 takes 1.
+ * Taken from the Classic 3.2.3, whose renderer presents with vsync.
+ */
+void
+sdlvsync(int n)
+{
+	vsyncwant = n;
+	applyvsync();
 }
 
 /*
@@ -416,8 +556,38 @@ place(void)
 			winh = r.h;
 		}
 	}
-	SDL_SetRenderLogicalPresentation(renderer, Screen_X, Screen_Y, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+	/*
+	 * FEATURE: IntegerScaling ON, the screen scaled by the largest whole
+	 * multiple the window takes, black around it, and the window kept as
+	 * large as the screen, which SDL crops in a smaller one. The port's
+	 * own.
+	 */
+	if (FlagIntegerScaling) {
+		SDL_SetRenderLogicalPresentation(renderer, Screen_X, Screen_Y, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+		SDL_SetWindowMinimumSize(window, Screen_X, Screen_Y);
+	} else {
+		SDL_SetRenderLogicalPresentation(renderer, Screen_X, Screen_Y, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+	}
 	return d;
+}
+
+/* The texture's scale mode, as smooth says. */
+static void
+scale(void)
+{
+	if (smooth)
+		SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_LINEAR);
+	else if (SDL_GetVersion() < SDL_VERSIONNUM(3, 4, 0) || !SDL_SetTextureScaleMode(texture, pixelart))
+		SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+}
+
+/* sdlfilter: the screen scaled through the linear filter with on set, sharp otherwise (scale). */
+void
+sdlfilter(int on)
+{
+	smooth = on;
+	scale();
+	stale = 1;
 }
 
 /*
@@ -437,8 +607,7 @@ sdlscreen(void)
 		SDL_TEXTUREACCESS_STREAMING, Wide_X, Screen_Y);
 	if (texture == NULL)
 		fatal("SDL_CreateTexture: %s", SDL_GetError());
-	if (SDL_GetVersion() < SDL_VERSIONNUM(3, 4, 0) || !SDL_SetTextureScaleMode(texture, scalemode))
-		SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+	scale();
 	pixels = malloc((size_t)Wide_X*Screen_Y*sizeof pixels[0]);
 	lastvram = calloc((size_t)Wide_X*Screen_Y, 1);
 	if (pixels == NULL || lastvram == NULL)
@@ -847,16 +1016,20 @@ dac8(uint8_t v)
 /*
  * Show the screen: its mode's part of the video memory through the DAC,
  * the 6-bit values widened to 8, unless it is as last shown and the
- * window still has it. The retrace is timer.c's. Mode 13h fills the
- * largest 4:3 rectangle in the middle of the screen, as a monitor
- * showed it. Under SDL's dummy video sdlshow returns at once.
+ * window still has it. The retrace is timer.c's, and with DisplaySync
+ * each present waits for the display's refreshes too (sdlvsync).
+ * Where the texture is wider or taller than the frame, the frame's last
+ * column and row go once more beside it, which the linear filter reads
+ * at the frame's edge. Mode 13h fills the largest 4:3 rectangle in the
+ * middle of the screen, as a monitor showed it. Under SDL's dummy video
+ * sdlshow returns at once.
  */
 void
 sdlshow(void)
 {
 	uint32_t pal[256];
 	SDL_FRect src, dst;
-	int i, w, h, dw, dh;
+	int i, w, h, dw, dh, x, y, tw, th;
 
 	if (dummy)
 		return;
@@ -871,9 +1044,17 @@ sdlshow(void)
 	stale = 0;
 	for (i = 0; i < 256; i++)
 		pal[i] = 0xFF000000u | dac8(vga.dac[i][0])<<16 | dac8(vga.dac[i][1])<<8 | dac8(vga.dac[i][2]);
-	for (i = 0; i < w*h; i++)
-		pixels[i] = pal[vga.vram[i]];
-	SDL_UpdateTexture(texture, &(SDL_Rect){0, 0, w, h}, pixels, w*4);
+	tw = w < Wide_X ? w + 1 : w;
+	th = h < Screen_Y ? h + 1 : h;
+	for (y = 0; y < h; y++) {
+		for (x = 0; x < w; x++)
+			pixels[y*tw + x] = pal[vga.vram[y*w + x]];
+		if (tw > w)
+			pixels[y*tw + w] = pixels[y*tw + w - 1];
+	}
+	if (th > h)
+		memcpy(pixels + (size_t)h*tw, pixels + (size_t)(h - 1)*tw, (size_t)tw*sizeof pixels[0]);
+	SDL_UpdateTexture(texture, &(SDL_Rect){0, 0, tw, th}, pixels, tw*4);
 	src = (SDL_FRect){0, 0, w, h};
 	dw = Screen_X;
 	dh = Screen_Y;
@@ -990,8 +1171,22 @@ sdlpoll(void)
 			text(e.text.text);
 			break;
 		case SDL_EVENT_WINDOW_EXPOSED:
+			applyvsync();
+			stale = 1;
+			break;
 		case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
 			stale = 1;
+			break;
+		case SDL_EVENT_WINDOW_SHOWN:
+		case SDL_EVENT_WINDOW_HIDDEN:
+		case SDL_EVENT_WINDOW_MINIMIZED:
+		case SDL_EVENT_WINDOW_RESTORED:
+		case SDL_EVENT_WINDOW_OCCLUDED:
+			applyvsync();
+			break;
+		case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
+		case SDL_EVENT_DISPLAY_CURRENT_MODE_CHANGED:
+			displayvsync();
 			break;
 		case SDL_EVENT_WINDOW_FOCUS_GAINED:
 			hookkeys(1);
@@ -1006,7 +1201,7 @@ sdlpoll(void)
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: lba [-g gamedir]... [-c cd]... [-p prefdir] [-D WxH] [-r record | -i record] [-s sums] [-S n[-m[/k]]] [-w wave] [-m music]\n");
+	fprintf(stderr, "usage: lba [-g gamedir]... [-c cd]... [-p prefdir] [-D WxH] [-R hz] [-r record | -i record] [-s sums] [-S n[-m[/k]]] [-w wave] [-m music]\n");
 	exit(2);
 }
 
@@ -1019,10 +1214,14 @@ usage(void)
  * directory's parent, and the preferences SDL's. The configuration file
  * is read after them from the program's directory (files.c). The wide
  * screen takes its shape from the display, or from the size -D gives,
- * which a record keeps for its replays. The input can be recorded (-r)
- * or played from a record (-i), the screens shown summed (-s), the nth,
- * or the nth to the mth (every kth), written as lban.bmp (-S), and the
- * samples mixed (-w) and the music made (-m) written raw: replay.c.
+ * which a record keeps for its replays, and DisplaySync its pace and its
+ * presents' vsync from the display's refresh in hertz, -R's, 1 to 1000
+ * or 0 for unknown, the pace else a record's, else the window's
+ * display's, and vsync else the window's display's. The input can be
+ * recorded (-r) or played from a record (-i), the screens shown summed
+ * (-s), the nth, or the nth to the mth (every kth), written as lban.bmp
+ * (-S), and the samples mixed (-w) and the music made (-m) written raw:
+ * replay.c.
  */
 int
 main(int argc, char *argv[])
@@ -1031,6 +1230,7 @@ main(int argc, char *argv[])
 	const char *base;
 	uint32_t n, m, k;
 	long dw, dh;
+	double hz;
 	int i, ngame, ncd;
 
 	meminit();
@@ -1063,6 +1263,18 @@ main(int argc, char *argv[])
 			if (dw <= 0 || dw > 65535 || dh <= 0 || dh > 65535 || *e != '\0')
 				usage();
 			setdisplay((int)dw, (int)dh);
+			break;
+		case 'R':
+			hz = strtod(argv[++i], &e);
+			if (e == argv[i] || *e != '\0')
+				usage();
+			if (hz == 0)
+				setrefresh(0);
+			else if (hz >= 1 && hz <= 1000)
+				setrefresh((uint64_t)(1e9/hz + 0.5));
+			else
+				usage();
+			framegiven = 1;
 			break;
 		case 'r':
 			rec = argv[++i];

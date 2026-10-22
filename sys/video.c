@@ -57,6 +57,14 @@ int32_t	Screen_X = Width;
 int32_t	Screen_Y = Height;
 int32_t	Wide_X = Width;	/* the screen's width with WideScreen ON, set at the start (sys.c) */
 int32_t	FlagWideScreen;	/* WideScreen ON: the screen Wide_X wide */
+int32_t	FlagIntegerScaling;	/* IntegerScaling ON: the screen scaled by whole multiples */
+
+/*
+ * DesiredDisplayNum is TLBA1C.exe 0x832dc0: the display the window
+ * opens on, the nth of SDL's from 0, 0 when the key is missing, as the
+ * Classic's image holds it.
+ */
+int32_t	DesiredDisplayNum;
 int32_t	ClipXmin;
 int32_t	ClipYmin;
 int32_t	ClipXmax = Width - 1;
@@ -195,6 +203,19 @@ poparea(void)
 }
 
 /*
+ * FEATURE: SetSmoothScaling, lba.cfg's SmoothScaling, ON where the key
+ * is missing (modes.c's readplatform): the screen scaled through the
+ * linear filter where flag is set and sharp otherwise (sdlfilter), the
+ * flag given back. The port's own: ON draws as the Classic 3.2.3 draws.
+ */
+int32_t
+SetSmoothScaling(int32_t flag)
+{
+	sdlfilter(flag != 0);
+	return flag;
+}
+
+/*
  * A picture of 640x480 loaded at the start of p, a buffer of the
  * screen's size, put in the window's place there, black around it.
  */
@@ -237,6 +258,7 @@ setmode(int mode)
 {
 	vga.mode = mode;
 	memset(vga.vram, 0, (size_t)Screen_X*Screen_Y);
+	displayvsync();
 }
 
 void

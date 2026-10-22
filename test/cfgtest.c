@@ -27,8 +27,9 @@
  * lines after it, and lines longer than DefString, a key read past them
  * and a value kept to its first 255 bytes. Then LbaWin's settings, as
  * lib386/lib_sys/settings.c reads, forces and writes them, and the
- * switch WideScreen with its default. First, the port's keys as
- * readplatform reads them, and the game's own switch, SkipLogo, as
+ * switches WideScreen, SmoothScaling, IntegerScaling and DisplaySync,
+ * each with its default, and DesiredDisplayNum. First, the port's keys
+ * as readplatform reads them, and the game's own switch, SkipLogo, as
  * gamekey reads it for sources/perso.c, from sys/lba.cfg, shipped beside
  * the program and held as its text, each named there, and from the CD's
  * LBA.CFG, which leaves them out: the same values, the code's defaults
@@ -38,13 +39,14 @@
 void	setdirs(char*, char**, int, char**, int);
 int	bindtext(int, char*, const char*, char*, int);
 int	readswitch(char*, char*, int);
-void	readplatform(char*);
+void	readplatform(char*, int*);
 char*	gamekeyname(int);
 
 
 char	PathConfigFile[260];	/* sys/sys.c's, which cfgtest leaves out */
-int32_t	FlagWideScreen;	/* sys/video.c's */
+int32_t	FlagWideScreen, FlagIntegerScaling, DesiredDisplayNum;	/* sys/video.c's */
 int32_t	FlagFullScreen = 1;	/* sys/video.c's, TLBA1C.exe 0x818854's value */
+static int32_t	smooth;	/* SmoothScaling, as readplatform gave it */
 
 static char *pref;
 static int fails;
@@ -63,12 +65,39 @@ static struct {
 	{"WideScreen: ON\r\n", "WideScreen", 1, 1},
 	{"widescreen: off\r\n", "WideScreen", 1, 0},
 	{"WideScreen: on  \r\n", "WideScreen", 1, 1},
-	{"SkipLogo: OFF\r\n", "WideScreen", 1, 1},	/* missing */
+	{"SmoothScaling: OFF\r\n", "WideScreen", 1, 1},	/* missing */
 	{"WideScreen:\r\n", "WideScreen", 1, 1},
 	{"WideScreen: auto\r\n", "WideScreen", 1, -1},
 	{"WideScreen: 960x540\r\n", "WideScreen", 1, -1},
 	{"WideScreen: 1\r\n", "WideScreen", 1, -1},
+	{"SmoothScaling: OFF\r\n", "SmoothScaling", 1, 0},
+	{"smoothscaling: on\r\n", "SmoothScaling", 1, 1},
+	{"SmoothScaling: Off  \r\n", "SmoothScaling", 1, 0},
+	{"WideScreen: OFF\r\n", "SmoothScaling", 1, 1},	/* missing */
+	{"SmoothScaling:\r\n", "SmoothScaling", 1, 1},
+	{"SmoothScaling: \r\n", "SmoothScaling", 1, 1},
+	{"SmoothScaling: linear\r\n", "SmoothScaling", 1, -1},
+	{"SmoothScaling: ONE\r\n", "SmoothScaling", 1, -1},
+	{"SmoothScaling: 0\r\n", "SmoothScaling", 1, -1},
+	{"IntegerScaling: ON\r\n", "IntegerScaling", 0, 1},
+	{"integerscaling: off\r\n", "IntegerScaling", 0, 0},
+	{"SmoothScaling: ON\r\n", "IntegerScaling", 0, 0},	/* missing */
+	{"IntegerScaling:\r\n", "IntegerScaling", 0, 0},
+	{"IntegerScaling: 2\r\n", "IntegerScaling", 0, -1},
+	{"DisplaySync: OFF\r\n", "DisplaySync", 1, 0},
+	{"displaysync: on\r\n", "DisplaySync", 1, 1},
+	{"IntegerScaling: OFF\r\n", "DisplaySync", 1, 1},	/* missing */
+	{"DisplaySync:\r\n", "DisplaySync", 1, 1},
+	{"DisplaySync: vsync\r\n", "DisplaySync", 1, -1},
 };
+
+/* SetSmoothScaling is sys/video.c's: here the flag kept. */
+int32_t
+SetSmoothScaling(int32_t flag)
+{
+	smooth = flag;
+	return flag;
+}
 
 /* fatal is sys/fns.h's, as sys/sdl.c has it. */
 void
@@ -204,18 +233,25 @@ longcase(void)
 
 /* The port's keys, in readplatform's order */
 static char *names[] = {
-	"LbaWinSettings", "LbaWinFullScreen", "WideScreen",
+	"LbaWinSettings", "LbaWinFullScreen", "WideScreen", "DesiredDisplayNum",
+	"SmoothScaling", "IntegerScaling", "DisplaySync",
 };
 
 /* readplatform's values for the configuration file name into v, in names' order */
 static void
 platform(char *name, int32_t *v)
 {
+	int sync;
+
 	strcpy(PathConfigFile, name);
-	readplatform(name);
+	readplatform(name, &sync);
 	v[0] = LbaWinSettings;
 	v[1] = FlagFullScreen;
 	v[2] = FlagWideScreen;
+	v[3] = DesiredDisplayNum;
+	v[4] = smooth;
+	v[5] = FlagIntegerScaling;
+	v[6] = sync;
 }
 
 /* key named in sys/lba.cfg, and its value a where the CD's LBA.CFG leaves it out the same as b, sys/lba.cfg's */
@@ -400,6 +436,9 @@ main(int argc, char **argv)
 	put("W.CFG", "WideScreen: ON\r\nOther: auto\r\n");
 	str("W.CFG", "WideScreen", "ON");
 	str("W.CFG", "Other", "auto");
+	put("D.CFG", "DesiredDisplayNum: 1\r\n");
+	val("D.CFG", "DesiredDisplayNum", 1, 1);
+	val("LBA.CFG", "DesiredDisplayNum", 0, 0);	/* the CD's: SDL's primary */
 
 	for (i = 0; i < (int)(sizeof switches / sizeof switches[0]); i++)
 		onoff(i);

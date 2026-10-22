@@ -204,7 +204,7 @@ sys/mem.c typedef MEMINFO lba2	game: each game's memory calls on the one arena, 
 sys/mem.c watcomexpand lba2	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
 sys/replay.c music lba1	game: LBA1's music chip's frames, written raw by -m
 sys/replay.c musicto lba1	game: LBA1's music chip
-sys/replay.c next apart	game: LBA2's frame in a record's header, and its pad's buttons in p lines
+sys/replay.c next apart	game: LBA2's pad's buttons in p lines
 sys/replay.c replay apart	game: LBA2's pad's buttons in p lines
 sys/replay.c summed apart	game: mode 13h's screens in LBA1, 320x200 and the mode summed
 sys/replay.c summedmidi lba1	game: LBA1's music chip
@@ -213,9 +213,9 @@ sys/sdl.c actionkey lba1	game: LbaWinSettings' 4, W on AZERTY
 sys/sdl.c enum Ext apart	game: each game's constants beside the window's, LBA1's W on AZERTY and its music's silence, LBA2's release bit
 sys/sdl.c key apart	game: the W of LbaWinSettings' 4
 sys/sdl.c lastmode lba1	game: mode 13h, where LBA1 plays its movies
-sys/sdl.c lastw lba2	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, LBA2's one mode, its texture made again at each width
+sys/sdl.c lastw lba2	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, its texture's border column and row for the filter at either mode's edge, LBA2's one mode, its texture made again at each width
 sys/sdl.c main apart	game: each program's start, LBA1's in InitAdelineSystem, LBA2's display, wide screen and clock in main before the 1997 game's parameters, and LBA1's music written raw by -m, beside the sound by -w in both
-sys/sdl.c maketexture lba2	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, LBA2's one mode, its texture made again at each width
+sys/sdl.c maketexture lba2	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, its texture's border column and row for the filter at either mode's edge, LBA2's one mode, its texture made again at each width
 sys/sdl.c midigain lba1	game: the music's chip, the OPL3 or the EMU8000
 sys/sdl.c midilead lba1	game: the music's chip, the OPL3 or the EMU8000
 sys/sdl.c midiquiet lba1	game: the music's chip, the OPL3 or the EMU8000
@@ -231,9 +231,9 @@ sys/sdl.c sdllate apart	game: LBA1's stream of the music chip, and its samples' 
 sys/sdl.c sdlmidi lba1	game: the music's chip, the OPL3 or the EMU8000
 sys/sdl.c sdlmidigain lba1	game: the music's chip, the OPL3 or the EMU8000
 sys/sdl.c sdlpoll apart	game: LBA2's mouse, which the 1997 code reads in its editor
-sys/sdl.c sdlscreen apart	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, LBA2's one mode, its texture made again at each width
-sys/sdl.c sdlshow apart	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, LBA2's one mode, its texture made again at each width
-sys/sdl.c sdlsize apart	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, LBA2's one mode, its texture made again at each width
+sys/sdl.c sdlscreen apart	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, its texture's border column and row for the filter at either mode's edge, LBA2's one mode, its texture made again at each width
+sys/sdl.c sdlshow apart	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, its texture's border column and row for the filter at either mode's edge, LBA2's one mode, its texture made again at each width
+sys/sdl.c sdlsize apart	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, its texture's border column and row for the filter at either mode's edge, LBA2's one mode, its texture made again at each width
 sys/sdl.c sdlwave apart	game: LBA1's stream of the music chip, and its samples' volume as the wave stream's gain, LBA2's MSS mixing its own
 sys/sdl.c sdlwavegain lba1	game: LBA1's mixer chip's gains
 sys/sdl.c usage apart	game: each program's start, LBA1's in InitAdelineSystem, LBA2's display, wide screen and clock in main before the 1997 game's parameters, and LBA1's music written raw by -m, beside the sound by -w in both
@@ -265,11 +265,13 @@ sys/timer.c CmptFrame lba1	game: timer_a.asm's counts at the PIT's 50 Hz
 sys/timer.c Cmpt_18 lba1	game: timer_a.asm's counts at the PIT's 50 Hz
 sys/timer.c LockVMMTimer lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c NbFramePerSecond lba1	game: timer_a.asm's counts at the PIT's 50 Hz
+sys/timer.c SetDisplaySync apart	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c TimerRef lba1	game: timer_a.asm's counts at the PIT's 50 Hz
 sys/timer.c TimerSystem lba1	game: timer_a.asm's counts at the PIT's 50 Hz
 sys/timer.c WaitNbTicks lba1	game: timer_a.asm's counts at the PIT's 50 Hz
 sys/timer.c clocknow lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c decl interrupts lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
+sys/timer.c displayvsync apart	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c divisor lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c enum Pitclock lba2	game: LBA1's PIT tick and mode 13h's frame, LBA2's PIT clock and MSS's spin
 sys/timer.c enum Tick lba1	game: LBA1's PIT tick and mode 13h's frame, LBA2's PIT clock and MSS's spin
@@ -279,9 +281,11 @@ sys/timer.c interrupts lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milli
 sys/timer.c irqat lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c millis lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c msat lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
+sys/timer.c paces lba1	game: LBA1's frame by the screen's mode, mode 13h's 70.09 Hz beside VGA's 59.94 Hz, LBA2's one
 sys/timer.c pitcount lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c pump apart	game: the devices each pump drives, LBA1's PIT ticks, its wave, CD and music chip, LBA2's MSS interrupts, its CD and its pad's repeats
 sys/timer.c setpit lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
+sys/timer.c synced lba1	game: LBA1's frame by the screen's mode, mode 13h's 70.09 Hz beside VGA's 59.94 Hz, LBA2's one
 sys/timer.c tick lba1	game: timer_a.asm's counts at the PIT's 50 Hz
 sys/timer.c ticks lba1	game: timer_a.asm's counts at the PIT's 50 Hz
 sys/timer.c vsync apart	game: LBA1's frame by the screen's mode, mode 13h's 70.09 Hz beside VGA's 59.94 Hz, LBA2's one
@@ -447,6 +451,7 @@ test/clocktest.c TimerSystem lba1	game: LBA1's 50 Hz ticks and its two modes' fr
 test/clocktest.c decl NewProc08 lba2	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
 test/clocktest.c dignext lba2	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
 test/clocktest.c digturn lba2	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c displays apart	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
 test/clocktest.c enum Turns apart	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
 test/clocktest.c held lba2	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
 test/clocktest.c irqms lba2	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
@@ -458,6 +463,7 @@ test/clocktest.c pitirq lba2	game: LBA1's 50 Hz ticks and its two modes' frames,
 test/clocktest.c soundtick lba1	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
 test/clocktest.c steps lba2	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
 test/clocktest.c switched lba2	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c synced apart	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
 test/clocktest.c ticks lba1	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
 test/clocktest.c vga lba1	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
 test/clocktest.c wavetick lba1	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts

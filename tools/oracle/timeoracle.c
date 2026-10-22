@@ -125,6 +125,24 @@ sdlshow(void)
 {
 }
 
+uint64_t
+sdlrefresh(void)
+{
+	return 0;
+}
+
+uint64_t
+sdlwindowframe(void)
+{
+	return 0;
+}
+
+void
+sdlvsync(int n)
+{
+	USED(n);
+}
+
 void
 summed(uint32_t n, uint64_t t)
 {

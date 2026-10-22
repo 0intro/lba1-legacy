@@ -10,7 +10,7 @@
 # them standing for dir/run/NAME, made empty first: the EMU8000 against
 # its documents (emu8ktest), Alt+F4 and the Windows keys refused
 # (syskeystest), the wide screen's width (widetest), the clock's
-# retraces and ticks (clocktest), the preferences' files and their
+# retraces, pace and ticks (clocktest), the preferences' files and their
 # writer (filestest) and a CD's image read on images of the test's own
 # (cdimagetest). cfgtest runs in test/nodata. A Windows build's tests
 # (NAME.exe) run natively under Git Bash or MSYS2, and on Linux under

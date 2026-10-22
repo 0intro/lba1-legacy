@@ -206,6 +206,12 @@ sdlfullscreen(int on)
 }
 
 void
+sdlfilter(int on)
+{
+	USED(on);
+}
+
+void
 sdlsize(void)
 {
 }
@@ -259,6 +265,24 @@ miditick(uint64_t t)
 void
 sdlshow(void)
 {
+}
+
+uint64_t
+sdlrefresh(void)
+{
+	return 0;
+}
+
+uint64_t
+sdlwindowframe(void)
+{
+	return 0;
+}
+
+void
+sdlvsync(int n)
+{
+	USED(n);
 }
 
 /* The port's screen shown, at the retrace t. */
