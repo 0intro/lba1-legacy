@@ -490,6 +490,8 @@ check(char *what, Image *m, int audio)
 			}
 		if (imagetrackread(m, t, (uint64_t)Nframe*Raw, frame, Raw) != 0)
 			fail("%s: track %d: a frame past its end", what, t);
+		if (imagecoded(m, t))
+			fail("%s: track %d taken for a decoder's", what, t);
 	}
 	if (imageaudio(m, 1) != 0)
 		fail("%s: the data track taken for an audio track", what);
@@ -834,8 +836,9 @@ own(void)
 		{"a size past the image's end", Cdrec+11, 0x68, NULL, 1, NULL},
 		{"a cue without its file", -1, 0, "TRACK 01 MODE1/2352\n  INDEX 01 00:00:00\n", 0, "a TRACK line out of place"},
 		{"a cue naming a missing file", -1, 0, "FILE \"none.bin\" BINARY\n  TRACK 01 MODE1/2352\n    INDEX 01 00:00:00\n", 0, "no such file"},
-		{"a cue of an AIFF file", -1, 0, "FILE \"disc.bin\" AIFF\n  TRACK 01 MODE1/2352\n    INDEX 01 00:00:00\n", 0, "other than BINARY or WAVE"},
+		{"a cue of an AIFF file", -1, 0, "FILE \"disc.bin\" AIFF\n  TRACK 01 MODE1/2352\n    INDEX 01 00:00:00\n", 0, "other than BINARY, WAVE, MP3 or OGG"},
 		{"a WAVE file of no RIFF", -1, 0, "FILE \"disc.bin\" WAVE\n  TRACK 01 AUDIO\n    INDEX 01 00:00:00\n", 0, "a WAVE file other than"},
+		{"an MP3 file of no sound", -1, 0, "FILE \"disc.cue\" MP3\n  TRACK 01 AUDIO\n    INDEX 01 00:00:00\n", 0, "neither MP3 nor Ogg Vorbis"},
 		{"a data track in a WAVE file", -1, 0, "FILE \"wave.bin\" BINARY\n  TRACK 01 MODE1/2048\n    INDEX 01 00:00:00\nFILE \"wave.bin2\" WAVE\n  TRACK 02 MODE1/2352\n    INDEX 01 00:00:00\n", 0, "a data track in a file of sound"},
 		{"a MODE2/2336 track", -1, 0, "FILE \"disc.bin\" BINARY\n  TRACK 01 MODE2/2336\n    INDEX 01 00:00:00\n", 0, "a track of a kind other than"},
 		{"a second out of range", -1, 0, "FILE \"disc.bin\" BINARY\n  TRACK 01 MODE1/2352\n    INDEX 01 00:61:00\n", 0, "not a time"},

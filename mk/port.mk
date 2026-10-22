@@ -81,9 +81,9 @@ TESTS_linux=\
 	padtest\
 
 # The objects, the game's in their link order, and their directories.
-OFILES=$(addprefix $(O)/,$(GAME) $(LIBS) $(NEW) $(CARRIED) $(PORT) $(OPL3) $(ARRAYS))
-NEWOFILES=$(addprefix $(O)/,$(NEW) $(CARRIED) $(TESTS:%=test/%.o) $(PCM))
-DIRS=$(patsubst %/,%,$(sort $(dir $(OFILES) $(NEWOFILES) $(DECODE:%=$(O)/%) $(O)/test/padtest.o)))
+OFILES=$(addprefix $(O)/,$(GAME) $(LIBS) $(NEW) $(CARRIED) $(PORT) $(OPL3) $(DECODE) $(ARRAYS))
+NEWOFILES=$(addprefix $(O)/,$(NEW) $(CARRIED) $(TESTS:%=test/%.o) tools/pcm.o)
+DIRS=$(patsubst %/,%,$(sort $(dir $(OFILES) $(NEWOFILES) $(O)/test/padtest.o)))
 
 # all builds the game, lba.cfg beside it, the tool and the unit tests.
 all: $(O)/lba$(EXE) $(O)/lba.cfg $(O)/pcm$(EXE) $(DLL_$(OS))\
@@ -94,10 +94,12 @@ all: $(O)/lba$(EXE) $(O)/lba.cfg $(O)/pcm$(EXE) $(DLL_$(OS))\
 # The game comes last, its file the folder's.
 SDLLICENCE_windows=$(SDLDIR)/$(MINGW_$(ARCH))/share/licenses/SDL3/LICENSE.txt
 $(D)/lba$(EXE): $(O)/lba$(EXE) $(O)/lba.cfg $(DLL_$(OS)) $(SDLDEP_$(OS)) LICENSE\
-	sys/nuked/LICENSE lib386/lib_midi/ail32/license
+	sys/nuked/LICENSE sys/drlibs/LICENSE sys/stb/LICENSE lib386/lib_midi/ail32/license
 	rm -rf $(D) && mkdir -p $(D)
 	cp $(O)/lba.cfg $(DLL_$(OS)) LICENSE $(D)/
 	cp sys/nuked/LICENSE $(D)/LICENSE.nuked
+	cp sys/drlibs/LICENSE $(D)/LICENSE.drlibs
+	cp sys/stb/LICENSE $(D)/LICENSE.stb
 	cp lib386/lib_midi/ail32/license $(D)/LICENSE.ail32
 	$(if $(SDLLICENCE_$(OS)),cp $(SDLLICENCE_$(OS)) $(D)/LICENSE.SDL3)
 	cp $(O)/lba$(EXE) $@
@@ -146,11 +148,11 @@ LINK=$(COMPILE) $(LD) -o $@ $^
 $(O)/emu8ktest$(EXE): $(addprefix $(O)/,$(EMU8KTEST)) $(MANIFEST)
 	$(LINK) -lm
 
-$(O)/cfgtest$(EXE): $(addprefix $(O)/,$(CFGTEST)) $(MANIFEST)
-	$(LINK)
+$(O)/cfgtest$(EXE): $(addprefix $(O)/,$(CFGTEST) $(DECODE)) $(MANIFEST)
+	$(LINK) -lm
 
-$(O)/inputtest$(EXE): $(addprefix $(O)/,$(INPUTTEST)) $(MANIFEST)
-	$(LINK)
+$(O)/inputtest$(EXE): $(addprefix $(O)/,$(INPUTTEST) $(DECODE)) $(MANIFEST)
+	$(LINK) -lm
 
 $(O)/syskeystest$(EXE): $(addprefix $(O)/,$(SYSKEYSTEST)) $(MANIFEST)
 	$(LINK)
@@ -161,11 +163,11 @@ $(O)/widetest$(EXE): $(addprefix $(O)/,$(WIDETEST)) $(MANIFEST)
 $(O)/clocktest$(EXE): $(addprefix $(O)/,$(CLOCKTEST)) $(MANIFEST)
 	$(LINK)
 
-$(O)/filestest$(EXE): $(addprefix $(O)/,$(FILESTEST)) $(MANIFEST)
-	$(LINK)
+$(O)/filestest$(EXE): $(addprefix $(O)/,$(FILESTEST) $(DECODE)) $(MANIFEST)
+	$(LINK) -lm
 
-$(O)/cdimagetest$(EXE): $(addprefix $(O)/,$(CDIMAGETEST)) $(MANIFEST)
-	$(LINK)
+$(O)/cdimagetest$(EXE): $(addprefix $(O)/,$(CDIMAGETEST) $(DECODE)) $(MANIFEST)
+	$(LINK) -lm
 
 $(O)/padtest$(EXE): $(addprefix $(O)/,$(PADTEST)) $(MANIFEST)
 	$(LINK) $(SDLLIBS) -lm

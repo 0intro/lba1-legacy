@@ -253,7 +253,7 @@ wavetick(uint64_t ns)
 		mixhalf();
 		mixed++;
 		sdlwave(buffer, Half, PlayRate);
-		summedwave(mixed, buffer, Half);
+		summedwave(mixed, buffer, Half, NULL, 0);
 	}
 }
 

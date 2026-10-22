@@ -36,8 +36,11 @@
  * is on, it adds a line per period of its timer: m, the chip's samples
  * made so far, the sum of the period's. A PlayStation's track playing
  * in the XMIDI's place adds a line per frame of it handed on: r, its
- * number, its sum. The halves can be written too, raw, 16-bit stereo at
- * the samples' rate, and the chip's samples, at its rate.
+ * number, its sum. A frame a decoder gives, whose samples the builds
+ * decode a few bits apart, is summed by its place: in a c line its
+ * audio track's number and its byte, in an r line those, its frame's
+ * number and its volume. The halves can be written too, raw, 16-bit
+ * stereo at the samples' rate, and the chip's samples, at its rate.
  */
 
 static FILE *rec;
@@ -381,17 +384,23 @@ waveto(char *file)
 		fatal("cannot create %s", file);
 }
 
-/* The samples' half n, mixed: its sum, and its frames written. */
+/*
+ * The samples' half n, mixed: its sum, or where a decoder's sound lies
+ * in it, whose samples differ by build, the sum of its len bytes of
+ * place, and its frames written.
+ */
 void
-summedwave(uint64_t n, const uint32_t *buf, int frames)
+summedwave(uint64_t n, const uint32_t *buf, int frames, const uint8_t *place, int len)
 {
-	if (sums != NULL)
+	if (sums != NULL && place != NULL)
+		fprintf(sums, "w %" PRIu64 " %08" PRIx32 "\n", n, crc(0, place, (size_t)len));
+	else if (sums != NULL)
 		fprintf(sums, "w %" PRIu64 " %08" PRIx32 "\n", n, crc(0, (const uint8_t*)buf, (size_t)frames*4));
 	if (wave != NULL)
 		fwrite(buf, 4, (size_t)frames, wave);
 }
 
-/* The CD's frame of audio n, handed on: its sum. */
+/* The CD's frame of audio n, handed on, or its place where a decoder gives it: its sum. */
 void
 summedcd(uint64_t n, const uint8_t *buf, int len)
 {
@@ -399,7 +408,7 @@ summedcd(uint64_t n, const uint8_t *buf, int len)
 		fprintf(sums, "c %" PRIu64 " %08" PRIx32 "\n", n, crc(0, buf, (size_t)len));
 }
 
-/* The PlayStation's track's frame n, handed on at its volume: its sum. */
+/* The PlayStation's track's frame n, handed on at its volume, or its place where a decoder gives it: its sum. */
 void
 summedpstrack(uint64_t n, uint8_t *buf, int len)
 {

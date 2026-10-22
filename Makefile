@@ -221,6 +221,7 @@ PORT=\
 	sys/xmidi.o\
 	sys/yamaha.o\
 	sys/cuts.o\
+	sys/decode.o\
 	sys/cdimage.o\
 	sys/input.o\
 	sys/syskeys.o\
@@ -258,6 +259,7 @@ CFGTEST=\
 	sys/mem.o\
 	sys/modes.o\
 	sys/cdimage.o\
+	sys/decode.o\
 	sys/lbacfg.o\
 
 # inputtest: the Classic's input, its keys' virtual keys and the inputs
@@ -273,6 +275,7 @@ INPUTTEST=\
 	sys/input.o\
 	sys/mem.o\
 	sys/cdimage.o\
+	sys/decode.o\
 
 # syskeystest: sys/syskeys.c's answers to Alt+F4 and the Windows keys,
 # the hook's and the game's, held to what each event must give
@@ -309,6 +312,7 @@ FILESTEST=\
 	sys/files.o\
 	sys/mem.o\
 	sys/cdimage.o\
+	sys/decode.o\
 
 # cdimagetest: a CD's image read as the CD.
 CDIMAGETEST=\
@@ -316,6 +320,7 @@ CDIMAGETEST=\
 	sys/compat.o\
 	sys/files.o\
 	sys/cdimage.o\
+	sys/decode.o\
 
 # pcm: a music file decoded as the port decodes it.
 PCM=\

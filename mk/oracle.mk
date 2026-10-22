@@ -82,6 +82,7 @@ CDSRC=\
 	sys/cdimage.c\
 	sys/compat.c\
 	sys/cuts.c\
+	tools/oracle/nodecode.c\
 	lib386/lib_sys/expand.c\
 
 KEYSRC=\
@@ -109,6 +110,7 @@ FILESRC=\
 	sys/files.c\
 	sys/cdimage.c\
 	sys/compat.c\
+	tools/oracle/nodecode.c\
 	lib386/lib_sys/expand.c\
 
 MIXSRC=\

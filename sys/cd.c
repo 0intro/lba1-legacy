@@ -53,6 +53,7 @@ struct Track
 	FILE	*f;	/* a host's file, */
 	Image	*img;	/* or the image whose sound it is */
 	int32_t	audio;	/* the image's audio track the sound lies in */
+	int	coded;	/* that track's sound decoded (imagecoded) */
 	int32_t	num;	/* the CD's track the game plays, 0 for none */
 	uint32_t	n;	/* its frames */
 	uint64_t	fed;	/* frames handed */
@@ -148,6 +149,7 @@ audioopen(char *name, Track *t)
 		if (cdtrack(name, &t->img, &t->audio, &first, &t->n) < 0)
 			return -1;
 		t->base = (uint64_t)first * Frame;
+		t->coded = imagecoded(t->img, t->audio);
 		return 0;
 	}
 	f = fopen(path, "rb");
@@ -429,33 +431,48 @@ cutframe(uint8_t *buf, uint64_t f)
 
 /*
  * cdtick: the frames of the track playing that the clock has passed,
- * and Ahead more, read and handed on, each summed in a record. At its
+ * and Ahead more, read and handed on, each summed in a record, a frame
+ * a decoder gives by its place, whose samples differ by build. At its
  * end it stops. So too the PlayStation's track or the cut, its frames
  * scaled by its volume at their time.
  */
 void
 cdtick(uint64_t ns)
 {
-	uint8_t buf[Frame];
-	uint64_t n;
+	uint8_t buf[Frame], place[64];
+	uint64_t n, at;
+	int32_t v;
+	int len;
 
 	now = ns;
 	if (trackon(&track)) {
 		for (n = due(&track, ns); track.fed < n; track.fed++) {
+			at = track.base + track.at;
 			trackread(&track, buf, Frame);
 			sdlcd(buf, Frame);
-			summedcd(++played, buf, Frame);
+			if (track.coded) {
+				len = snprintf((char*)place, sizeof place, "%ld %llu", (long)track.audio, (unsigned long long)at);
+				summedcd(++played, place, len);
+			} else
+				summedcd(++played, buf, Frame);
 		}
 		if (track.fed == track.n)
 			trackclose(&track);
 	}
 	if (trackon(&ps.t)) {
 		for (n = due(&ps.t, ns); ps.t.fed < n; ps.t.fed++) {
+			at = ps.t.base + ps.t.at;
 			trackread(&ps.t, buf, Frame);
 			cutframe(buf, ps.t.fed);
-			scale(buf, psvolume(ps.t.start + ps.t.fed*1000000000/75));
+			v = psvolume(ps.t.start + ps.t.fed*1000000000/75);
+			scale(buf, v);
 			sdlpstrack(buf, Frame);
-			summedpstrack(++psplayed, buf, Frame);
+			if (ps.t.coded) {
+				len = snprintf((char*)place, sizeof place, "%ld %llu %llu %ld", (long)ps.t.audio,
+					(unsigned long long)at, (unsigned long long)ps.t.fed, (long)v);
+				summedpstrack(++psplayed, place, len);
+			} else
+				summedpstrack(++psplayed, buf, Frame);
 		}
 		if (ps.t.fed == ps.t.n)
 			trackclose(&ps.t);

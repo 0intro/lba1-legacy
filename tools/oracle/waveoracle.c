@@ -253,11 +253,13 @@ sdlwave(const uint32_t *buf, int n, int rate)
 }
 
 void
-summedwave(uint64_t n, const uint32_t *buf, int nf)
+summedwave(uint64_t n, const uint32_t *buf, int nf, const uint8_t *place, int len)
 {
 	USED(n);
 	USED(buf);
 	USED(nf);
+	USED(place);
+	USED(len);
 }
 
 /* A call that runs on: where, and the end. */

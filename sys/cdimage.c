@@ -25,11 +25,15 @@
  * sample to the next of its channel, at Nprobe places of each audio
  * track of a BINARY file (bigendian), as the Internet Archive's rip of
  * LBA2's EU CD holds its track 2. A sound steps little, and a sample whose
- * bytes are read in the wrong order jumps by its low byte, as noise. The
- * data track's ISO 9660 directories give its files, a name compared
- * whatever its case once its version (a semicolon and a number) and a
- * last dot are taken off, and a MODE1/2352 sector holds its 2048 bytes
- * after 16 of sync and header, a MODE2/2352 sector after 24, its
+ * bytes are read in the wrong order jumps by its low byte, as noise. An
+ * MP3 or OGG file holds them as MP3 or Ogg Vorbis at 44100 Hz (decode.c,
+ * which tells the two apart by their bytes, as GOG's sheet of LBA2 calls
+ * its Ogg Vorbis file MP3), read gapless, mono played on both channels,
+ * its frames counted 588 samples each. The data track's ISO 9660
+ * directories give its files, a name compared whatever its case once
+ * its version (a semicolon and a number) and a last dot are taken off,
+ * and a MODE1/2352 sector holds its 2048 bytes after 16 of sync and
+ * header, a MODE2/2352 sector after 24, its
  * subheader's 8 among them. An audio track runs from its INDEX 01 to the
  * next track's, the extent a CD's table of contents gives it, as
  * tools/cdtracks.py cuts it: the next track's PREGAP among it as
@@ -84,6 +88,7 @@ enum
 {
 	Fbinary,	/* raw sectors */
 	Fwave,	/* a RIFF WAVE file's samples */
+	Fcoded,	/* an MP3 or Ogg Vorbis file's */
 };
 
 typedef struct Kind Kind;
@@ -124,9 +129,12 @@ struct Image
 {
 	char	*path[Ntrack];	/* the files, in the sheet's order */
 	FILE	*f[Ntrack];	/* a BINARY or WAVE file's */
+	Decoder	*dec[Ntrack];	/* an MP3 or OGG file's */
 	int	kind[Ntrack];
 	uint32_t	base[Ntrack];	/* a WAVE file's first byte of samples */
 	uint32_t	len[Ntrack];	/* and their bytes */
+	int	mono[Ntrack];	/* an MP3 or OGG file of one channel */
+	uint64_t	next[Ntrack];	/* the frame its decoder gives next */
 	uint32_t	nsec[Ntrack];	/* each file's sectors */
 	int	size[Ntrack];	/* the bytes of each file's sectors, Raw or Sector */
 	int	nfile;
@@ -270,6 +278,8 @@ static int
 addfile(Image *m, char *cue, char *name, char *kind, char *err, int nerr)
 {
 	char dir[Npath], path[Npath], *p, *q, *rel;
+	uint32_t rate, channels;
+	uint64_t frames;
 	int i;
 
 	if (m->nfile == Ntrack) {
@@ -323,8 +333,24 @@ addfile(Image *m, char *cue, char *name, char *kind, char *err, int nerr)
 			return -1;
 		}
 		m->size[i] = Raw;
+	} else if (watcomstricmp(kind, "MP3") == 0 || watcomstricmp(kind, "OGG") == 0) {
+		m->kind[i] = Fcoded;
+		m->dec[i] = decopen(path);
+		if (m->dec[i] == NULL) {
+			seterr(err, nerr, "%s: neither MP3 nor Ogg Vorbis", name);
+			return -1;
+		}
+		decinfo(m->dec[i], &rate, &channels, &frames);
+		if (rate != Rate || (frames + Chunk-1) / Chunk > UINT32_MAX) {
+			seterr(err, nerr, "%s: a sound other than one at 44100 Hz", name);
+			return -1;
+		}
+		m->mono[i] = channels == 1;
+		m->nsec[i] = (frames + Chunk-1) / Chunk;
+		m->size[i] = Raw;
+		return 0;
 	} else {
-		seterr(err, nerr, "%s: a file of a kind other than BINARY or WAVE", name);
+		seterr(err, nerr, "%s: a file of a kind other than BINARY, WAVE, MP3 or OGG", name);
 		return -1;
 	}
 	if (m->f[i] == NULL) {
@@ -735,6 +761,25 @@ imageaudio(Image *m, int32_t num)
 	return i < 0 ? 0 : frames(m, i);
 }
 
+/*
+ * imagecoded: whether the sound of the audio track num comes, in whole
+ * or in part, from an MP3 or Ogg Vorbis file, which a decoder gives.
+ */
+int
+imagecoded(Image *m, int32_t num)
+{
+	Itrack *t;
+	int i;
+
+	i = audio(m, num);
+	if (i < 0)
+		return 0;
+	t = &m->t[i];
+	if (m->kind[t->file] == Fcoded)
+		return 1;
+	return frames(m, i) > m->nsec[t->file] - t->start && t->file+1 < m->nfile && m->kind[t->file+1] == Fcoded;
+}
+
 /* The index of the audio track whose INDEX 01 is the volume's sector s, or -1. */
 static int
 trackat(Image *m, uint32_t s)
@@ -817,6 +862,29 @@ imagesound(Image *m, char *rel, int32_t *num, uint32_t *first, uint32_t *n)
 }
 
 /*
+ * Up to n frames of the MP3 or OGG file i from its frame at into s, its
+ * samples stereo: the frames given, fewer at its end or where it fails.
+ */
+static uint32_t
+coded(Image *m, int i, uint64_t at, int16_t *s, uint32_t n)
+{
+	uint64_t got;
+	uint32_t k;
+
+	if (m->next[i] != at) {
+		if (decseek(m->dec[i], at) < 0)
+			return 0;
+		m->next[i] = at;
+	}
+	got = decread(m->dec[i], s, n);
+	m->next[i] += got;
+	if (m->mono[i])
+		for (k = (uint32_t)got; k-- > 0; )
+			s[2*k] = s[2*k+1] = s[k];
+	return (uint32_t)got;
+}
+
+/*
  * n bytes of the big-endian samples of f from its byte at into buf,
  * little-endian, a sample starting at each even byte: the count given,
  * short where the file fails to give them.
@@ -855,18 +923,35 @@ swapped(FILE *f, uint64_t at, uint8_t *buf, uint32_t n)
 static uint32_t
 sound(Image *m, int i, uint64_t at, uint8_t *buf, uint32_t n)
 {
+	int16_t s[2*Chunk];
+	uint32_t done, k, got, o, j;
+
 	if (m->kind[i] == Fwave) {
 		if (at >= m->len[i])
 			return 0;
 		if (n > m->len[i] - at)
 			n = m->len[i] - at;
 	}
-	at += m->base[i];
-	if (m->kind[i] == Fbinary && m->swap)
-		return swapped(m->f[i], at, buf, n);
-	if (at > LONG_MAX || fseek(m->f[i], (long)at, SEEK_SET) != 0)
-		return 0;
-	return fread(buf, 1, n, m->f[i]);
+	if (m->kind[i] != Fcoded) {
+		at += m->base[i];
+		if (m->kind[i] == Fbinary && m->swap)
+			return swapped(m->f[i], at, buf, n);
+		if (at > LONG_MAX || fseek(m->f[i], (long)at, SEEK_SET) != 0)
+			return 0;
+		return fread(buf, 1, n, m->f[i]);
+	}
+	for (done = 0; done < n; done += k) {
+		o = (at + done) % 4;
+		got = coded(m, i, (at + done) / 4, s, Chunk);
+		if (got == 0)
+			break;
+		k = 4*got - o;
+		if (k > n - done)
+			k = n - done;
+		for (j = 0; j < k; j++)
+			buf[done+j] = (uint8_t)((uint16_t)s[(o+j)/2] >> 8*((o+j)%2));
+	}
+	return done;
 }
 
 /*
@@ -944,6 +1029,8 @@ imageclose(Image *m)
 	for (i = 0; i < m->nfile; i++) {
 		if (m->f[i] != NULL)
 			fclose(m->f[i]);
+		if (m->dec[i] != NULL)
+			decclose(m->dec[i]);
 		free(m->path[i]);
 	}
 	free(m);
