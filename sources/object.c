@@ -17,6 +17,25 @@ WORD	LastJoyFlag = FALSE ;
 WORD	LastMyJoy = 0 ;
 WORD	LastMyFire = 0 ;
 
+#ifdef	DOS
+#define	GameJoy	MyJoy
+#else
+/*
+ * FEATURE: the moves relative to the screen, LbaWinSettings's 0x20.
+ * DoDir and ManualRealAngle read Twinsen's arrows in GameJoy, which
+ * DoDir sets from MyJoy, and JoyDir holds the screen's direction he
+ * walks to. Taken from the Classic 3.2.3, as LbaWin 0.8.1 made it.
+ */
+/* GameJoy is TLBA1C.exe 0x8db7f0 (LbaWin.exe 0x43ec7e): the arrows as DoDir reads them */
+WORD	GameJoy = 0 ;
+/* JoyDir is TLBA1C.exe 0x8db7c8 (LbaWin.exe 0x43f2a4): the arrows of the direction walked to, 0 for none */
+WORD	JoyDir = 0 ;
+/* DirArray is TLBA1C.exe 0x7f2ae4 (LbaWin.exe 0x4302e4): the heading of each direction, by the arrows' bits */
+WORD	DirArray[16] = {
+	0, 640, 128, 640, 896, 768, 0, 768,
+	384, 512, 256, 512, 896, 768, 128, 640 } ;
+#endif
+
 WORD	Col1 ;
 
 void	IncrustGrm( WORD numgrm ) ;
@@ -2032,8 +2051,8 @@ void	ManualRealAngle( T_OBJET *ptrobj )
 {
 	WORD	angle = 0 ;
 
-	if( MyJoy & J_LEFT )	angle = +256 ;
-	if( MyJoy & J_RIGHT )	angle = -256 ;
+	if( GameJoy & J_LEFT )	angle = +256 ;
+	if( GameJoy & J_RIGHT )	angle = -256 ;
 
 	InitRealAngleConst(	ptrobj->Beta,
 				ptrobj->Beta + angle,
@@ -2077,10 +2096,75 @@ void	DoDir( WORD numobj  )
 	WORD	flag, angle ;
 	UBYTE	macro ;
 	UBYTE	string[256] ;
+#ifndef	DOS
+	LONG	x0, y0, x1, y1, cross ;
+	WORD	n ;
+#endif
 
 	ptrobj = &ListObjet[numobj] ;
 
 	if( ptrobj->Body == -1 )	return ;
+
+#ifndef	DOS
+	/*
+	 * FEATURE: the moves relative to the screen. With LbaWinSettings's
+	 * 0x20 an arrow walks Twinsen to the screen's direction it gives:
+	 * his heading takes it at once at a first arrow, from the opposite
+	 * direction, and three eighths of a turn to or from Down and Left
+	 * together, heading 0 (the two directions' dot product -0x80000 or
+	 * less, Rot2D halving every vector but heading 0's), and he turns
+	 * to it on the way from another, until his heading passes it. Taken
+	 * from the Classic 3.2.3, as LbaWin 0.8.1 made it.
+	 */
+	if( ptrobj->Move == MOVE_MANUAL )
+	{
+		GameJoy = MyJoy ;
+		if( LbaWinSettings & 0x20 )
+		{
+			if( MyJoy == 0 )
+			{
+				JoyDir = 0 ;
+				GameJoy = 0 ;
+			}
+			else
+			{
+				GameJoy = J_UP ;
+				n = MyJoy & 15 ;
+				if( JoyDir == 0 )
+				{
+					JoyDir = n ;
+					ptrobj->Beta = DirArray[n] ;
+				}
+				else if( MyJoy != JoyDir )
+				{
+					Rot2D( 1024, 1024, DirArray[JoyDir] ) ;
+					x0 = EX0 ;
+					y0 = EY0 ;
+					Rot2D( 1024, 1024, DirArray[n] ) ;
+					x1 = EX0 ;
+					y1 = EY0 ;
+					if( y1*y0 + x1*x0 <= -0x80000 )	// un demi-tour
+					{
+						JoyDir = n ;
+						ptrobj->Beta = DirArray[n] ;
+					}
+					else
+					{
+						cross = y1*x0 - x1*y0 ;
+						Rot2D( 1024, 1024, ptrobj->Beta ) ;
+						if( ((EX0*y1 - EY0*x1) ^ cross) < 0 )	// la direction dépassée
+						{
+							JoyDir = n ;
+							ptrobj->Beta = DirArray[n] ;
+						}
+						else if( cross < 0 )	GameJoy = J_UP+J_RIGHT ;
+						else			GameJoy = J_UP+J_LEFT ;
+					}
+				}
+			}
+		}
+	}
+#endif
 
 /*-------------------------------------------------------------------------*/
 	if( ptrobj->WorkFlags & FALLING )
@@ -2088,7 +2172,7 @@ void	DoDir( WORD numobj  )
 		if( ptrobj->Move == MOVE_MANUAL )
 		{
 			ManualRealAngle( ptrobj ) ;
-			LastMyJoy = MyJoy ;
+			LastMyJoy = GameJoy ;
 		}
 		return ;
 	}
@@ -2186,11 +2270,11 @@ void	DoDir( WORD numobj  )
 					 * call left: Up's over Left's over Right's.
 					 */
 #ifdef	FIXES
-					if( MyJoy & J_UP )
+					if( GameJoy & J_UP )
 						InitAnim( GEN_ANIM_COUP_1, ANIM_THEN, GEN_ANIM_RIEN, numobj ) ;
-					else if( MyJoy & J_LEFT )
+					else if( GameJoy & J_LEFT )
 						InitAnim( GEN_ANIM_COUP_3, ANIM_THEN, GEN_ANIM_RIEN, numobj ) ;
-					else if( MyJoy & J_RIGHT )
+					else if( GameJoy & J_RIGHT )
 						InitAnim( GEN_ANIM_COUP_2, ANIM_THEN, GEN_ANIM_RIEN, numobj ) ;
 #else
 					if( MyJoy & J_RIGHT )
@@ -2253,9 +2337,9 @@ void	DoDir( WORD numobj  )
 
 	if( !MyFire OR ActionNormal )
 	{
-		if( MyJoy & J_UP+J_DOWN )	LastJoyFlag = FALSE ;
+		if( GameJoy & J_UP+J_DOWN )	LastJoyFlag = FALSE ;
 
-		if( ((MyJoy != LastMyJoy) OR (MyFire != LastMyFire) )
+		if( ((GameJoy != LastMyJoy) OR (MyFire != LastMyFire) )
 		AND LastJoyFlag )
 		{
 			InitAnim( GEN_ANIM_RIEN, ANIM_REPEAT, NO_ANIM, numobj ) ;
@@ -2263,7 +2347,7 @@ void	DoDir( WORD numobj  )
 
 		LastJoyFlag = FALSE ;
 
-		if( MyJoy & J_UP )
+		if( GameJoy & J_UP )
 		{
 			if( !FlagClimbing )
 			{
@@ -2272,13 +2356,13 @@ void	DoDir( WORD numobj  )
 			LastJoyFlag = TRUE ;
 		}
 
-		if( MyJoy & J_DOWN )
+		if( GameJoy & J_DOWN )
 		{
 			InitAnim( GEN_ANIM_RECULE, ANIM_REPEAT, NO_ANIM, numobj ) ;
 			LastJoyFlag = TRUE ;
 		}
 
-		if( MyJoy & J_LEFT )
+		if( GameJoy & J_LEFT )
 		{
 			LastJoyFlag = TRUE ;
 //			if( ptrobj->Anim == AnimRien )
@@ -2295,7 +2379,7 @@ void	DoDir( WORD numobj  )
 			}
 		}
 
-		if( MyJoy & J_RIGHT )
+		if( GameJoy & J_RIGHT )
 		{
 			LastJoyFlag = TRUE ;
 //			if( ptrobj->Anim == AnimRien )
@@ -2314,7 +2398,7 @@ void	DoDir( WORD numobj  )
 	}
 
 	ManualRealAngle( ptrobj ) ;
-	LastMyJoy = MyJoy ;
+	LastMyJoy = GameJoy ;
 	LastMyFire = MyFire ;
 
 	break ;

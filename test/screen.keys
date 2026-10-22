@@ -1,0 +1,44 @@
+# The moves relative to the screen, LbaWinSettings: 242, 0x20 set
+# (fixtures/screen: the CD's LBA.CFG with that key and the outside
+# save). Each arrow, from no arrow, turns Twinsen at once the way it
+# points: Up walks him up the screen, then Right and Left, and Up and
+# Right together turn him on the way up and right, and Down turns him
+# down. Sporty, Right runs him to the right.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 12
+shot start
+down Up
+sleep 1.5
+up Up
+shot up
+down Right
+sleep 1.5
+up Right
+shot right
+down Left
+sleep 1
+up Left
+shot left
+down Up Right
+sleep 1.5
+up Up Right
+shot upright
+sleep 1
+down Down
+sleep 1
+up Down
+shot down
+key F2
+sleep 1
+down Right
+sleep 1
+up Right
+shot run
+sleep 1
+shot end
