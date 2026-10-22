@@ -82,21 +82,21 @@ TESTS_linux=\
 
 # The objects, the game's in their link order, and their directories.
 OFILES=$(addprefix $(O)/,$(GAME) $(LIBS) $(NEW) $(CARRIED) $(PORT) $(OPL3) $(DECODE) $(ARRAYS))
-NEWOFILES=$(addprefix $(O)/,$(NEW) $(CARRIED) $(TESTS:%=test/%.o) tools/pcm.o)
+NEWOFILES=$(addprefix $(O)/,$(NEW) $(CARRIED) $(TESTS:%=test/%.o) tools/lbasave.o tools/pcm.o)
 DIRS=$(patsubst %/,%,$(sort $(dir $(OFILES) $(NEWOFILES) $(O)/test/padtest.o)))
 
-# all builds the game, lba.cfg beside it, the tool and the unit tests.
-all: $(O)/lba$(EXE) $(O)/lba.cfg $(O)/pcm$(EXE) $(DLL_$(OS))\
+# all builds the game, lba.cfg beside it, the tools and the unit tests.
+all: $(O)/lba$(EXE) $(O)/lba.cfg $(O)/lbasave$(EXE) $(O)/pcm$(EXE) $(DLL_$(OS))\
 	$(TESTS:%=$(O)/%$(EXE)) $(TESTS_$(OS):%=$(O)/%$(EXE))
 
-# The distribution holds the game and lba.cfg, the tree's licence and
-# those of the code it carries, and on Windows SDL3.dll and its licence.
-# The game comes last, its file the folder's.
+# The distribution holds the game, lbasave and lba.cfg, the tree's
+# licence and those of the code it carries, and on Windows SDL3.dll and
+# its licence. The game comes last, its file the folder's.
 SDLLICENCE_windows=$(SDLDIR)/$(MINGW_$(ARCH))/share/licenses/SDL3/LICENSE.txt
-$(D)/lba$(EXE): $(O)/lba$(EXE) $(O)/lba.cfg $(DLL_$(OS)) $(SDLDEP_$(OS)) LICENSE\
+$(D)/lba$(EXE): $(O)/lba$(EXE) $(O)/lbasave$(EXE) $(O)/lba.cfg $(DLL_$(OS)) $(SDLDEP_$(OS)) LICENSE\
 	sys/nuked/LICENSE sys/drlibs/LICENSE sys/stb/LICENSE lib386/lib_midi/ail32/license
 	rm -rf $(D) && mkdir -p $(D)
-	cp $(O)/lba.cfg $(DLL_$(OS)) LICENSE $(D)/
+	cp $(O)/lbasave$(EXE) $(O)/lba.cfg $(DLL_$(OS)) LICENSE $(D)/
 	cp sys/nuked/LICENSE $(D)/LICENSE.nuked
 	cp sys/drlibs/LICENSE $(D)/LICENSE.drlibs
 	cp sys/stb/LICENSE $(D)/LICENSE.stb
@@ -142,7 +142,7 @@ $(O)/sys/lbacfg.c: sys/lba.cfg | $(DIRS)
 $(O)/sys/%.res.o: sys/%.rc sys/lba.manifest | $(DIRS)
 	$(CROSS)windres -I sys -O coff -o $@ $<
 
-# The console programs: the unit tests and the tool.
+# The console programs: the unit tests and the tools.
 LINK=$(COMPILE) $(LD) -o $@ $^
 
 $(O)/emu8ktest$(EXE): $(addprefix $(O)/,$(EMU8KTEST)) $(MANIFEST)
@@ -175,6 +175,9 @@ $(O)/padtest$(EXE): $(addprefix $(O)/,$(PADTEST)) $(MANIFEST)
 $(O)/pcm$(EXE): $(addprefix $(O)/,$(PCM) $(DECODE)) $(MANIFEST)
 	$(LINK) -lm
 
+$(O)/lbasave$(EXE): $(addprefix $(O)/,$(LBASAVE)) $(MANIFEST)
+	$(LINK)
+
 # livemusic.so: test/livemusic's preload, which watches the music's
 # stream in play and stalls the game, on Linux alone, as Wine's builds
 # refuse a preload.
@@ -185,7 +188,7 @@ $(O)/livemusic.so: test/livemusic.c | $(DIRS)
 $(addprefix $(O)/,$(GAME) $(LIBS)): $(O)/%.o: %.c | $(DIRS)
 	$(COMPILE) $(CFLAGS) $(OLDFLAGS) -c -o $@ $<
 
-# NEW, CARRIED, the unit tests and the tool.
+# NEW, CARRIED, the unit tests and the tools.
 $(NEWOFILES): $(O)/%.o: %.c | $(DIRS)
 	$(COMPILE) $(CFLAGS) $(NEWFLAGS) -c -o $@ $<
 
@@ -206,11 +209,13 @@ $(addprefix $(O)/,$(ARRAYS)): $(O)/%.o: $(O)/%.c
 
 -include $(wildcard $(O)/*.d $(O)/*/*.d $(O)/*/*/*.d)
 
-# test runs what needs the tree alone: the unit tests (test/unit) and the
-# game's start without its files, cfgtest among its runs (test/nodata).
+# test runs what needs the tree alone: the unit tests (test/unit), the
+# game's start without its files, cfgtest among its runs (test/nodata),
+# and lbasave's saves (test/lbasave check).
 test: all
 	test/unit $(O)
 	test/nodata -x $(O)/lba$(EXE)
+	test/lbasave check -x $(O)/lbasave$(EXE)
 
 # The parts of check that a Linux target alone runs: the proof of the
 # tunes cut from the CD's tracks, which runs pcm, and the start in real

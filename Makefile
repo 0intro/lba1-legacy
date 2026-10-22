@@ -240,7 +240,7 @@ ARRAYS=\
 	sys/lbacfg.o\
 
 # The unit tests' objects, each list the test's own first, and those of
-# the tool built beside the game.
+# the two tools built beside the game.
 
 # emu8ktest: the EMU8000 against its documents (test/emu8ktest.c).
 EMU8KTEST=\
@@ -329,6 +329,15 @@ PCM=\
 	tools/pcm.o\
 	sys/decode.o\
 
+# lbasave: a save written as another version of the game writes it
+# (tools/lbasave.c), with LBA2's packer of the saves and the places the
+# scenes' scripts rewrite.
+LBASAVE=\
+	tools/lbasave.o\
+	lib386/lib_sys/lzss.o\
+	lib386/lib_sys/compress.o\
+	sources/patch.o\
+
 # The game's modules whose .def files make defs writes, NEWDEFS the
 # port's own, which include sys/compat.h themselves.
 NEWDEFS=\
@@ -367,7 +376,7 @@ lint:
 	shellcheck -S warning $$(git grep -l --untracked '^#!/usr/bin/env bash')
 	python3 -I tools/lint.py\
 		-c $(NEW:.o=.c) $(PORT:.o=.c) $(wildcard sys/*.h dos/*.h test/*.c)\
-			$(PCM:.o=.c)\
+			tools/lbasave.c $(PCM:.o=.c)\
 			$(wildcard tools/oracle/*.c tools/oracle/*.h tools/emu8kdiff/*.c)\
 		-p $$(git ls-files -co --exclude-standard '*.py')\
 		-- $$(git ls-files -co --exclude-standard)

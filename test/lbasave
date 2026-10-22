@@ -1,0 +1,496 @@
+#!/usr/bin/env bash
+#
+# lbasave: tools/lbasave.c held to the model of the saves
+# (tools/saves.py), then the saves it writes loaded by each version of
+# the game.
+#
+#     test/lbasave check [-x lbasave]
+#     test/lbasave record [-x lba]
+#     test/lbasave port [-x lba]
+#     test/lbasave dos|lbawin|classic [-x lba] [sample...]
+#
+# check runs tools/saves.py check on lbasave: saves of every version and
+# form made by the model, and, when $LBATMP holds them, the saves of the
+# corpus and the game's files ($LBATMP/pc/LBA), each converted to every
+# version and held to the model's bytes. A Windows exe runs under
+# tools/winerun on Linux, natively elsewhere (Git Bash, MSYS2).
+#
+# The other steps load the samples, the saves in $LBATMP/lbasave/samples,
+# which they read and never write: door.LBA, the port's (version 3,
+# scene 1), snap.LBA, the port's too (16, packed, the prison's back
+# door), dotemu.LBA, DotEmu's (4, scene 5), ngplus.LBA, the Classic's
+# New Game+ (scene 0, chapter 0, which replays the introduction),
+# classic.LBA, the Classic's (scene 0 of chapter 1), and lbawin.LBA,
+# LbaWin's (scene 9).
+#
+# record plays on the port in our Xephyr (tools/xkeys) the main menu's
+# Continue saved game, Load Game with SaveAnywhere on, and the first
+# save of the list, thirty seconds, with SaveAnywhere off (load.in), on
+# (snap.in), and off on a save of the introduction, paged by two
+# Escapes (intro.in). port replays them:
+# DotEmu's save and its conversion to lba, snap and its conversion to
+# lba, with the key off, snap and its conversion to legacy renamed,
+# with it on, each pair the same screens from the load on. With the key
+# off, the save the port writes back at the load is the converted file's
+# bytes, and DotEmu's save under the name DotEmu gave it,
+# 20200509155535.LBA, shows dotemu.LBA's screens and is written back.
+#
+# dos, lbawin and classic convert snap, dotemu, ngplus, classic and
+# lbawin, or the samples named, for LBA.EXE in DOSBox (tools/dosrun),
+# LbaWin (tools/winerun) and GOG's Classic (tools/winerun offline, its
+# sound on ALSA's null PCM), put each alone where the version keeps its
+# saves, and load it from the version's list (tools/xkeys), shooting the
+# screen every two seconds from the load: each shot is sought among the
+# port's screens of the same file's load (tools/framecmp.py, 95% of the
+# pixels, the Classic's, which SDL scales linearly, with -l), and the
+# save the version writes back at the load must be the converted file's
+# bytes. The keys wait for the version's menu and list, as the
+# references in $LBATMP/lbasave/ref show them (DOSBox's are the
+# sweep's), which the first run makes, sleeping in their place. The
+# Classic runs from $LBATMP/gog/run, GOG's files and TLBA1C.exe as its
+# installer lays them out, its home $LBATMP/gog/home, whose .asoundrc
+# names ALSA's null PCM. Its saves of earlier runs are set aside for the
+# runs and put back.
+#
+# lbasave is build/linux-amd64-gcc/lbasave by default, lba
+# build/linux-amd64-gcc/lba.
+# LBATMP is the tree's ../lba1-tmp unless set.
+
+set -Eeuo pipefail
+
+TEST=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPO=$(cd -- "$TEST/.." && pwd)
+LBATMP=${LBATMP:-$(cd -- "$REPO/.." && pwd)/lba1-tmp}
+TOOLS=$REPO/tools
+W=$LBATMP/lbasave
+S=$W/samples
+GAME=$LBATMP/pc/LBA
+LOAD=44000000000	# ns: past the record's Return on the list, its clock
+SPAN=24000000000	# ns: the screens compared from there
+
+usage() {
+	echo "usage: lbasave check [-x lbasave] | record|port [-x lba] | dos|lbawin|classic [-x lba] [sample...]" >&2
+	exit 2
+}
+
+tool=$REPO/build/linux-amd64-gcc/lbasave
+exe=$REPO/build/linux-amd64-gcc/lba
+lbasave=$REPO/build/linux-amd64-gcc/lbasave
+picked=()
+
+# py args: the model, by whichever name Python has here
+py() {
+	local p
+	for p in python3 python; do
+		if command -v "$p" > /dev/null 2>&1; then
+			"$p" -I "$TOOLS/saves.py" "$@"
+			return
+		fi
+	done
+	echo "lbasave: no python3" >&2
+	exit 1
+}
+
+check() {
+	local args=()
+	[[ -f $tool ]] || { echo "lbasave: no $tool; build it first" >&2; exit 1; }
+	if [[ $tool == *.exe && $(uname -s) == Linux ]]; then
+		args+=(-w)
+	fi
+	[[ -d $GAME ]] && args+=(-g "$GAME")
+	[[ -d $W/corpus ]] && args+=(-c "$W/corpus")
+	py check "${args[@]}" "$tool"
+}
+
+samples() {
+	[[ -f $S/door.LBA ]] || { echo "lbasave: no samples in $S" >&2; exit 1; }
+	[[ -x $lbasave ]] || { echo "lbasave: no $lbasave; build it first" >&2; exit 1; }
+}
+
+# fresh dir: an empty directory
+fresh() {
+	rm -rf -- "${1:?}"
+	mkdir -p "$1"
+}
+
+# xk log args...: tools/xkeys, its output into log, run again while the
+# window of a command before it on the shared Xephyr is still closing
+xk() {
+	local log=$1
+	shift
+	for _ in 1 2 3 4 5 6; do
+		"$TOOLS/xkeys" "$@" > "$log" 2>&1 && return
+		grep -q 'window is already open' "$log" || return 1
+		sleep 10
+	done
+	return 1
+}
+
+# pref dir [on]: the CD's LBA.CFG as dir's lba.cfg, SaveAnywhere on when asked
+pref() {
+	fresh "$1"
+	if [[ -n ${2:-} ]]; then
+		{ cat "$GAME/LBA.CFG"; printf 'SaveAnywhere: ON\r\n'; } > "$1/lba.cfg"
+	else
+		cp -- "$GAME/LBA.CFG" "$1/lba.cfg"
+	fi
+}
+
+# convert version dir sample [args...]: the sample converted into dir,
+# its path printed
+convert() {
+	local version=$1 dir=$2 sample=$3
+	shift 3
+	mkdir -p "$dir"
+	"$lbasave" -t "$version" -g "$GAME" "$@" "$S/$sample.LBA" "$dir" 2> /dev/null | tail -n 1
+}
+
+record() {
+	local p=$W/run/pref
+	samples
+	printf 'sleep 40\nkey Down Return\nsleep 3\nkey Return\nsleep 30\n' > "$W/load.keys"
+	pref "$p"
+	cp -- "$S/door.LBA" "$p/S2292.LBA"
+	SDL_AUDIO_DRIVER=dummy xk "$W/load.log" -c lba -o "$W/run/shots" "$W/load.keys" "$exe" \
+		-g "$GAME" -c "$LBATMP/pc" -p "$p" -r "$W/load.in"
+	printf 'hold 0.05\nsleep 40\nkey Down Return\nsleep 3\nkey Return\nhold 0.15\nsleep 30\n' > "$W/snap.keys"
+	pref "$p" on
+	cp -- "$S/snap.LBA" "$p/S2075.LBA"
+	SDL_AUDIO_DRIVER=dummy xk "$W/snap.log" -c lba -o "$W/run/shots" "$W/snap.keys" "$exe" \
+		-g "$GAME" -c "$LBATMP/pc" -p "$p" -r "$W/snap.in"
+	printf 'sleep 40\nkey Down Return\nsleep 3\nkey Return\nsleep 9\nkey Escape\nsleep 8\nkey Escape\nsleep 30\n' \
+		> "$W/intro.keys"
+	pref "$p"
+	"$lbasave" -t lba "$S/ngplus.LBA" "$p" > /dev/null 2>&1
+	SDL_AUDIO_DRIVER=dummy xk "$W/intro.log" -c lba -o "$W/run/shots" "$W/intro.keys" "$exe" \
+		-g "$GAME" -c "$LBATMP/pc" -p "$p" -r "$W/intro.in"
+	echo "lbasave: recorded load.in, snap.in and intro.in in ${W#"$LBATMP"/}"
+}
+
+# start dir save [on]: dir a fresh preferences holding save alone,
+# dated 2000 so that the port's rewrite at the load shows
+start() {
+	pref "$1" "${3:-}"
+	cp -- "$2" "$1/"
+	touch -d @946684800 -- "$1/$(basename -- "$2")"
+}
+
+# replay input save sums [on] [frames] [from] [step]: the port replaying
+# input on save alone, its sums into sums, and each of its screens from
+# the load on, or from from (ns), written into frames (twice as long for
+# intro.in, the introduction's), or every step-th
+replay() {
+	local input=$1 save=$2 sums=$3 on=${4:-} frames=${5:-} from=${6:-$LOAD} step=${7:-1}
+	local p=$W/run/replay w span=$SPAN
+	[[ $input == */intro.in ]] && span=$((SPAN * 2))
+	start "$p" "$save" "$on"
+	SDL_VIDEO_DRIVER=dummy SDL_AUDIO_DRIVER=dummy "$exe" -g "$GAME" -c "$LBATMP/pc" -p "$p" \
+		-i "$input" -s "$sums" > "$sums.log" 2>&1 || true
+	[[ -z $frames ]] && return
+	read -ra w <<< "$(awk -v a="$from" -v b="$((from + span))" '$1 ~ /^[0-9]+$/ && $2 >= a && $2 <= b {
+		if (first == "") first = $1; last = $1 } END { print first, last }' "$sums")"
+	fresh "$frames"
+	start "$p" "$save" "$on"
+	(cd -- "$frames" && SDL_VIDEO_DRIVER=dummy SDL_AUDIO_DRIVER=dummy "$exe" -g "$GAME" -c "$LBATMP/pc" \
+		-p "$p" -i "$input" -S "${w[0]}-${w[1]}/$step" > /dev/null 2>&1) || true
+}
+
+# after sums [from]: the clock and sum of each screen from the load on,
+# or from from (ns)
+after() {
+	awk -v a="${2:-$LOAD}" '$1 ~ /^[0-9]+$/ && $2 >= a { print $2, $3 }' "$1"
+}
+
+fails=0
+
+# loaded what save [on]: whether the last replay loaded save: the port
+# wrote it back, or with SaveAnywhere on wrote current.lba
+loaded() {
+	local p=$W/run/replay
+	if [[ -n ${3:-} ]]; then
+		[[ -f $p/current.lba ]] && return
+	elif (( $(stat -c %Y -- "$p/$(basename -- "$2")") > 946684800 )); then
+		return
+	fi
+	fail "$1: the replay did not load it"
+}
+
+# fail what: a failure, said and counted
+fail() {
+	echo "lbasave: $1"
+	fails=$((fails + 1))
+}
+
+# same what a b [from]: whether two replays show the same screens from
+# the load on, or from from (ns)
+same() {
+	local n from=${4:-$LOAD}
+	n=$(after "$2" "$from" | wc -l)
+	if (( n == 0 )); then
+		fail "$1: no screen after the load"
+	elif cmp -s <(after "$2" "$from") <(after "$3" "$from"); then
+		echo "$1: the same $n screens from $((from / 1000000000)) s on"
+	else
+		fail "$1: the screens from $((from / 1000000000)) s on differ"
+	fi
+}
+
+port() {
+	local d=$W/port f g
+	samples
+	[[ -f $W/load.in ]] || { echo "lbasave: no load.in; run test/lbasave record" >&2; exit 1; }
+	fresh "$d"
+	for f in dotemu snap; do
+		g=$(convert lba "$d/$f" "$f")
+		replay "$W/load.in" "$S/$f.LBA" "$d/$f.sums"
+		loaded "$f" "$S/$f.LBA"
+		replay "$W/load.in" "$g" "$d/$f-lba.sums"
+		loaded "$f's version 3" "$g"
+		same "$f and its version 3, SaveAnywhere off" "$d/$f.sums" "$d/$f-lba.sums"
+		if cmp -s "$g" "$W/run/replay/$(basename -- "$g")"; then
+			echo "$f: the port writes its version 3 back as it was"
+		else
+			fail "$f: the port writes its version 3 back otherwise"
+		fi
+	done
+	mkdir -p "$d/slot"
+	cp -- "$S/dotemu.LBA" "$d/slot/20200509155535.LBA"
+	replay "$W/load.in" "$d/slot/20200509155535.LBA" "$d/slot.sums"
+	loaded "dotemu as 20200509155535.LBA" "$d/slot/20200509155535.LBA"
+	same "dotemu as 20200509155535.LBA and as dotemu.LBA, SaveAnywhere off" "$d/dotemu.sums" "$d/slot.sums"
+	g=$(convert legacy "$d/renamed" snap -n zzz)
+	replay "$W/snap.in" "$S/snap.LBA" "$d/snap-on.sums" on
+	loaded snap "$S/snap.LBA" on
+	replay "$W/snap.in" "$g" "$d/renamed.sums" on
+	loaded "snap renamed" "$g" on
+	# the game grows out of the list's picture, under the name, for 0.7 s
+	same "snap and its rename, SaveAnywhere on" "$d/snap-on.sums" "$d/renamed.sums" $((LOAD + 1000000000))
+	for f in "$d"/*.sums; do
+		if grep -q '^lba: the ' "$f.log"; then
+			fail "$(basename -- "$f" .sums): the port says: $(grep -m 1 '^lba: the ' "$f.log")"
+		fi
+	done
+}
+
+# putback dir aside: the Classic's own saves back in dir, the runs' gone,
+# at the end or as a run fails
+putback() {
+	rm -f -- "$1"/*.LBA
+	find "$2" -maxdepth 1 -type f -exec mv -- {} "$1/" \;
+	rmdir -- "$2"
+}
+
+# shots dir crop [linear]: the version's shots of dir as PPMs, cut
+# from the screen by crop and sampled back to 640x480, or with linear,
+# a screen scaled linearly to twice that, averaged by blocks of 2x2, and
+# to 320x200 for a movie
+shots() {
+	local f n
+	local -a how=(-filter point -resize '640x480!')
+	[[ -n ${3:-} ]] && how=(-scale 50%)
+	fresh "$1/ppm"
+	mkdir -p "$1/ppm/640" "$1/ppm/320"
+	for f in "$1"/shots/t*.png; do
+		[[ -e $f ]] || continue
+		n=$(basename -- "$f" .png)
+		magick "$f" -crop "$2" +repage "${how[@]}" -depth 8 "$1/ppm/640/$n.ppm"
+		magick "$f" -crop "$2" +repage -filter point -resize '320x200!' -depth 8 "$1/ppm/320/$n.ppm"
+	done
+}
+
+# misses res frames ppm tol [linear]: how many of the PPMs in ppm/640 and
+# ppm/320 have no form found among the BMPs in frames of their size
+# (framecmp -l on ppm/640 with linear), framecmp's lines into res
+misses() {
+	local res=$1 frames=$2 ppm=$3 tol=$4 linear=${5:+-l} n miss=0
+	local -a big small
+	mapfile -t big < <(find "$frames" -name '*.bmp' -size +100k)
+	mapfile -t small < <(find "$frames" -name '*.bmp' -size -100k)
+	: > "$res"
+	if (( ${#big[@]} )) && compgen -G "$ppm/640/*.ppm" > /dev/null; then
+		python3 -I "$TOOLS/framecmp.py" -t "$tol" -p 0.95 ${linear:+"$linear"} "${big[@]}" -- "$ppm"/640/*.ppm \
+			>> "$res" 2>&1 || true
+	fi
+	if (( ${#small[@]} )) && compgen -G "$ppm/320/*.ppm" > /dev/null; then
+		python3 -I "$TOOLS/framecmp.py" -t "$tol" -p 0.95 "${small[@]}" -- "$ppm"/320/*.ppm >> "$res" 2>&1 || true
+	fi
+	while read -r n; do
+		grep -E "^[^ ]*/(640|320)/$n\\.ppm: " "$res" | grep -vq 'not found' || miss=$((miss + 1))
+	done < <(find "$ppm" -name '*.ppm' -printf '%f\n' | sed 's/\.ppm$//' | sort -u)
+	echo "$miss"
+}
+
+# found what dir input on tol [linear]: dir's shots sought among the
+# port's screens of the same file's load
+found() {
+	local what=$1 dir=$2 input=$3 on=$4 tol=$5 linear=${6:-} shots miss
+	shots=$(find "$dir/ppm/640" -name '*.ppm' | wc -l)
+	if (( shots == 0 )); then
+		fail "$what: no shot taken ($dir/shots)"
+		return
+	fi
+	replay "$input" "$dir/save/$(ls "$dir/save")" "$dir/port.sums" "$on" "$dir/frames"
+	miss=$(misses "$dir/framecmp" "$dir/frames" "$dir/ppm" "$tol" "$linear")
+	if (( miss == 0 )); then
+		echo "$what: $shots shots found among the port's screens"
+	else
+		fail "$what: $miss of $shots shots not found among the port's screens ($dir/framecmp)"
+	fi
+	rm -rf -- "${dir:?}/frames"
+}
+
+# keys file [intro]: a version's keys, the list's save loaded, the
+# introduction paged by intro's keys, shots every two seconds
+keys() {
+	{
+		cat
+		printf '%b' "${2:-}"
+		for f in 02 04 06 08 10 12 14 16; do
+			printf 'sleep 2\nshot t%s\n' "$f"
+		done
+	} > "$1"
+}
+
+# written what got want stamp: the save a version wrote back at the
+# load, since stamp, against the converted one
+written() {
+	if [[ ! $2 -nt $4 ]]; then
+		fail "$1: not written back, so not loaded ($2)"
+	elif cmp -s "$2" "$3"; then
+		echo "$1: written back as it was"
+	else
+		fail "$1: written back otherwise ($2)"
+	fi
+}
+
+# load version: the samples converted for version (dos, lbawin or
+# classic), each alone where the version keeps its saves, loaded from its
+# list, its screen shot every two seconds, and the waits for its menu and
+# list take references in $W/ref/version (DOSBox's the sweep's), which
+# its first run makes, the waits then sleeping
+load() {
+	local v=$1 d=$W/$1 ref=$W/ref/$1 t dir crop tol linear='' pages class wait aside='' f g intro input
+	local -a prog
+	samples
+	case $v in
+	dos)
+		t=lba dir=$LBATMP/dos/run/LBA ref=$LBATMP/sweep/ref crop=948x711+166+124 tol=1 class=
+		pages='sleep 9\nkey Escape\nsleep 8\nkey Escape\nsleep 2\n'
+		wait='wait menu 814x76+234+470 150\nkey Down Return\nwait choose 520x50+380+160 30\nkey Return\n'
+		prog=("$TOOLS/dosrun" -k -q)
+		[[ -f $ref/menu.png && -f $ref/choose.png ]] ||
+			{ echo "lbasave: no ${ref#"$LBATMP"/}; run test/sweep dos once" >&2; exit 1; }
+		[[ -d $dir ]] || xk "$W/dosrun.log" -o "$W/run/ref" /dev/null "$TOOLS/dosrun" -q -s none || true
+		[[ -d $dir ]] || { echo "lbasave: no ${dir#"$LBATMP"/}" >&2; exit 1; }
+		cp -- "$GAME/LBA.CFG" "$dir/LBA.CFG"
+		;;
+	lbawin)
+		t=lbawin dir=$LBATMP/lbawin/run/Save crop=640x480+323+269 tol=3 class=lbawin.exe
+		pages='sleep 9\nkey Escape\nsleep 8\nkey Escape\nsleep 2\n'
+		wait='wait menu 550x51+369+503 150\nkey Down Return\nwait choose 351x34+467+293 30\nkey Return\n'
+		prog=("$TOOLS/winerun" -k -q)
+		[[ -d $dir ]] || { echo "lbasave: no ${dir#"$LBATMP"/}; run tools/winerun once" >&2; exit 1; }
+		;;
+	classic)
+		# SDL's linear filter scales the frame to the screen
+		t=classic crop=1280x960+0+0 tol=4 linear=1 class=tlba1c.exe
+		# its narration paces the introduction's three pages, an Escape
+		# each, and the dream's movie then plays its 77 s (924 frames at
+		# 12 a second)
+		pages='sleep 20\nkey Escape\nsleep 16\nkey Escape\nsleep 12\nkey Escape\nsleep 90\n'
+		wait='wait menu 1100x102+92+468 150\nkey Down Return\nwait choose 702x68+288+48 30\nkey Return\n'
+		[[ -f $LBATMP/gog/run/TLBA1C.exe && -f $LBATMP/gog/home/.asoundrc ]] ||
+			{ echo "lbasave: no gog/run or gog/home/.asoundrc" >&2; exit 1; }
+		dir=$(compgen -G "$LBATMP/wine/drive_c/users/*/Saved Games/2point21/tlba-classic/Save" | head -n 1 || true)
+		[[ -n $dir ]] || { echo "lbasave: no Classic's Saved Games in $LBATMP/wine" >&2; exit 1; }
+		# under xrun, offline: a connection that must fail, then the
+		# Classic with only what Wine needs, its sound on ALSA's null PCM
+		# shellcheck disable=SC2016 # expanded by the inner shell, under xrun
+		prog=(unshare -c -n bash -c '
+			if (exec 3<> /dev/tcp/192.0.2.1/80) 2> /dev/null; then
+				echo "lbasave: the Classic would run online" >&2
+				exit 1
+			fi
+			exec env -i WINERUN_CLEAN=1 HOME="$1" USER="${USER:-}" PATH=/usr/bin:/bin \
+				LANG=C.UTF-8 DISPLAY="$DISPLAY" XAUTHORITY="${XAUTHORITY:-}" \
+				XRUN_DISPLAY="$XRUN_DISPLAY" LBATMP="$2" WINEDEBUG=-all \
+				PULSE_SERVER=unix:/nonexistent "$3" "$4"' classic "$LBATMP/gog/home" "$LBATMP" \
+			"$TOOLS/winerun" "$LBATMP/gog/run/TLBA1C.exe")
+		# the Classic's own saves, set aside for the runs
+		aside=$W/classic-aside
+		if [[ ! -d $aside ]]; then
+			mkdir -p "$aside"
+			find "$dir" -maxdepth 1 -type f -exec mv -- {} "$aside/" \;
+		fi
+		trap 'putback "$dir" "$aside"' EXIT
+		;;
+	esac
+	mkdir -p "$d"
+	for f in "${picked[@]}"; do
+		rm -rf -- "${d:?}/$f" "$d/$f".*
+		intro='' input=$W/load.in
+		[[ $f == ngplus ]] && { intro=$pages input=$W/intro.in; }
+		g=$(convert "$t" "$d/$f/save" "$f")
+		rm -f -- "$dir"/*.LBA
+		cp -- "$g" "$dir/"
+		# dated 2000, so that the version's rewrite shows
+		touch -d @946684800 -- "$dir/$(basename -- "$g")"
+		touch -- "$d/$f.stamp"
+		printf '%b' "$wait" | keys "$d/$f.keys" "$intro"
+		xk "$d/$f.log" -o "$d/$f/shots" -r "$ref" ${class:+-c "$class"} "$d/$f.keys" "${prog[@]}" || true
+		if [[ ! -f $ref/menu.png && -f $d/$f/shots/menu.png && -f $d/$f/shots/choose.png ]]; then
+			mkdir -p "$ref"
+			cp -- "$d/$f/shots/menu.png" "$d/$f/shots/choose.png" "$ref/"
+			echo "lbasave: references made in ${ref#"$LBATMP"/}"
+		fi
+		written "$f on $v" "$dir/$(basename -- "$g")" "$g" "$d/$f.stamp"
+		shots "$d/$f" "$crop" "$linear"
+		found "$f on $v" "$d/$f" "$input" "" "$tol" "$linear"
+	done
+	if [[ -n $aside ]]; then
+		trap - EXIT
+		putback "$dir" "$aside"
+	fi
+}
+
+# main step [args...]: the step asked, run when test/lbasave runs, not
+# when a script reads it for its functions
+main() {
+	local f
+
+	(( $# )) || usage
+	cmd=$1
+	shift
+	while (( $# )); do
+		case $1 in
+		-x)
+			f=$(cd -- "$(dirname -- "${2:?}")" && pwd)/$(basename -- "$2")
+			case $cmd in
+			check) tool=$f ;;
+			*) exe=$f ;;
+			esac
+			shift 2
+			;;
+		snap | dotemu | ngplus | classic | lbawin)
+			[[ $cmd == @(dos|lbawin|classic) ]] || usage
+			picked+=("$1")
+			shift
+			;;
+		*) usage ;;
+		esac
+	done
+	(( ${#picked[@]} )) || picked=(snap dotemu ngplus classic lbawin)
+	case $cmd in
+	check) check ;;
+	record) record ;;
+	port) port ;;
+	dos | lbawin | classic) load "$cmd" ;;
+	*) usage ;;
+	esac
+	if (( fails )); then
+		echo "lbasave: $fails failed"
+		exit 1
+	fi
+}
+
+[[ ${BASH_SOURCE[0]} != "$0" ]] || main "$@"
