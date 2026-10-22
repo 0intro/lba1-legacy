@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# extract: the files of the game's discs where the tests read them.
+# extract: the files of the game's discs where the tests and the oracles
+# read them.
 #
 #     tools/extract [pc]
 #

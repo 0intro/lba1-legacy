@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+#
+# exesym: the names of LBA.EXE that are certain, as re/lba.exe.sym holds
+# them: a DOS build's functions that tools/lecmp.py -a finds in LBA.EXE
+# once, byte for byte, and three of Watcom's runtime read by hand (rand,
+# srand and qsort), where the search finds them nowhere.
+#
+#     tools/exesym [-e lba.elf] lba0.elf lba0.sym > re/lba.exe.sym
+#
+# lba0.elf and lba0.sym are the build's image and map:
+# build/dos-386-watcom's give re/lba.exe.sym as it stands,
+# build/dos-386-openwatcom's, OpenWatcom's code, a shorter list. lba.elf
+# is LBA.EXE's image, $LBATMP/elf/lba.elf by default (tools/extract
+# makes it). LBATMP is the tree's ../lba1-tmp unless set.
+
+set -Eeuo pipefail
+
+TOOLS=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+LBATMP=${LBATMP:-$(cd -- "$TOOLS/../.." && pwd)/lba1-tmp}
+exe=$LBATMP/elf/lba.elf
+
+usage() {
+	echo 'usage: exesym [-e lba.elf] lba0.elf lba0.sym' >&2
+	exit 2
+}
+
+while getopts e: c; do
+	case $c in
+	e) exe=$OPTARG ;;
+	*) usage ;;
+	esac
+done
+shift $((OPTIND - 1))
+(( $# == 2 )) || usage
+[[ -s $exe ]] || { echo "exesym: no $exe: run tools/extract" >&2; exit 1; }
+printf '%s\n' "# LBA.EXE: LBA0.EXE's functions found there once, byte for byte" \
+	"# (tools/lecmp.py -a), and rand, srand and qsort read by hand where" \
+	"# the search finds none. Made by tools/exesym."
+python3 -I "$TOOLS/lecmp.py" -a -m 8 "$1" "$2" "$exe" |
+	awk -F'\t' '$3 ~ /^0x[0-9a-f]+$/ { printf "%s T %s %d\n", $3, $1, $4 }' |
+	awk '{ print; found[$3] = 1 }
+	END {
+		n = split("0x28eaf T rand 37,0x28ed4 T srand 19,0x2e522 T qsort 387", hand, ",")
+		for (i = 1; i <= n; i++) {
+			split(hand[i], f, " ")
+			if (!(f[3] in found))
+				print hand[i]
+		}
+	}' | sort

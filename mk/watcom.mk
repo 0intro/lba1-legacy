@@ -226,10 +226,29 @@ $(DOSDLL:%=$(O)/%.sym): $(O)/%.sym: $(O)/%.dll tools/wmap2sym.py
 $(DOSDLL:%=$(O)/%.elf): $(O)/%.elf: $(O)/%.sym tools/le2elf.py
 	python3 -I tools/le2elf.py -s $< -f $(O)/$*.fix -o $@ $(O)/$*.dll >/dev/null
 
-# test: the build's sums against the reference and its run to No CD.
-test: all
+ifneq ($(DOSFIXES),)
+# test, with the fixes: the build's sums against the reference, the
+# oracle on its image (its rand, srand and qsort against ours,
+# Watcom C 9's being LBA.EXE's), asmoracle on it (its assembly against
+# the translations into C), and its run to No CD.
+test: all oracles
 	diff dos/$(CC)$(if $(FIXES),-fixes).sums $(O)/lba0.sums
+	$(ORACLE)/oracle $(O)/lba0.elf $(O)/lba0.sym
+	$(ORACLE)/asmoracle $(O)/lba0.elf $(O)/lba0.sym
 	dos/nodata -g $(DOS4GW) -x $(O)/lba0.exe
 
-# check: lint and test.
+# check, with the fixes: lint and test, then asmoracle on the game's
+# files.
 check: lint test
+	$(ORACLE)/asmoracle -g $(LBATMP)/pc/LBA $(O)/lba0.elf $(O)/lba0.sym
+else
+# test, LBA.EXE's code: the build's sums, and the oracle whose cases
+# hold it as they hold the fixes, the run-time's, then its run to No CD.
+test: all oracles
+	diff dos/$(CC).sums $(O)/lba0.sums
+	$(ORACLE)/oracle $(O)/lba0.elf $(O)/lba0.sym
+	dos/nodata -g $(DOS4GW) -x $(O)/lba0.exe
+
+# check, LBA.EXE's code: lint and test.
+check: lint test
+endif

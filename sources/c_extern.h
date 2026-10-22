@@ -36,6 +36,8 @@ void	MixteColonne( void *pts, void *ptd ) ;
 #endif
 
 #ifndef	DOS
+UBYTE	*GetAdrBlock( LONG numblock ) ;
+
 void	BlackFrame( void ) ;
 void	CopyFrame( void *ptsrc ) ;
 void	DrawFrame( void *ptframe, LONG deltax, LONG deltay ) ;
@@ -344,6 +346,10 @@ extern	WORD	NumXmi ;
 extern	UBYTE	*BufferBrick	;
 #endif
 extern	UBYTE	*BufCube ;
+#ifndef	DOS
+extern	UBYTE	*TabBlock ;
+extern	LONG	XScreen, YScreen ;
+#endif
 
 extern	WORD	FirstTime ;
 extern	WORD	CameraZone ;

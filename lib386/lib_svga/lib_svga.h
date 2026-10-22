@@ -14,17 +14,25 @@
 #define SVGA_GENOA              7	/* REAL Genoa (not Cirrus or ET3000) */
 
 /*-----------------------------------------------------------------------------*/
+#ifdef	DOS
+// les dd de l'assembleur, que le C de 1994 lisait en WORD
 extern  WORD    ClipXmin        ;
 extern  WORD    ClipYmin        ;
 extern  WORD    ClipXmax        ;
 extern  WORD    ClipYmax        ;
+#else
+extern  LONG    ClipXmin        ;
+extern  LONG    ClipYmin        ;
+extern  LONG    ClipXmax        ;
+extern  LONG    ClipYmax        ;
+#endif
 
-extern  ULONG   TabOffLine      ;
+extern  ULONG   TabOffLine[]    ;
 extern  UBYTE   *Phys           ;
 extern  UBYTE   *Log            ;
 extern  UBYTE   *MemoLog        ;
-extern  WORD    Screen_X        ;
-extern  WORD    Screen_Y        ;
+extern  LONG    Screen_X        ;
+extern  LONG    Screen_Y        ;
 extern  UBYTE   Text_Ink        ;
 extern  UBYTE   Text_Paper      ;
 extern  UBYTE   OldVideo        ;
@@ -49,6 +57,10 @@ extern  WORD    Ymax ;
 
 extern  WORD    TabCoulG[]      ;
 extern  WORD    TabCoulD[]      ;
+#ifndef	DOS
+extern  WORD    TabX1[]         ;
+extern  WORD    TabY1[]         ;
+#endif
 
 /*──────────────────────────────────────────────────────────────────────────*/
 /*                              MOUSE.C                                     */
@@ -109,6 +121,7 @@ void    Line( LONG x0, LONG y0, LONG x1, LONG y1, LONG couleur )        ;
 /*                      S_Poly.asm                                              */
 #ifndef	DOS
 LONG    ComputePoly( void )                                     ;
+LONG    ComputeSphere( LONG xc, LONG yc, LONG rayon )           ;
 #endif
 /*-----------------------------------------------------------------------------*/
 /*                      S_FillV.asm                                             */

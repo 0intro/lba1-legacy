@@ -54,7 +54,7 @@ DATE=1994-10-14T10:43:15Z
 unexport OS ARCH CC FIXES
 
 .DELETE_ON_ERROR:
-.PHONY: usage fetch all dist test check lint defs clean
+.PHONY: usage fetch all dist test check oracles asan oraclecheck lint defs clean
 
 # usage lists the goals.
 usage::
@@ -66,16 +66,49 @@ usage::
 	@echo '  dist         build its distribution into dist/<os>-<arch>-<cc>, the programs'
 	@echo '               and their licences, and the archive of that folder'
 	@echo '  test         run the tests that need the tree alone'
-	@echo '  check        run lint and test'
+	@echo "  check        run lint and test, then the tests on the game's files in LBATMP"
 	@echo ''
 	@echo 'the targets:'
 	@echo '  $(strip $(TARGETS))'
 	@echo '  and with FIXES=1 dos-386-watcom-fixes'
 	@echo ''
 	@echo 'the tree:'
+	@echo '  oracles      build the oracles into build/oracle'
+	@echo '  asan         build asmoracle-asan, asmoracle under AddressSanitizer, into build/oracle'
+	@echo "  oraclecheck  run the oracle on the game's LBA.EXE"
 	@echo "  lint         check the tree's rules a program can"
 	@echo "  defs         make the game's .def files again (tools/defs)"
 	@echo '  clean        remove build/ and dist/'
+
+# NEW: the translations of the game's assembly into C, which asmoracle
+# holds to the assembly and lint reads.
+NEW=\
+	lib386/lib_3d/p_anim.c\
+	lib386/lib_3d/p_func.c\
+	lib386/lib_3d/p_ob_iso.c\
+	lib386/lib_3d/p_sintab.c\
+	lib386/lib_3d/p_trigo.c\
+	lib386/lib_svga/font_a.c\
+	lib386/lib_svga/graph_a.c\
+	lib386/lib_svga/graphmsk.c\
+	lib386/lib_svga/mask_a.c\
+	lib386/lib_svga/s_block.c\
+	lib386/lib_svga/s_box.c\
+	lib386/lib_svga/s_fillv.c\
+	lib386/lib_svga/s_line.c\
+	lib386/lib_svga/s_poly.c\
+	lib386/lib_svga/s_screen.c\
+	lib386/lib_svga/texture.c\
+	lib386/lib_sys/buffer_a.c\
+	lib386/lib_sys/expand.c\
+	lib386/lib_sys/hqr.c\
+	sources/adfli_a.c\
+	sources/balance.c\
+	sources/cpymask.c\
+	sources/fire.c\
+	sources/func.c\
+	sources/grille_a.c\
+	sources/mcga.c\
 
 # The game's modules whose .def files make defs writes.
 DEFS=\
@@ -100,7 +133,9 @@ DEFS=\
 # and the Python tools, on the standard library alone.
 lint:
 	shellcheck -S warning $$(git grep -l --untracked '^#!/usr/bin/env bash')
-	python3 -I tools/lint.py -c sys/qsort.c $(wildcard sys/*.h dos/*.h)\
+	python3 -I tools/lint.py\
+		-c $(NEW) sys/qsort.c sys/rand.c $(wildcard sys/*.h dos/*.h)\
+			$(wildcard tools/oracle/*.c tools/oracle/*.h)\
 		-p $$(git ls-files -co --exclude-standard '*.py')\
 		-- $$(git ls-files -co --exclude-standard)
 
@@ -113,7 +148,8 @@ defs:
 clean:
 	rm -rf build dist
 
-# The rules: the tools make fetches and the game for DOS by the 1994
-# compilers.
+# The rules: the tools make fetches, the game for DOS by the 1994
+# compilers, then the oracles.
 include mk/fetch.mk
 include mk/watcom.mk
+include mk/oracle.mk

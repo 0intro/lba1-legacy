@@ -1,9 +1,10 @@
 #include <stddef.h>
 
 /*
- * Watcom C 9.01's qsort, written from what LBA.EXE's does: the order it
- * leaves equal elements in is what the holomap's globe shows.
- * OpenWatcom's own leaves another, so the DOS build links this one.
+ * Watcom C 9.01's qsort, written from what LBA.EXE's does and proved
+ * against it by tools/oracle: the order it leaves equal elements in is
+ * what the holomap's globe shows. OpenWatcom's own leaves another, so
+ * the DOS build links this one.
  */
 
 static void

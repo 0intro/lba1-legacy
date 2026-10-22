@@ -28,7 +28,7 @@ regions, lines of type X (code), R (read-only data) or W (variables)
 with their sizes, which must cover the object exactly: each region is
 then a section of its own, with those permissions, so that Ghidra
 decompiles variables as variables and tables as tables. The segments
-stay one per object.
+(and so the bytes the oracles map) stay one per object.
 """
 import collections
 import hashlib

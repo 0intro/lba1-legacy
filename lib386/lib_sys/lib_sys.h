@@ -219,6 +219,11 @@ void	*Malloc( LONG lenalloc )				;
 
 void	Free( void *buffer )					;
 void	*Mshrink( void *buffer, ULONG taille )			;
+
+#ifndef	DOS
+ULONG	MemOffset( void *buffer )				;
+void	*MemPointer( ULONG offset )				;
+#endif
 /*──────────────────────────────────────────────────────────────────────────*/
 /*				LOADMALL.C				    */
 

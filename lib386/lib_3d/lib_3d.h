@@ -36,19 +36,23 @@ typedef struct {	WORD	Xp ;
 			WORD	Zrot ;   } T_LIST_POINT ;
 
 
+#ifndef	DOS
+extern		WORD	P_SinTab[] ;
+#endif
+
 extern		WORD	AnimMasterRot ;
 extern		WORD	AnimStepAlpha, AnimStepBeta, AnimStepGamma ;
 extern		WORD	AnimStepX, AnimStepY, AnimStepZ ;
 extern		WORD	ScreenXmin, ScreenXmax, ScreenYmin, ScreenYmax ;
 
-extern		WORD	XCentre, YCentre ;
+extern		LONG	XCentre, YCentre ;
 extern		WORD	IsoScale ;
 
 extern		WORD	Xp, Yp ;
 extern		WORD	Z_Min, Z_Max ;
 
 extern		WORD		NbPoints ;
-extern		T_LIST_POINT	List_Point ;
+extern		WORD		List_Point[] ;
 
 extern		LONG	KFactor, LFactorY, LFactorX ;
 
@@ -70,6 +74,13 @@ extern		LONG	MatriceRot, MatriceDummy;
 extern		LONG	Distance ;
 
 extern		LONG	CmptMemoTimerRef ;
+
+#ifndef	DOS
+extern		WORD	TypeProj ;
+extern		WORD	compteur ;
+extern		LONG	LMatriceRot[], LMatriceWorld[], LMatriceTempo[] ;
+extern		LONG	TabMat[] ;
+#endif
 
 void	InitRealValue(	WORD start,
 			WORD end,
@@ -137,6 +148,16 @@ void	SetFollowCamera(	LONG targetx, LONG targety, LONG targetz,
 				LONG camalpha, LONG cambeta, LONG camgamma,
 				LONG camzoom ) ;
 LONG	TestVuePoly( void *ptrpoly ) ;
+
+void	Rot( LONG x, LONG y, LONG z ) ;
+void	WorldRot( LONG x, LONG y, LONG z ) ;
+void	LongWorldRot( LONG x, LONG y, LONG z ) ;
+void	RotMatW( void ) ;
+void	RotMatIndex2( LONG *dst, LONG *src ) ;
+void	RotList( LONG *mat, void *src, WORD *dst, LONG n ) ;
+void	TransRotList( LONG *mat, void *src, WORD *dst, LONG n ) ;
+void	Proj_3D( LONG x, LONG y, LONG z, WORD *xp, WORD *yp ) ;
+void	Proj_ISO( LONG x, LONG y, LONG z, WORD *xp, WORD *yp ) ;
 #endif
 
 LONG	ProjettePoint(LONG CoorX, LONG CoorY, LONG CoorZ);
