@@ -82,6 +82,10 @@ enum
 /* sys/lba.cfg's bytes and a 0, made by the Makefile: the configuration's text (sys.c) */
 extern uint8_t	lbacfg[];
 
+/* sys/icon/lba.bmp's nlbabmp bytes and a 0, made by the Makefile: the window's icon (sdl.c) */
+extern uint8_t	lbabmp[];
+extern uint32_t	nlbabmp;
+
 /* The calls files.c's writer makes of its lock, sdl.c's (setwriter) */
 enum
 {

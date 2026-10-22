@@ -1,8 +1,9 @@
 # port.mk builds the game on SDL3 with gcc or clang, for the target that
 # OS and ARCH name: GAME and LIBS with sys/compat.h read first, the rest
 # with every warning an error. Each Windows program links
-# sys/lba.manifest, through sys/lba.rc, which makes its code page UTF-8,
-# the code page of the paths SDL gives.
+# sys/lba.manifest, which makes its code page UTF-8, the code page of
+# the paths SDL gives: lba.exe through sys/lba.rc, with its icon and its
+# version information, the others through sys/manifest.rc.
 
 # The compiler's command. gcc and clang take the architecture as a flag
 # on Linux, and mingw-w64 names it in the command, which CROSS= leaves
@@ -48,13 +49,15 @@ NEWFLAGS=-Wall -Wextra -Werror $(DEFS_$(OS))
 LD_windows=-Wl,--no-insert-timestamp
 LD=$(LD_$(OS))
 
-# A Windows program ends in .exe and links sys/lba.rc's resource, lba.exe
-# as a windowed program (-mwindows), and SDL3.dll lies beside them.
+# A Windows program ends in .exe. lba.exe links as a windowed program
+# (-mwindows) with its resources, the console programs with the manifest
+# alone, and SDL3.dll lies beside them.
 EXE_windows=.exe
 EXE=$(EXE_$(OS))
 GUI_windows=-mwindows
 RES_windows=$(O)/sys/lba.res.o
-MANIFEST=$(RES_$(OS))
+MANIFEST_windows=$(O)/sys/manifest.res.o
+MANIFEST=$(MANIFEST_$(OS))
 DLL_windows=$(O)/SDL3.dll
 
 # RUN starts a Windows program under Wine, in the project's prefix and
@@ -95,13 +98,16 @@ all: $(O)/lba$(EXE) $(O)/lba.cfg $(O)/lbasave$(EXE) $(O)/pcm$(EXE) $(DLL_$(OS))\
 # its licence. The game comes last, its file the folder's.
 SDLLICENCE_windows=$(SDLDIR)/$(MINGW_$(ARCH))/share/licenses/SDL3/LICENSE.txt
 $(D)/lba$(EXE): $(O)/lba$(EXE) $(O)/lbasave$(EXE) $(O)/lba.cfg $(DLL_$(OS)) $(SDLDEP_$(OS)) LICENSE\
-	sys/nuked/LICENSE sys/drlibs/LICENSE sys/stb/LICENSE lib386/lib_midi/ail32/license
+	sys/nuked/LICENSE sys/drlibs/LICENSE sys/stb/LICENSE lib386/lib_midi/ail32/license sys/icon/LICENSE\
+	sys/icon/README.md
 	rm -rf $(D) && mkdir -p $(D)
 	cp $(O)/lbasave$(EXE) $(O)/lba.cfg $(DLL_$(OS)) LICENSE $(D)/
 	cp sys/nuked/LICENSE $(D)/LICENSE.nuked
 	cp sys/drlibs/LICENSE $(D)/LICENSE.drlibs
 	cp sys/stb/LICENSE $(D)/LICENSE.stb
 	cp lib386/lib_midi/ail32/license $(D)/LICENSE.ail32
+	cp sys/icon/LICENSE $(D)/LICENSE.icon
+	cp sys/icon/README.md $(D)/README.icon.md
 	$(if $(SDLLICENCE_$(OS)),cp $(SDLLICENCE_$(OS)) $(D)/LICENSE.SDL3)
 	cp $(O)/lba$(EXE) $@
 
@@ -129,8 +135,11 @@ $(O)/lba.cfg: sys/lba.cfg | $(DIRS)
 $(O)/SDL3.dll: $(SDL_OK) | $(DIRS)
 	cp $(SDLDIR)/$(MINGW_$(ARCH))/bin/SDL3.dll $@
 
-# sys/lba.cfg's bytes as a C array, lbacfg (sys/dat.h), a 0 after them.
-$(O)/sys/lbacfg.c: sys/lba.cfg | $(DIRS)
+# sys/lba.cfg's and sys/icon/lba.bmp's bytes as C arrays, lbacfg and
+# lbabmp (sys/dat.h), a 0 after their bytes.
+$(O)/sys/lbacfg.c: sys/lba.cfg
+$(O)/sys/lbabmp.c: sys/icon/lba.bmp
+$(O)/sys/lbacfg.c $(O)/sys/lbabmp.c: | $(DIRS)
 	od -An -v -tx1 $< >$@.od
 	{ echo '#include <stdint.h>' &&\
 		echo 'uint8_t $(basename $(@F))[] = {' &&\
@@ -139,7 +148,10 @@ $(O)/sys/lbacfg.c: sys/lba.cfg | $(DIRS)
 		echo 'uint32_t n$(basename $(@F)) = sizeof $(basename $(@F)) - 1;'; } >$@
 	rm -f $@.od
 
-# The Windows programs' resource, sys/lba.rc: the manifest.
+# The Windows programs' resources: lba.exe's (sys/lba.rc) the manifest,
+# the icon and the version information, the others' (sys/manifest.rc)
+# the manifest alone.
+$(O)/sys/lba.res.o: sys/icon/lba.ico
 $(O)/sys/%.res.o: sys/%.rc sys/lba.manifest | $(DIRS)
 	$(CROSS)windres -I sys -O coff -o $@ $<
 

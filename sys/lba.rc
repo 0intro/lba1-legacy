@@ -1,2 +1,27 @@
 /* lba.manifest, the Windows programs' manifest: RT_MANIFEST (24), CREATEPROCESS_MANIFEST_RESOURCE_ID (1) */
 1 24 "lba.manifest"
+
+/* lba.exe's icon, sys/icon's planet: the first, which Explorer shows and SDL gives its window class */
+1 ICON "icon/lba.ico"
+
+/* lba.exe's version information, which Explorer and Task Manager show */
+1 VERSIONINFO
+FILEOS 0x40004	/* VOS_NT_WINDOWS32 */
+FILETYPE 0x1	/* VFT_APP */
+BEGIN
+	BLOCK "StringFileInfo"
+	BEGIN
+		BLOCK "040904B0"
+		BEGIN
+			VALUE "FileDescription", "Little Big Adventure"
+			VALUE "ProductName", "Little Big Adventure"
+			VALUE "InternalName", "lba"
+			VALUE "OriginalFilename", "lba.exe"
+			VALUE "LegalCopyright", "Copyright (c) Adeline Software International 1994"
+		END
+	END
+	BLOCK "VarFileInfo"
+	BEGIN
+		VALUE "Translation", 0x409, 1200
+	END
+END

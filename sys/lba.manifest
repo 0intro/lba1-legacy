@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
   <!--
-    The Windows programs' manifest (lba.rc).
+    The Windows programs' manifest (lba.rc and manifest.rc).
     activeCodePage makes the process's code page UTF-8, from Windows 10
     version 1903 on, so that the C library's calls on paths, fopen,
     opendir and stat among them, take as they are the paths SDL gives in

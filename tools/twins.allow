@@ -148,6 +148,7 @@ sys/files.c where lba2	game: DOS's drives and current directories, which the 199
 sys/fns.h * apart	game: each port's functions, its game's modules' among them, which follow their files
 sys/fns.h * lba1	game: each port's functions, its game's modules' among them, which follow their files
 sys/fns.h * lba2	game: each port's functions, its game's modules' among them, which follow their files
+sys/icon/README.md (file) apart	game: each game's icon and its source
 sys/install.c bindinstall apart	game: LBA2's rows of a text, the EU CD's languages, and of a decoded file, the Classic's track 2, and each game's saves' place, LBA1's root and LBA2's SAVE
 sys/install.c cdconfig lba2	game: the EU CD's empty languages, which LBA2's installer filled
 sys/install.c cddrive apart	game: each game's CD, LBA1's known by its CD_LBA, LBA2's by the VIDEO.HQR of its LBA2 or TWINSEN
@@ -223,7 +224,8 @@ sys/keyb.c setbyte lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, aga
 sys/keyb.c special lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c xtcode apart	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/lba.manifest * apart	game: each program's name
-sys/lba.rc * apart	game: each program's name
+sys/lba.rc * apart	game: each program's name, icon and version
+sys/manifest.rc * apart	game: each program's manifest's name
 sys/mem.c DOSVer lba2	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
 sys/mem.c DosAvailableMem lba2	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
 sys/mem.c DosMalloc lba1	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2

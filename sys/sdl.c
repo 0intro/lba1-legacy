@@ -371,6 +371,8 @@ startwriter(void)
 static void
 sdlinit(void)
 {
+	SDL_Surface *icon;
+
 	/* An identifier would become the window's class on X11, in place of the program's file name. */
 	SDL_SetAppMetadata("Little Big Adventure", NULL, NULL);
 	SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
@@ -388,6 +390,12 @@ sdlinit(void)
 	    SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN, &window, &renderer))
 		fatal("SDL_CreateWindowAndRenderer: %s", SDL_GetError());
 	SDL_GetRenderVSync(renderer, &vsynclast);
+	/* The window's icon: SDL's dummy video, which the replays use, refuses it. */
+	icon = SDL_LoadBMP_IO(SDL_IOFromConstMem(lbabmp, nlbabmp), true);
+	if (icon != NULL) {
+		SDL_SetWindowIcon(window, icon);
+		SDL_DestroySurface(icon);
+	}
 	SDL_StopTextInput(window);
 	startwriter();
 }

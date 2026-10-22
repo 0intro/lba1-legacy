@@ -236,9 +236,11 @@ DECODE=\
 	sys/drlibs/dr_mp3.o\
 	sys/stb/stb_vorbis.o\
 
-# sys/lba.cfg's text made into C at the build.
+# sys/lba.cfg's text and sys/icon/lba.bmp, the window's icon, made into
+# C at the build.
 ARRAYS=\
 	sys/lbacfg.o\
+	sys/lbabmp.o\
 
 # The unit tests' objects, each list the test's own first, and those of
 # the two tools built beside the game.
@@ -292,6 +294,7 @@ SYSKEYSTEST=\
 PADTEST=\
 	test/padtest.o\
 	sys/sdl.o\
+	sys/lbabmp.o\
 
 # widetest: sys/wide.c's screenwidth, the wide screen's width held to
 # the display's shape (test/widetest.c).
