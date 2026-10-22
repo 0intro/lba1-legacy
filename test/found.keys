@@ -1,0 +1,33 @@
+# A found object on a wide screen of 852x480 (fixtures/found: the
+# sweep's save of scene 98, byte 261, with Twinsen put in the scene's
+# zone 0 by actor 2: SceneStartX, Y, Z at bytes 270-275, 29872 256
+# 28700, and the CD's LBA.CFG with WideScreen: ON, recorded with -D
+# 1920x1080). The action key, in the normal behaviour, runs Twinsen's
+# script there, which takes actor 2 away and gives object 14: the scene
+# drawn again around him, the Meca-Penguin turning in its box over his
+# head on the whole screen, and its name in the dialogue's box in the
+# window of 640x480 in the middle. Return ends it, and play goes on. F6
+# then opens the option menu over the scene, its entries in the window,
+# and the first, Return to game, goes back.
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 12
+shot start
+key space
+sleep 3
+shot found
+sleep 5
+shot text
+key Return
+sleep 4
+shot end
+hold 0.05
+key F6
+sleep 3
+shot options
+key Return
+sleep 4
+shot back

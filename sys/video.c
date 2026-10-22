@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include "dat.h"
 #include "fns.h"
@@ -8,19 +9,36 @@
  * The screen, as lib386/lib_svga's initsvga.asm, s_phys.asm, s_pal.asm
  * and initmode.c drove it: Phys was the VGA window at 0A0000h, 640x480
  * through VESA's banks or 320x200 in mode 13h, and the DAC took 6-bit
- * colours. Here Phys is vram, presented whole (sys/sdl.c), in the mode
- * last set, and the DAC keeps the same 6-bit values.
+ * colours. Here Phys is vram, Screen_X by Screen_Y bytes, presented
+ * whole (sys/sdl.c), in the mode last set, and the DAC keeps the same
+ * 6-bit values.
  *
  * On Windows a hook of the keyboard, in place while the window has the
  * focus, refuses Alt+F4 (LbaWinSettings's 0x40), and the Windows keys
  * while the screen fills the display (0x80).
+ *
+ * FEATURE: the wide screen, lba.cfg's WideScreen, wider than 640x480.
+ * The game draws in one of two areas, each a place on the screen, its
+ * size and its lines' addresses in TabOffLine, which every primitive
+ * starts its lines from: the whole screen, where AffScene draws the
+ * scene, or the window of 640x480 in its middle, where the interface
+ * keeps the 1994 coordinates. Lines go Screen_X apart in both, and the
+ * clip is the area's. The port's own.
  */
 
 enum
 {
-	Width = 640,
-	Height = 480,
+	Width = 640,	/* the window */
+	Height = 480,	/* and the screen */
 	Nrect = 64,
+	Nareas = 8,	/* the areas pushed, at most */
+};
+
+/* the areas the game draws in */
+enum
+{
+	Ascreen,	/* the whole screen, in its coordinates */
+	Awindow,	/* the window of 640x480 in its middle, the first */
 };
 
 typedef struct Rect Rect;
@@ -37,6 +55,8 @@ uint8_t	*Log;
 uint8_t	*Phys;
 int32_t	Screen_X = Width;
 int32_t	Screen_Y = Height;
+int32_t	Wide_X = Width;	/* the screen's width with WideScreen ON, set at the start (sys.c) */
+int32_t	FlagWideScreen;	/* WideScreen ON: the screen Wide_X wide */
 int32_t	ClipXmin;
 int32_t	ClipYmin;
 int32_t	ClipXmax = Width - 1;
@@ -57,23 +77,35 @@ uint32_t	TabOffLine[Height];
 int32_t	FlagFullScreen = 1;
 
 static int32_t memoclip[4] = {0, 0, Width-1, Height-1};
+static int current = Awindow;	/* the area drawn in */
+static int areas[Nareas];	/* the areas pushed, nareas of them */
+static int nareas;
+static int32_t areax, areay;	/* the area's place on the screen */
+static int32_t areaw = Width;	/* and its size */
+static int32_t areah = Height;
 static Rect copied[Nrect];
 static int ncopied;
 static uint32_t copiedshown;
 
 Vga vga;
 
-/* InitGraphSvga's work: the mode, the line table, Log. */
+static void	setarea(int);
+
+/*
+ * InitGraphSvga's work: the mode, the line table, Log. The video memory
+ * and Log are made for the screen Wide_X wide, the widest the run takes.
+ */
 void
 videoinit(void)
 {
-	int y;
-
+	vga.vram = calloc((size_t)Wide_X*Screen_Y, 1);
+	if (vga.vram == NULL)
+		fatal("no memory for a screen of %dx%d", (int)Wide_X, (int)Screen_Y);
 	Phys = vga.vram;
 	vga.mode = Svga;
-	for (y = 0; y < Height; y++)
-		TabOffLine[y] = y * Screen_X;
-	Log = Malloc(Width*Height);
+	Log = Malloc(Wide_X*Screen_Y);
+	setarea(Awindow);
+	sdlscreen();
 	/*
 	 * FEATURE: the window shown, switched to the whole display first
 	 * when FlagFullScreen says so, as the Classic 3.2.3's InitSvga
@@ -88,8 +120,8 @@ SetClip(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
 {
 	ClipXmin = x0 < 0 ? 0 : x0;
 	ClipYmin = y0 < 0 ? 0 : y0;
-	ClipXmax = x1 < Screen_X ? x1 : Screen_X-1;
-	ClipYmax = y1 < Screen_Y ? y1 : Screen_Y-1;
+	ClipXmax = x1 < areaw ? x1 : areaw-1;
+	ClipYmax = y1 < areah ? y1 : areah-1;
 }
 
 void
@@ -97,8 +129,88 @@ UnSetClip(void)
 {
 	ClipXmin = 0;
 	ClipYmin = 0;
-	ClipXmax = Screen_X - 1;
-	ClipYmax = Screen_Y - 1;
+	ClipXmax = areaw - 1;
+	ClipYmax = areah - 1;
+}
+
+/* The area at x, y of the screen, w by h: its lines, those past its last following on, and its clip. */
+static void
+area(int32_t x, int32_t y, int32_t w, int32_t h)
+{
+	int32_t i;
+
+	areax = x;
+	areay = y;
+	areaw = w;
+	areah = h;
+	for (i = 0; i < Screen_Y; i++)
+		TabOffLine[i] = (i + y)*Screen_X + x;
+	UnSetClip();
+}
+
+/*
+ * setarea: the area a made the current, its clip the whole area, as
+ * the 1994 code sets its clips after each change of area.
+ */
+static void
+setarea(int a)
+{
+	current = a;
+	if (a == Ascreen)
+		area(0, 0, Screen_X, Screen_Y);
+	else
+		area((Screen_X - Width) / 2, 0, Width, Height);
+}
+
+static void
+pusharea(int a)
+{
+	if (nareas == Nareas)
+		fatal("areas pushed past %d", Nareas);
+	areas[nareas++] = current;
+	setarea(a);
+}
+
+/* pushscreen: the screen's area, till poparea */
+void
+pushscreen(void)
+{
+	pusharea(Ascreen);
+}
+
+/* pushwindow: the window's area, till poparea */
+void
+pushwindow(void)
+{
+	pusharea(Awindow);
+}
+
+/* poparea: the area before the last push */
+void
+poparea(void)
+{
+	if (nareas == 0)
+		fatal("an area popped with none pushed");
+	setarea(areas[--nareas]);
+}
+
+/*
+ * A picture of 640x480 loaded at the start of p, a buffer of the
+ * screen's size, put in the window's place there, black around it.
+ */
+void
+windowpicture(void *p)
+{
+	uint8_t *b;
+	int32_t x, i;
+
+	b = p;
+	x = (Screen_X - Width) / 2;
+	for (i = Height - 1; i >= 0; i--) {
+		memmove(b + i*Screen_X + x, b + i*Width, Width);
+		memset(b + i*Screen_X, 0, x);
+		memset(b + i*Screen_X + x + Width, 0, Screen_X - x - Width);
+	}
 }
 
 void
@@ -124,7 +236,7 @@ static void
 setmode(int mode)
 {
 	vga.mode = mode;
-	memset(vga.vram, 0, sizeof vga.vram);
+	memset(vga.vram, 0, (size_t)Screen_X*Screen_Y);
 }
 
 void
@@ -182,12 +294,45 @@ WriteFullScreen(void)
 }
 
 /*
+ * FEATURE: Widescreen display's choice, the screen moved at once between
+ * 640x480 and the display's shape, and WideScreen written to lba.cfg at
+ * once. The port's own.
+ */
+
+/*
+ * writewide: FlagWideScreen turned over and the screen Wide_X or 640
+ * wide, the window's 640x480 of b, a picture of the screen at its old
+ * width, laid out again at the new one, black around it, the window's
+ * area made again, the screen shown at its new width, and the key
+ * written.
+ */
+void
+writewide(void *b)
+{
+	uint8_t *p;
+	int32_t x, i;
+
+	p = b;
+	x = (Screen_X - Width) / 2;
+	for (i = 0; i < Height; i++)
+		memmove(p + i*Width, p + i*Screen_X + x, Width);
+	FlagWideScreen = !FlagWideScreen;
+	Screen_X = FlagWideScreen ? Wide_X : Width;
+	windowpicture(b);
+	setarea(current);
+	sdlsize();
+	Def_WriteString((unsigned char*)PathConfigFile, (unsigned char*)"WideScreen",
+		(unsigned char*)(FlagWideScreen ? "ON" : "OFF"));
+}
+
+/*
  * The game drew as fast as the machine let it, and the screen showed
  * what it found at each retrace. The main loop waits in framesync. The
  * other loops that draw, the menus', copy the same area again and
  * again: a copy of an area already copied since the screen was last
  * shown waits for the next retrace, so that each one drawn is shown and
- * none is drawn that could not be.
+ * none is drawn that could not be. An area is kept by its place on the
+ * screen.
  */
 static void
 pace(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
@@ -211,8 +356,8 @@ pace(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
 void
 Flip(void)
 {
-	pace(0, 0, Width-1, Height-1);
-	memcpy(vga.vram, Log, Width*Height);
+	pace(0, 0, Screen_X-1, Screen_Y-1);
+	memcpy(vga.vram, Log, (size_t)Screen_X*Screen_Y);
 	pump();
 }
 
@@ -226,16 +371,16 @@ CopyBlockPhys(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
 		x0 = 0;
 	if (y0 < 0)
 		y0 = 0;
-	if (x1 >= Width)
-		x1 = Width - 1;
-	if (y1 >= Height)
-		y1 = Height - 1;
+	if (x1 >= areaw)
+		x1 = areaw - 1;
+	if (y1 >= areah)
+		y1 = areah - 1;
 	n = x1 - x0 + 1;
 	if (n <= 0 || y1 < y0) {
 		pump();
 		return;
 	}
-	pace(x0, y0, x1, y1);
+	pace(areax+x0, areay+y0, areax+x1, areay+y1);
 	for (y = y0; y <= y1; y++)
 		memcpy(vga.vram + TabOffLine[y] + x0, Log + TabOffLine[y] + x0, n);
 	pump();

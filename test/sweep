@@ -6,9 +6,9 @@
 #     test/sweep saves
 #     test/sweep record [-x exe]
 #     test/sweep dos [-x exe] [scene...]
-#     test/sweep port [-x exe] [scene...]
+#     test/sweep port [-x exe] [-s WxH] [scene...]
 #     test/sweep compare [-x exe] [scene...]
-#     test/sweep check [-x exe] [scene...]
+#     test/sweep check [-x exe] [-s WxH] [scene...]
 #
 # Everything goes to $LBATMP/sweep. saves makes a save for each of the
 # 120 scenes of SCENE.HQR (saves/NNN/S2292.LBA): the outside save of the
@@ -16,7 +16,8 @@
 # holomap) with its scene (byte 261) set and its start (bytes 270-271)
 # at -1, the scene's own, and beside them the CD's LBA.CFG, no sound,
 # each port's preferences given the values the sweep was made under
-# where the CD's file leaves them out: LbaWinSettings 210.
+# where the CD's file leaves them out: LbaWinSettings 210 and WideScreen
+# OFF.
 # record plays the loading of a save on the port in our Xephyr
 # (tools/xkeys): the main menu, Continue saved game, the save, then a
 # hundred seconds. It keeps its input (port.in). A record counts its
@@ -41,6 +42,11 @@
 # on each save on exe and compares its sums with port's: the whole game
 # against the port as compare left it.
 #
+# port and check take -s WxH: the scenes with lba.cfg's WideScreen ON
+# on a display of that size (the port's -D), port's sums and screens
+# kept in port-WxH and check's compared with them, LBA.EXE's shots, of
+# 640x480, compared with the replays of port alone.
+#
 # Scenes are numbered 0 to 119. None named means all. exe is
 # build/linux-amd64-gcc/lba by default. Given to dos and compare, exe is
 # a DOS program played in LBA.EXE's place, our build
@@ -63,8 +69,8 @@ LOAD=43000000000	# ns: the record's Return on the list, its clock
 SPAN=24000000000	# ns: the screens compared from there
 
 usage() {
-	echo "usage: sweep saves | record [-x exe] | dos [-x exe] [scene...] | port [-x exe] [scene...]" >&2
-	echo "       sweep compare [-x exe] [scene...] | check [-x exe] [scene...]" >&2
+	echo "usage: sweep saves | record [-x exe] | dos [-x exe] [scene...] | port [-x exe] [-s WxH] [scene...]" >&2
+	echo "       sweep compare [-x exe] [scene...] | check [-x exe] [-s WxH] [scene...]" >&2
 	exit 2
 }
 
@@ -72,10 +78,19 @@ usage() {
 cmd=$1
 shift
 exe=$REPO/build/linux-amd64-gcc/lba
-if [[ ${1:-} == -x ]]; then
-	exe=$(cd -- "$(dirname -- "${2:?}")" && pwd)/$(basename -- "$2")
+size=
+while [[ ${1:-} == -[xs] ]]; do
+	case $1 in
+	-x) exe=$(cd -- "$(dirname -- "${2:?}")" && pwd)/$(basename -- "$2") ;;
+	-s) [[ ${2:-} =~ ^[1-9][0-9]*x[1-9][0-9]*$ && ( $cmd == port || $cmd == check ) ]] || usage
+		size=$2 ;;
+	esac
 	shift 2
-fi
+done
+# the port's replays, on the display -s gives
+P=port${size:+-$size}
+display=()
+[[ -z $size ]] || display=(-D "$size")
 # the DOS program, LBA.EXE unless -x names one for dos or compare, which
 # leaves exe the port's
 dosexe=()
@@ -118,17 +133,23 @@ saves() {
 	echo "sweep: $NSCENES saves in ${SW#"$LBATMP"/}/saves"
 }
 
-# pins dir: the values the sweep was made under added to dir's lba.cfg
+# pins dir value: the values the sweep was made under added to dir's
+# lba.cfg, value WideScreen's
 pins() {
-	printf 'LbaWinSettings: 210\r\n' >> "$1/lba.cfg"
+	printf 'LbaWinSettings: 210\r\nWideScreen: %s\r\n' "$2" >> "$1/lba.cfg"
 }
 
-# pref dir scene: the port's preferences for a scene's save
+# pref dir scene: the port's preferences for a scene's save, the wide
+# screen on with -s
 pref() {
 	rm -rf -- "$1"
 	mkdir -p "$1"
 	cp "$SW/saves/lba.cfg" "$SW/saves/$2/S2292.LBA" "$1/"
-	pins "$1"
+	if [[ -n $size ]]; then
+		pins "$1" ON
+	else
+		pins "$1" OFF
+	fi
 }
 
 record() {
@@ -182,7 +203,7 @@ replay() {
 	mkdir -p "$2"
 	pref "$RUN/pref" "$1"
 	(cd -- "$2" && SDL_VIDEO_DRIVER=dummy SDL_AUDIO_DRIVER=dummy "$exe" -g "$LBATMP/pc/LBA" \
-		-c "$LBATMP/pc" -p "$RUN/pref" -i "$SW/port.in" -S "$3" > /dev/null 2>&1) || true
+		-c "$LBATMP/pc" "${display[@]}" -p "$RUN/pref" -i "$SW/port.in" -S "$3" > /dev/null 2>&1) || true
 }
 
 # screens sums: the screens a sums file holds, its other lines the sound's
@@ -194,22 +215,22 @@ screens() {
 # from the scene's sums
 window() {
 	awk -v a="$LOAD" -v b="$((LOAD + SPAN))" '$1 ~ /^[0-9]+$/ && $2 >= a && $2 <= b {
-		if(first == "") first = $1; last = $1 } END { print first, last }' "$SW/port/$1.sums"
+		if(first == "") first = $1; last = $1 } END { print first, last }' "$SW/$P/$1.sums"
 }
 
 port() {
 	local s w
 	[[ -f $SW/port.in ]] || { echo "sweep: no ${SW#"$LBATMP"/}/port.in; run sweep record" >&2; exit 1; }
-	mkdir -p "$SW/port"
+	mkdir -p "$SW/$P"
 	for s in "${scenes[@]}"; do
 		pref "$RUN/pref" "$s"
 		SDL_VIDEO_DRIVER=dummy SDL_AUDIO_DRIVER=dummy "$exe" -g "$LBATMP/pc/LBA" -c "$LBATMP/pc" \
-			-p "$RUN/pref" -i "$SW/port.in" -s "$SW/port/$s.sums" > "$SW/port/$s.log" 2>&1 ||
-			{ echo "$s: failed (${SW#"$LBATMP"/}/port/$s.log)"; continue; }
+			"${display[@]}" -p "$RUN/pref" -i "$SW/port.in" -s "$SW/$P/$s.sums" > "$SW/$P/$s.log" 2>&1 ||
+			{ echo "$s: failed (${SW#"$LBATMP"/}/$P/$s.log)"; continue; }
 		read -ra w <<< "$(window "$s")"
 		(( ${#w[@]} == 2 )) || { echo "$s: no screen after the load"; continue; }
-		replay "$s" "$SW/port/$s" "${w[0]}-${w[1]}/6"
-		echo "$s: screens ${w[0]} to ${w[1]}, $(ls "$SW/port/$s" | wc -l) written"
+		replay "$s" "$SW/$P/$s" "${w[0]}-${w[1]}/6"
+		echo "$s: screens ${w[0]} to ${w[1]}, $(ls "$SW/$P/$s" | wc -l) written"
 	done
 }
 
@@ -337,11 +358,11 @@ compare() {
 check() {
 	local s bad=0
 	for s in "${scenes[@]}"; do
-		[[ -f $SW/port/$s.sums ]] || { echo "$s: no reference"; bad=1; continue; }
+		[[ -f $SW/$P/$s.sums ]] || { echo "$s: no reference"; bad=1; continue; }
 		pref "$RUN/pref" "$s"
 		SDL_VIDEO_DRIVER=dummy SDL_AUDIO_DRIVER=dummy "$exe" -g "$LBATMP/pc/LBA" -c "$LBATMP/pc" \
-			-p "$RUN/pref" -i "$SW/port.in" -s "$RUN/$s.sums" > /dev/null 2>&1 || true
-		if cmp -s "$SW/port/$s.sums" "$RUN/$s.sums"; then
+			"${display[@]}" -p "$RUN/pref" -i "$SW/port.in" -s "$RUN/$s.sums" > /dev/null 2>&1 || true
+		if cmp -s "$SW/$P/$s.sums" "$RUN/$s.sums"; then
 			echo "$s: same, $(screens "$RUN/$s.sums") screens"
 		else
 			echo "$s: differs from $(diff "$SW/$P/$s.sums" "$RUN/$s.sums" | grep -m1 '^[<>]' || true)"

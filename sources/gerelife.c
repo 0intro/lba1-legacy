@@ -1250,6 +1250,7 @@ void	DoLife( WORD numobj )
 
 				FadeToBlack( PtrPal ) ;
 				Load_HQR( PATH_RESSOURCE"ress.hqr", Screen, RESS_SENDELL_PCR ) ;
+				windowpicture( Screen ) ;
 				CopyScreen( Screen, Log ) ;
 				Load_HQR( PATH_RESSOURCE"ress.hqr", PalettePcx, RESS_SENDELL_PAL ) ;
 				Flip() ;
@@ -1337,7 +1338,12 @@ void	DoLife( WORD numobj )
 				break ;
 
 			case LM_PROJ_ISO:
-				SetIsoProjection( 320-8-1, 240, SIZE_BRICK_XZ ) ;
+				/*
+				 * FEATURE: the projection's centre about the
+				 * middle of a screen of any size, as Init3DGame's.
+				 * The port's own.
+				 */
+				SetIsoProjection( CENTRE_ECRAN_X-8-1, CENTRE_ECRAN_Y, SIZE_BRICK_XZ ) ;
 				SetPosCamera( 0,0,0 ) ;
 				SetAngleCamera( 0,0,0 ) ;
 				SetLightVector( AlphaLight, BetaLight, 0 ) ;
@@ -1348,7 +1354,12 @@ void	DoLife( WORD numobj )
 				CopyScreen( Log, Screen ) ;
 				Flip() ;
 				FlagAffGrille = FALSE ;
-				SetProjection( 320, 240, 128,1024,1024 ) ;
+				/*
+				 * FEATURE: the credits' bodies about the middle
+				 * of a screen of any size, where AffScene draws
+				 * them. The port's own.
+				 */
+				SetProjection( CENTRE_ECRAN_X, CENTRE_ECRAN_Y, 128,1024,1024 ) ;
 				SetFollowCamera( 0,1500,0, 25,-128,0, 13000 ) ;
 				SetLightVector( 896, 950, 0 ) ;
 				InitDial( 1 ) ;

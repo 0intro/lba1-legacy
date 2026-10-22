@@ -1,0 +1,36 @@
+# The incrusts at places of their own on a wide screen of 852x480, at
+# the top left of the window of 640x480 in its middle (fixtures/widehud:
+# the save of fixtures/candy, before scene 30's life candy machine, with
+# 20 life points, byte 264, and 100 kashes, bytes 265-266, and the CD's
+# LBA.CFG with WideScreen: ON, recorded with -D 1920x1080). Shift opens
+# the inventory, Up goes from its first slot to its last, the clover
+# box, and Return uses a clover, Twinsen's life being below 50: the
+# clover shows in its box. The action key then asks the machine whether
+# to buy, and Return takes "Ok, I'll buy.": the coin paid and the count
+# of kashes show.
+
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 12
+shot start
+key Shift_L
+sleep 3
+shot inventory
+key Up
+sleep 1
+key Return
+sleep 1
+shot clover
+sleep 4
+shot after
+key space
+sleep 4
+shot question
+key Return
+sleep 1
+shot paid
+sleep 4
+shot end

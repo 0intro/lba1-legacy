@@ -54,7 +54,7 @@ UWORD	GameOptionMenu[] = {
 #ifdef	DOS
 			4,	// nb entries
 #else
-			7,	// nb entries
+			8,	// nb entries
 #endif
 			0,	// y from top.
 			0,	// .dia num
@@ -68,6 +68,7 @@ UWORD	GameOptionMenu[] = {
 			0, 47,	// advanced options
 			0, 0x1000,	// FEATURE: Choose language, before the switches. Taken from the Classic 3.2.3.
 			0, 0x1008,	// FEATURE: Fullscreen display, before Hit walls. Taken from the Classic 3.2.3.
+			0, 0x2001,	// FEATURE: Widescreen display, the wide screen's switch after the full screen's. The port's own.
 			0, 0x100A	// FEATURE: Hit walls, the option menu's last entry. Taken from the Classic 3.2.3.
 #endif
 				} ;
@@ -227,7 +228,11 @@ extern	WORD	IndexGrm ;
 
 void	Init3DGame()
 {
-	SetIsoProjection( 320-8-1, 240, SIZE_BRICK_XZ ) ;
+	/*
+	 * FEATURE: the projection's centre about the middle of a screen of
+	 * any size, as the bricks are. The port's own.
+	 */
+	SetIsoProjection( CENTRE_ECRAN_X-8-1, CENTRE_ECRAN_Y, SIZE_BRICK_XZ ) ;
 	SetPosCamera( 0,0,0 ) ;
 	SetAngleCamera( 0,0,0 ) ;
 	SetLightVector( AlphaLight, BetaLight, 0 ) ;
@@ -988,6 +993,13 @@ void	DoFoundObj( WORD numobj )
 
 	// reaff twinksen anim trouve
 
+	/*
+	 * FEATURE: Twinsen, the object and their boxes on the whole screen,
+	 * in its coordinates, the dialogue in the window of 640x480 in its
+	 * middle. The port's own.
+	 */
+	pushscreen() ;
+
 	xw = StartXCube*SIZE_BRICK_XZ ;
 	yw = StartYCube*SIZE_BRICK_Y ;
 	zw = StartZCube*SIZE_BRICK_XZ ;
@@ -1050,6 +1062,7 @@ void	DoFoundObj( WORD numobj )
 
 #endif
 
+	poparea() ;
 	UnSetClip() ;
 	OpenDial( numobj ) ;
 //	timerend = TimerRef + 50 * 30 ;
@@ -1096,6 +1109,7 @@ void	DoFoundObj( WORD numobj )
 
 	NbOptPhysBox = 0 ;		// clear list cls boxes
 
+	pushscreen() ;
 	while( flag == FALSE )
 	{
 		UnSetClip() ;
@@ -1138,8 +1152,10 @@ void	DoFoundObj( WORD numobj )
 
 		if( dialstat == 1 )
 		{
+			pushwindow() ;
 			UnSetClip() ;
 			dialstat = NextDialCar() ;
+			poparea() ;
 		}
 		if( dialstat != 1 )		// pas en cours lecture
 		{
@@ -1160,6 +1176,7 @@ void	DoFoundObj( WORD numobj )
 			}
 		}
 	}
+	poparea() ;
 
 #ifdef	DEBUG_TOOLS
 argexit:
@@ -1248,9 +1265,9 @@ void	CopyBlockPhysMCGA( LONG x0, LONG y0, LONG x1, LONG y1 )
 	x = x0 - 160 ;
 	y = y0 - 140 ;
 
-	if( x > 640-320 )	x = 640-320 ;
+	if( x > LARGEUR_ECRAN-320 )	x = LARGEUR_ECRAN-320 ;
 	if( x < 0 )		x = 0 ;
-	if( y > 480-200 )	y = 480-200 ;
+	if( y > HAUTEUR_ECRAN-200 )	y = HAUTEUR_ECRAN-200 ;
 	if( y < 0 )		y = 0 ;
 
 #ifdef	DOS
@@ -2672,7 +2689,10 @@ LONG	OptionsMenu()
 	WORD flag = 0 ;
 #ifndef	DOS
 	UWORD *ptrfullscreen ;
+	UWORD *ptrwide ;
 	UWORD *ptrhitwalls ;
+	WORD n ;
+	LONG dx ;
 
 	/*
 	 * FEATURE: Fullscreen display, the option menu's switch of the
@@ -2688,6 +2708,23 @@ LONG	OptionsMenu()
 		ptrfullscreen += 2 ;
 	}
 	ptrfullscreen[1] = FlagFullScreen ? 0x1008 : 0x1009 ;
+
+	/*
+	 * FEATURE: Widescreen display, the option menu's switch of the wide
+	 * screen. Its entry says ON while FlagWideScreen is set and OFF
+	 * while it is clear, where InitProgram left it in the menu, and its
+	 * choice moves the screen's width at once and writes the key to
+	 * lba.cfg. The port's own.
+	 */
+	ptrwide = NULL ;
+	for( n=0; n<GameOptionMenu[1]; n++ )
+	{
+		if( (GameOptionMenu[4+2*n+1] == 0x2000) OR (GameOptionMenu[4+2*n+1] == 0x2001) )
+		{
+			ptrwide = GameOptionMenu+4+2*n ;
+			ptrwide[1] = FlagWideScreen ? 0x2000 : 0x2001 ;
+		}
+	}
 
 	/*
 	 * FEATURE: Hit walls, the option menu's switch of the bump into
@@ -2761,6 +2798,33 @@ LONG	OptionsMenu()
 			case 0x1009:	// Fullscreen display: OFF
 				WriteFullScreen() ;
 				ptrfullscreen[1] = FlagFullScreen ? 0x1008 : 0x1009 ;
+				break ;
+
+			/*
+			 * FEATURE: the screen's width moved and the scene's centre
+			 * with the screen's middle, which keeps a script's
+			 * projection, iso or 3D. Over a scene in play, F6's options
+			 * (Return to game), the scene is drawn again at the new width
+			 * under the menu, its origin and the numbers over a find
+			 * moving with it, and over the main menu its picture is laid
+			 * out again, black around it. The port's own.
+			 */
+			case 0x2000:	// Widescreen display: ON
+			case 0x2001:	// Widescreen display: OFF
+				dx = CENTRE_ECRAN_X ;
+				writewide( Screen ) ;
+				XCentre += CENTRE_ECRAN_X - dx ;
+				ptrwide[1] = FlagWideScreen ? 0x2000 : 0x2001 ;
+				if( GameOptionMenu[5] == 15 )
+				{
+					RedrawScene() ;
+					CopyScreen( Log, Screen ) ;
+				}
+				else
+				{
+					CopyScreen( Screen, Log ) ;
+					Flip() ;
+				}
 				break ;
 
 			case 0x100A:	// Hit walls: ON
@@ -3051,6 +3115,7 @@ LONG	MainGameMenu()
 
 				MenuDemo() ;
 				Load_HQR( PATH_RESSOURCE"ress.hqr", Screen, RESS_MENU_PCR ) ;
+				windowpicture( Screen ) ;
 				CopyScreen( Screen, Log ) ;
 				SetBlackPal() ;
 				Flip() ;
@@ -3355,6 +3420,7 @@ void	RessPict( WORD num )
 {
 	SetBlackPal() ;
 	Load_HQR( PATH_RESSOURCE"ress.hqr", Screen, num ) ;		// pcr
+	windowpicture( Screen ) ;
 	CopyScreen( Screen, Log ) ;
 	Load_HQR( PATH_RESSOURCE"ress.hqr", PalettePcx, num+1 ) ;	// pcp
 	Flip() ;
@@ -3390,6 +3456,7 @@ LONG	AdelineLogo()
 	PlayMidiFile( 31 ) ;
 
 	Load_HQR( PATH_RESSOURCE"ress.hqr", Screen, RESS_LOGO_PCR ) ;
+	windowpicture( Screen ) ;
 	CopyScreen( Screen, Log ) ;
 	Load_HQR( PATH_RESSOURCE"ress.hqr", PalettePcx, RESS_LOGO_PAL ) ;
 #ifdef	DOS

@@ -155,16 +155,23 @@ WorldCodeBrick(int32_t xw, int32_t yw, int32_t zw)
 	return block(BufCube[off]-1)[Header+1];
 }
 
-/* Map2Screen is grille_a.asm's Map2Screen: the screen's XScreen,YScreen of cell xm,ym,zm. */
+/*
+ * Map2Screen is grille_a.asm's Map2Screen: the screen's XScreen,YScreen of
+ * cell xm,ym,zm.
+ *
+ * FEATURE: the cell's place about the middle of a screen of any size, as
+ * the projection's centre is, on columns of 24 pixels from the screen's
+ * left edge. The port's own.
+ */
 void
 Map2Screen(int32_t xm, int32_t ym, int32_t zm)
 {
 	int32_t d, s;
 
 	d = xm - zm;
-	XScreen = 16*d + 8*d + 320-8-23-1;
+	XScreen = 16*d + 8*d + CENTRE_ECRAN_X-8-23-1;
 	s = xm + zm;
-	YScreen = 8*s + 4*s - (16*ym - ym) + 240-25;
+	YScreen = 8*s + 4*s - (16*ym - ym) + CENTRE_ECRAN_Y-25;
 }
 
 /*

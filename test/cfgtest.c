@@ -26,25 +26,49 @@
  * lines ended by LF or CR alone, a key written among them keeping the
  * lines after it, and lines longer than DefString, a key read past them
  * and a value kept to its first 255 bytes. Then LbaWin's settings, as
- * lib386/lib_sys/settings.c reads, forces and writes them. First, the
- * port's keys as readplatform reads them, and the game's own switch,
- * SkipLogo, as gamekey reads it for sources/perso.c, from sys/lba.cfg,
- * shipped beside the program and held as its text, each named there, and
- * from the CD's LBA.CFG, which leaves them out: the same values, the
- * code's defaults being the shipped file's.
+ * lib386/lib_sys/settings.c reads, forces and writes them, and the
+ * switch WideScreen with its default. First, the port's keys as
+ * readplatform reads them, and the game's own switch, SkipLogo, as
+ * gamekey reads it for sources/perso.c, from sys/lba.cfg, shipped beside
+ * the program and held as its text, each named there, and from the CD's
+ * LBA.CFG, which leaves them out: the same values, the code's defaults
+ * being the shipped file's.
  */
 
 void	setdirs(char*, char**, int, char**, int);
 int	bindtext(int, char*, const char*, char*, int);
+int	readswitch(char*, char*, int);
 void	readplatform(char*);
 char*	gamekeyname(int);
 
 
 char	PathConfigFile[260];	/* sys/sys.c's, which cfgtest leaves out */
+int32_t	FlagWideScreen;	/* sys/video.c's */
 int32_t	FlagFullScreen = 1;	/* sys/video.c's, TLBA1C.exe 0x818854's value */
 
 static char *pref;
 static int fails;
+
+/*
+ * A line of lba.cfg, the switch read and its default, and what
+ * readswitch gives: 1 for ON, 0 for OFF, the default for a missing key
+ * or an empty value, -1 for any other value
+ */
+static struct {
+	char	*line;
+	char	*key;
+	int	dflt;
+	int	v;
+} switches[] = {
+	{"WideScreen: ON\r\n", "WideScreen", 1, 1},
+	{"widescreen: off\r\n", "WideScreen", 1, 0},
+	{"WideScreen: on  \r\n", "WideScreen", 1, 1},
+	{"SkipLogo: OFF\r\n", "WideScreen", 1, 1},	/* missing */
+	{"WideScreen:\r\n", "WideScreen", 1, 1},
+	{"WideScreen: auto\r\n", "WideScreen", 1, -1},
+	{"WideScreen: 960x540\r\n", "WideScreen", 1, -1},
+	{"WideScreen: 1\r\n", "WideScreen", 1, -1},
+};
 
 /* fatal is sys/fns.h's, as sys/sdl.c has it. */
 void
@@ -134,6 +158,20 @@ text(char *name, char *want)
 	}
 }
 
+static void
+onoff(int i)
+{
+	int v;
+
+	put("O.CFG", switches[i].line);
+	v = readswitch("O.CFG", switches[i].key, switches[i].dflt);
+	if (v == switches[i].v)
+		return;
+	fprintf(stderr, "cfgtest: %s in \"%.*s\": %d where %d was due\n", switches[i].key,
+		(int)strcspn(switches[i].line, "\r\n"), switches[i].line, v, switches[i].v);
+	fails++;
+}
+
 /*
  * Lines longer than DefString's 256 bytes: a comment before the keys, a
  * key's value and a number's word, each read to its first 255 bytes,
@@ -166,7 +204,7 @@ longcase(void)
 
 /* The port's keys, in readplatform's order */
 static char *names[] = {
-	"LbaWinSettings", "LbaWinFullScreen",
+	"LbaWinSettings", "LbaWinFullScreen", "WideScreen",
 };
 
 /* readplatform's values for the configuration file name into v, in names' order */
@@ -177,6 +215,7 @@ platform(char *name, int32_t *v)
 	readplatform(name);
 	v[0] = LbaWinSettings;
 	v[1] = FlagFullScreen;
+	v[2] = FlagWideScreen;
 }
 
 /* key named in sys/lba.cfg, and its value a where the CD's LBA.CFG leaves it out the same as b, sys/lba.cfg's */
@@ -231,6 +270,8 @@ setting(LONG want)
 int
 main(int argc, char **argv)
 {
+	int i;
+
 	if (argc != 3) {
 		fprintf(stderr, "usage: cfgtest prefdir gamedir\n");
 		return 2;
@@ -355,6 +396,13 @@ main(int argc, char **argv)
 	put("S.CFG", "LbaWinSettings: 194\r\n");
 	ReadLbaWinSettings();
 	setting(194);	/* the fades off */
+
+	put("W.CFG", "WideScreen: ON\r\nOther: auto\r\n");
+	str("W.CFG", "WideScreen", "ON");
+	str("W.CFG", "Other", "auto");
+
+	for (i = 0; i < (int)(sizeof switches / sizeof switches[0]); i++)
+		onoff(i);
 
 	if (fails != 0)
 		return 1;

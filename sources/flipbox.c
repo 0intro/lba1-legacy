@@ -19,8 +19,18 @@ typedef	struct
 	WORD	y1 ;	}	T_PHYSBOX ;
 
 
+#ifdef	DOS
 T_PHYSBOX	NewListBox[MAX_OBJETS+MAX_EXTRAS] ;
 T_PHYSBOX	OptListBox[(MAX_OBJETS+MAX_EXTRAS)*2] ;
+#else
+/*
+ * FEATURE: room for the box of each thing AffScene draws, each sorted
+ * entry and each incrust, which a screen larger than 640x480 can show
+ * all at once. The port's own.
+ */
+T_PHYSBOX	NewListBox[(MAX_OBJETS+MAX_EXTRAS)*2+MAX_INCRUST_DISP] ;
+T_PHYSBOX	OptListBox[((MAX_OBJETS+MAX_EXTRAS)*2+MAX_INCRUST_DISP)*2] ;
+#endif
 
 WORD	NbPhysBox = 0 ;
 WORD	NbOptPhysBox = 0 ;
@@ -79,9 +89,9 @@ void	AddPhysBox( WORD x0, WORD y0, WORD x1, WORD y1 )
 	T_PHYSBOX	*ptr ;
 
 	if( x0 < 0 )	x0 = 0 ;
-	if( x1 > 639 )	x1 = 639 ;
+	if( x1 > LARGEUR_ECRAN-1 )	x1 = LARGEUR_ECRAN-1 ;
 	if( y0 < 0 )	y0 = 0 ;
-	if( y1 > 479 )	y1 = 479 ;
+	if( y1 > HAUTEUR_ECRAN-1 )	y1 = HAUTEUR_ECRAN-1 ;
 	if( x1 < x0 )	return ;
 	if( y1 < y0 )	return ;
 #ifdef	FIXES

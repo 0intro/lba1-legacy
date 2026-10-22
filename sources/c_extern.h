@@ -24,6 +24,9 @@
 #include	"object.def"
 #include	"perso.def"
 #include	"playfla.def"
+#ifndef	DOS
+#include	"porttext.def"
+#endif
 
 /* prototype */
 
@@ -112,6 +115,7 @@ extern	LONG	FlagCredits ;
 #ifndef	DOS
 extern	LONG	FlagPal ;
 extern	LONG	FlagSkipLogo ;
+extern	LONG	LastFileInit ;
 #endif
 
 extern	UBYTE	String[] ;

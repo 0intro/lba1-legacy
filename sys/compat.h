@@ -77,4 +77,32 @@ void	framesync(void);
 /* The game's own switches of lba.cfg, each its default where the file leaves it out (sys/modes.c). */
 int32_t	gamekey(char*, char*);
 
+/*
+ * The screen is Screen_X by 480 (sys/video.c), from 640 wide up: the
+ * old code takes its width from LARGEUR_ECRAN where it meant the
+ * screen's, and its height from HAUTEUR_ECRAN. The scene fills it,
+ * drawn in its coordinates (pushscreen), about CENTRE_ECRAN_X and
+ * CENTRE_ECRAN_Y: the middle, moved left by less than 24 pixels so that
+ * the bricks fall on the columns of 24 pixels from the screen's left
+ * edge that the grid's masks are drawn on (grille.c). The interface
+ * keeps a window of 640x480 in its middle, at FENETRE_X, drawn in the
+ * window's coordinates, the first area (pushwindow), each area kept
+ * till poparea gives back the one before it, and a picture of
+ * 640x480 loaded whole goes in that window (windowpicture). A buffer of
+ * the screen takes LARGEUR_MAX, the widest the run takes, as
+ * Widescreen display moves the screen's width while the game runs.
+ */
+#define LARGEUR_ECRAN	Screen_X
+#define LARGEUR_MAX	Wide_X
+#define HAUTEUR_ECRAN	480
+#define CENTRE_ECRAN_X	((Screen_X/2-32)/24*24+32)
+#define CENTRE_ECRAN_Y	240
+#define FENETRE_X	((Screen_X-640)/2)
+
+extern int32_t	Wide_X;	/* the screen's width with WideScreen ON, sys/video.c's */
+void	pushscreen(void);
+void	pushwindow(void);
+void	poparea(void);
+void	windowpicture(void*);
+
 #include "dos.h"

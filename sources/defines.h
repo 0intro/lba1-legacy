@@ -87,8 +87,8 @@ extern	ULONG	UsedHQMemory ;
 
 #define	VIEW_X0		-50
 #define	VIEW_Y0		-30
-#define	VIEW_X1		680
-#define	VIEW_Y1		580
+#define	VIEW_X1		(LARGEUR_ECRAN+40)
+#define	VIEW_Y1		(HAUTEUR_ECRAN+100)
 
 /*──────────────────────────────────────────────────────────────────────────*/
 

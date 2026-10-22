@@ -45,6 +45,11 @@ WORD	IndexGrm = -1 ;
 
 WORD	BetaUsedObj = 0 ;
 
+#ifndef	DOS
+/* FEATURE: the clock of AffScene's last frame, which RedrawScene draws the scene at again. The port's own. */
+ULONG	AffTimerRef ;
+#endif
+
 extern	LONG	XMap, YMap, ZMap ;
 extern	WORD	M_Xmin, M_Xmax, M_Ymin, M_Ymax, M_Zmin, M_Zmax ;
 extern	UBYTE	*SearchPtrAnimAction ;
@@ -2611,10 +2616,24 @@ void	AffScene( LONG flagflip )
 
 	oldxporg = XpOrgw ;
 	oldyporg = YpOrgw ;
+#ifndef	DOS
+	/*
+	 * FEATURE: the frame's clock kept for RedrawScene, the clock every
+	 * test of it in the frame reads, as the first pump comes at the
+	 * flip. The port's own.
+	 */
+	AffTimerRef = TimerRef ;
+#endif
 
 /*------------------------------------------------------------------------*/
 /* cls */
 
+	/*
+	 * FEATURE: the scene drawn on the whole screen, in its coordinates,
+	 * and the rest in the window of 640x480 in its middle, from the
+	 * flip on. The port's own.
+	 */
+	pushscreen() ;
 	UnSetClip() ;
 
 	if( !flagflip )
@@ -2677,7 +2696,7 @@ void	AffScene( LONG flagflip )
 			// agrandie la zone de visualisation que pour les portes (sprite_clip)
 
 			if( ( (ptrobj->Flags&SPRITE_CLIP)
-				AND (Xp>-112) AND (Xp<(640+112)) AND (Yp>-50) AND (Yp<(480+171)))
+				AND (Xp>-112) AND (Xp<(LARGEUR_ECRAN+112)) AND (Yp>-50) AND (Yp<(HAUTEUR_ECRAN+171)))
 
 			OR  ( (!(ptrobj->Flags&SPRITE_CLIP))
 				AND (Xp>VIEW_X0) AND (Xp<VIEW_X1) AND (Yp>VIEW_Y0) AND (Yp<VIEW_Y1)) )
@@ -3051,7 +3070,7 @@ void	AffScene( LONG flagflip )
 
 			if( FlagWater )
 			{
-				SetClip( 0,0, 639,FlagWater ) ;
+				SetClip( 0,0, LARGEUR_ECRAN-1,FlagWater ) ;
 			}
 
 				// affiche twinsen
@@ -3322,10 +3341,10 @@ void	AffScene( LONG flagflip )
 		ScreenXmax = ScreenXmin + dx ;
 		ScreenYmax = ScreenYmin + dy ;
 
-		if( ScreenXmax >= 640 )
+		if( ScreenXmax >= LARGEUR_ECRAN )
 		{
-			ScreenXmin -= ScreenXmax - 639 ;
-			ScreenXmax = 639 ;
+			ScreenXmin -= ScreenXmax - (LARGEUR_ECRAN-1) ;
+			ScreenXmax = LARGEUR_ECRAN-1 ;
 		}
 
 		if( ScreenXmin < 0 )
@@ -3334,10 +3353,10 @@ void	AffScene( LONG flagflip )
 			ScreenXmin = 0 ;
 		}
 
-		if( ScreenYmax >= 480 )
+		if( ScreenYmax >= HAUTEUR_ECRAN )
 		{
-			ScreenYmin -= ScreenYmax - 479 ;
-			ScreenYmax = 479 ;
+			ScreenYmin -= ScreenYmax - (HAUTEUR_ECRAN-1) ;
+			ScreenYmax = HAUTEUR_ECRAN-1 ;
 		}
 
 		if( ScreenYmin < 0 )
@@ -3364,6 +3383,18 @@ void	AffScene( LONG flagflip )
 		GetDxDyGraph( 0, &dx, &dy, HQR_Get(HQRPtrSpriteExtra,ptrdisp->Num) ) ;
 		ScreenXmin = ptrdisp->X + PtrZvExtra[ ptrdisp->Num*8 + 0 ] ;
 		ScreenYmin = ptrdisp->Y + PtrZvExtra[ ptrdisp->Num*8 + 1 ] ;
+#ifndef	DOS
+		/*
+		 * FEATURE: a sprite at a place of its own, a coin or a key
+		 * found, in the window of 640x480 in the middle of the screen
+		 * with the rest of the interface. One that follows an actor
+		 * stays by it. The port's own.
+		 */
+		if( ptrdisp->Move == 0 )
+		{
+			ScreenXmin += FENETRE_X ;
+		}
+#endif
 		ScreenXmax = ScreenXmin + dx ;
 		ScreenYmax = ScreenYmin + dy ;
 
@@ -3387,6 +3418,14 @@ void	AffScene( LONG flagflip )
 
 		ScreenXmin = ptrdisp->X ;
 		ScreenYmin = ptrdisp->Y - dy/2 ;
+#ifndef	DOS
+		/*
+		 * FEATURE: the coins' count in the window of 640x480 in the
+		 * middle of the screen with the rest of the interface. The
+		 * port's own.
+		 */
+		ScreenXmin += FENETRE_X ;
+#endif
 		ScreenXmax = ScreenXmin + dx ;
 		ScreenYmax = ScreenYmin + dy ;
 
@@ -3405,8 +3444,13 @@ void	AffScene( LONG flagflip )
 		{
 		UBYTE	*ptr3do ;
 
-		Box( 10, 10, 69, 69, 0 ) ;
-		SetClip(  10, 10, 69, 69 ) ;
+		/*
+		 * FEATURE: the object used at the top left of the window of
+		 * 640x480 in the middle of the screen, with the rest of the
+		 * interface. The port's own.
+		 */
+		Box( FENETRE_X+10, 10, FENETRE_X+69, 69, 0 ) ;
+		SetClip( FENETRE_X+10, 10, FENETRE_X+69, 69 ) ;
 
 		ptr3do = HQR_Get( InventoryObj, ptrdisp->Num ) ;
 		if( HQR_Flag )
@@ -3414,13 +3458,13 @@ void	AffScene( LONG flagflip )
 			PatchObjet( ptr3do ) ;
 		}
 
-		SetProjection( 40,40, 128,200,200 ) ;
+		SetProjection( FENETRE_X+40, 40, 128,200,200 ) ;
 
 		SetFollowCamera( 0,0,0, 60,0,0, 16000 ) ;
 		AffObjetIso(	0,0,0,	0,BetaUsedObj+=8,0, ptr3do ) ;
 
-		DrawCadre( 10, 10, 69, 69 ) ;
-		AddPhysBox( 10, 10, 69, 69 ) ;
+		DrawCadre( FENETRE_X+10, 10, FENETRE_X+69, 69 ) ;
+		AddPhysBox( FENETRE_X+10, 10, FENETRE_X+69, 69 ) ;
 
 		Init3DGame() ;
 		}
@@ -3452,6 +3496,7 @@ void	AffScene( LONG flagflip )
 			RestoreTimer() ;
 		}
 	}
+	poparea() ;
 #ifndef	DOS
 	/*
 	 * FIXED: the Classic leaves a scene come in without a fade
@@ -3475,6 +3520,41 @@ void	AffScene( LONG flagflip )
 		FlagFade = FALSE ;
 	}
 }
+
+#ifndef	DOS
+/*──────────────────────────────────────────────────────────────────────────*/
+
+/*
+ * FEATURE: the scene drawn again as AffScene drew its last frame, for the
+ * option menu's switch of the wide screen in play: at that frame's clock,
+ * so that the extras' entrances, the numbers' ends and the bodies' poses
+ * give what they gave then, with the island's texts over the actors, the
+ * voices' bank left as it is, and the object in its box at its angle, the
+ * clock, the texts and the angle put back after. The scene's origin and
+ * the numbers over a find move with the screen's middle, as at every full
+ * redraw. The port's own.
+ */
+void	RedrawScene()
+{
+	ULONG	timer ;
+	WORD	beta ;
+	LONG	file, speak ;
+
+	timer = TimerRef ;
+	beta = BetaUsedObj ;
+	file = LastFileInit ;
+	speak = FlagSpeak ;
+
+	FlagSpeak = FALSE ;
+	InitDial( START_FILE_ISLAND+Island ) ;
+	TimerRef = AffTimerRef ;
+	AffScene( TRUE ) ;
+	TimerRef = timer ;
+	BetaUsedObj = beta ;
+	InitDial( file ) ;
+	FlagSpeak = speak ;
+}
+#endif
 /*══════════════════════════════════════════════════════════════════════════*
 		▀▀▀█▀ █▀▀▀█ ██▄ █ █▀▀▀▀       █▀▀▀▄ █▀▀▀▀ █▀▀▀▀
 		 ▄█   ██  █ ██▀██ ██▀▀        ██  █ ██▀▀  ██

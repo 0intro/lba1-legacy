@@ -31,9 +31,10 @@
 # Language: Deutsch, LanguageCD in CP437 and NoMidi, the second empty,
 # lba reads that LBA.CFG as it is: the same screens and the OPL3 left
 # alone. On a game directory without LBA.CFG, a copy of lba in besidé
-# reads the lba.cfg beside it: the same screens and the OPL3's timbres
-# said missing. A copy beside none reads the text lba holds of lba.cfg to
-# "No CD", the OPL3's timbres said missing.
+# reads the lba.cfg beside it, its WideScreen ON on the record's display
+# of 640x480: the same screens and the OPL3's timbres said missing. A
+# copy beside none reads the text lba holds of lba.cfg to "No CD", the
+# OPL3's timbres said missing.
 #
 # exe is build/linux-amd64-gcc/lba by default, cfgtest and lba.cfg
 # beside it. A Windows exe runs natively (Git Bash, MSYS2), SDL3.dll

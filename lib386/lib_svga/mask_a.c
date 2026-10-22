@@ -10,7 +10,7 @@
  * of runs and the runs, alternately of pixels to leave and of pixels to
  * paint in one colour. Clipped, a line is painted into a buffer first
  * and its pixels of 0 are left, so that a mask of colour 0 paints
- * nothing, and lines go 640 apart.
+ * nothing, and lines go Screen_X apart.
  */
 
 static uint8_t colmask;
@@ -96,7 +96,7 @@ AffMask(int32_t num, int32_t x, int32_t y, void *bank)
 		d = clip;
 		nb = *m++;
 		if (nb == 0) {
-			line += 640;
+			line += Screen_X;
 			continue;
 		}
 		for (;;) {
@@ -122,7 +122,7 @@ AffMask(int32_t num, int32_t x, int32_t y, void *bank)
 		for (i = 0; i < npix; i++)
 			if (clip[ox+i] != 0)
 				line[ox+i] = clip[ox+i];
-		line += 640;
+		line += Screen_X;
 	} while (--nl != 0);
 }
 

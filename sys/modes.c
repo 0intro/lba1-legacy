@@ -123,4 +123,10 @@ readplatform(char *name)
 	 * InitWindows (TLBA1C.exe 0x427a90) reads it.
 	 */
 	Def_ReadValue2((unsigned char*)name, (unsigned char*)"LbaWinFullScreen", &FlagFullScreen);
+	/*
+	 * FEATURE: the wide screen, lba.cfg's WideScreen: with ON, the
+	 * default, the screen 480 lines high and as wide as the display's
+	 * shape at the start, and 640x480 otherwise. The port's own.
+	 */
+	FlagWideScreen = onoff(name, "WideScreen", 1);
 }

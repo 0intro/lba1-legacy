@@ -19,7 +19,11 @@
  *
  * A record is text, a line per input: the pump in decimal, then k and
  * the byte or b and the word, in hex. Its last line holds the pump the
- * run ended at and e. The sums are a line per screen shown that differs
+ * run ended at and e. Its first lines name it (# lba input) and give
+ * the display the run took (# display WxH), which a replay takes in
+ * place of its own, so that the wide screen has the record's width. A
+ * record made before those lines replays as on a display of 640x480.
+ * The sums are a line per screen shown that differs
  * from the one before: its number, the clock in ns, the sum. When the
  * samples play, they add a line per half of them mixed: w, its number,
  * the sum of its frames. When the CD plays, it adds a line per frame of
@@ -79,6 +83,18 @@ recordinput(char *file)
 	atexit(endrecord);
 }
 
+/*
+ * The display w by h the run takes, its window placed, written into the
+ * record before any input.
+ */
+void
+recorddisplay(int w, int h)
+{
+	if (rec == NULL)
+		return;
+	fprintf(rec, "# display %dx%d\n", w, h);
+}
+
 /* The next input played, or the end where the record stops short. */
 static void
 next(void)
@@ -86,9 +102,11 @@ next(void)
 	char line[128], kind;
 	uint64_t p;
 	unsigned v;
-	int n;
+	int n, w, h;
 
 	while (fgets(line, sizeof line, play) != NULL) {
+		if (sscanf(line, "# display %dx%d", &w, &h) == 2)
+			setdisplay(w, h);
 		if (line[0] == '#' || line[0] == '\n' || line[0] == '\r')
 			continue;
 		v = 0;
@@ -111,6 +129,7 @@ playinput(char *file)
 	if (play == NULL)
 		fatal("cannot open %s", file);
 	next();
+	setdisplay(640, 480);
 }
 
 int
@@ -266,8 +285,8 @@ summed(uint32_t n, uint64_t t)
 	uint8_t m;
 	int w, h;
 
-	w = vga.mode == Mcga ? 320 : 640;
-	h = vga.mode == Mcga ? 200 : 480;
+	w = vga.mode == Mcga ? 320 : Screen_X;
+	h = vga.mode == Mcga ? 200 : Screen_Y;
 	if (sums != NULL) {
 		m = vga.mode;
 		s = crc(0, vga.vram, (size_t)w*h);

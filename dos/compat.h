@@ -43,6 +43,27 @@ typedef unsigned long		uint32_t;
 #define idle()
 #define framesync()
 
+/*
+ * The port's screen can be wider than 640x480: there the old code takes
+ * the screen's size from LARGEUR_ECRAN and HAUTEUR_ECRAN and the scene's
+ * centre from CENTRE_ECRAN_X and CENTRE_ECRAN_Y, draws the scene on the
+ * whole screen (pushscreen) and the rest in a window of 640x480 in its
+ * middle (pushwindow, poparea), at FENETRE_X, and puts a picture of
+ * 640x480 in that window (windowpicture), its buffers LARGEUR_MAX wide,
+ * the widest the run takes. Here the screen is 640x480, the window
+ * fills it, and the four are empty.
+ */
+#define LARGEUR_ECRAN	640
+#define LARGEUR_MAX	640
+#define HAUTEUR_ECRAN	480
+#define CENTRE_ECRAN_X	320
+#define CENTRE_ECRAN_Y	240
+#define FENETRE_X	0
+#define pushscreen()
+#define pushwindow()
+#define poparea()
+#define windowpicture(p)
+
 #if __WATCOMC__ > 901
 /*
  * perso.c installs its critical error handler through _harderr_, the name

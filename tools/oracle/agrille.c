@@ -31,6 +31,9 @@ void	MixteColonne(void*, void*);
 uint8_t	*BufCube, *TabBlock;
 int32_t	XMap, YMap, ZMap, XScreen, YScreen;
 
+/* the screen's size, from which Map2Screen's C takes the scene's centre */
+extern int32_t	Screen_X, Screen_Y;
+
 static uint8_t cube[Ncube + 65536], blocks[Nblock*(3+4*32) + 4*Nblock];
 static int nbricks[Nblock];
 
@@ -147,6 +150,8 @@ testgrille(void)
 	mix = lookup("MixteColonne");
 	for (k = 0; k < 3; k++)
 		amap[k] = (uint8_t*)lookup(mapnames[k]);
+	Screen_X = 640;
+	Screen_Y = 480;
 	scene();
 	BufCube = cube;
 	TabBlock = blocks;

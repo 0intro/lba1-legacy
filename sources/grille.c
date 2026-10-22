@@ -43,8 +43,20 @@ LONG	WorldZCube = 0	;
 WORD	XpOrgw ;
 WORD	YpOrgw ;
 
+#ifdef	DOS
 #define	NB_COLON	28
 #define	MAX_BRICK	150
+#else
+/*
+ * FEATURE: a column of 24 pixels for each of the widest screen's, 1704
+ * pixels, and room in each for the bricks of a diagonal of the grid
+ * that its 480 lines show: on each of the 25 levels, cells 24 lines
+ * apart, 22 at most within the -38 to 479 AffBrickBlock takes. The
+ * port's own.
+ */
+#define	NB_COLON	((1704+24)/24+1)
+#define	MAX_BRICK	(22*25)
+#endif
 
 WORD	NbBrickColon[NB_COLON] ;
 
@@ -704,9 +716,9 @@ void	AffBrickBlock( LONG block, LONG brick, LONG x, LONG y, LONG z )
 		Map2Screen( x-StartXCube, y-StartYCube, z-StartZCube )	;
 
 		if( XScreen >= -24
-		AND XScreen < 640
+		AND XScreen < LARGEUR_ECRAN
 		AND YScreen >= -38
-		AND YScreen < 480 )
+		AND YScreen < HAUTEUR_ECRAN )
 		{
 			AffGraph( numbrick-1, XScreen, YScreen, BufferBrick ) ;
 

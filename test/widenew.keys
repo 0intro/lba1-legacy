@@ -1,0 +1,28 @@
+# A new game on a wide screen of 852x480 (fixtures/widenew: the CD's
+# LBA.CFG with WideScreen: ON, recorded with -D 1920x1080): its name
+# typed in the window in the middle, the introduction's pictures in the
+# window and its text, the movie, in mode 13h, in the window's place in
+# 4:3, bars beside it, cut short, then the cell on the whole screen and
+# F5's zoom in 4:3 as the movie.
+sleep 40
+shot menu
+key Return
+sleep 4
+shot name
+key a b c
+sleep 1
+key Return
+sleep 6
+shot text
+key Escape
+sleep 8
+shot movie
+key Escape
+sleep 10
+shot scene
+key F5
+sleep 3
+shot zoom
+key F5
+sleep 3
+shot unzoom

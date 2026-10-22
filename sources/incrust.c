@@ -107,6 +107,12 @@ void	DrawBulle( WORD numobj )
 {
 	LONG	dx, dy ;
 
+	/*
+	 * FEATURE: the bubble by its actor on the whole screen, in its
+	 * coordinates, then the window of 640x480 in its middle again. The
+	 * port's own.
+	 */
+	pushscreen() ;
 	ProjettePoint(	ListObjet[numobj].PosObjX - WorldXCube,
 			ListObjet[numobj].PosObjY + ListObjet[numobj].Ymax - WorldYCube,
 			ListObjet[numobj].PosObjZ - WorldZCube ) ;
@@ -138,6 +144,7 @@ void	DrawBulle( WORD numobj )
 	}
 
 	UnSetClip() ;
+	poparea() ;
 }
 
 /*──────────────────────────────────────────────────────────────────────────*/

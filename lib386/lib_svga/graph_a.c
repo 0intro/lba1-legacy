@@ -24,8 +24,8 @@ graph(void *bank, int32_t num)
 /*
  * AffGraph is graph_a.asm's AffGraph: graph num of bank, its hot spot at
  * x,y in Log. Clipped, each line is drawn into a buffer first and only
- * its pixels other than 0 are copied, to lines 640 apart: a graph drawn
- * whole draws its pixels of 0 and goes Screen_X apart.
+ * its pixels other than 0 are copied, where a graph drawn whole draws
+ * its pixels of 0. Lines go Screen_X apart.
  */
 void
 AffGraph(int32_t num, int32_t x, int32_t y, void *bank)
@@ -109,7 +109,7 @@ AffGraph(int32_t num, int32_t x, int32_t y, void *bank)
 		d = clip;
 		nb = *s++;
 		if (nb == 0) {
-			line += 640;
+			line += Screen_X;
 			continue;
 		}
 		do {
@@ -131,7 +131,7 @@ AffGraph(int32_t num, int32_t x, int32_t y, void *bank)
 		for (i = 0; i < npix; i++)
 			if (clip[off+i] != 0)
 				line[off+i] = clip[off+i];
-		line += 640;
+		line += Screen_X;
 	} while (--nl != 0);
 }
 

@@ -36,8 +36,8 @@ crossing(int32_t ax, int32_t ay, int32_t dx, int32_t dy)
  * Line is s_line.asm's Line, and Line_A, its entry for p_ob_iso.asm:
  * x0,y0 to x1,y1 in Log in colour col. The ends are clipped one at a
  * time to the clip box, an end outside on both axes at the edge the line
- * crosses there, then the line goes by Bresenham's steps, 640 bytes a
- * line.
+ * crosses there, then the line goes by Bresenham's steps, Screen_X
+ * bytes a line.
  */
 void
 Line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t col)
@@ -118,9 +118,9 @@ Line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t col)
 	p = Log + TabOffLine[y0] + x0;
 	dx = x1 - x0;
 	dy = y1 - y0;
-	step = 640;
+	step = Screen_X;
 	if (dy < 0) {
-		step = -640;
+		step = -Screen_X;
 		dy = -dy;
 	}
 	if (dx >= dy) {

@@ -14,16 +14,20 @@ enum
 
 typedef struct Vga Vga;
 
-/* The video card: its memory, its DAC (6-bit values), its mode. */
+/* The video card: its memory, Screen_X by Screen_Y bytes, its DAC (6-bit values), its mode. */
 struct Vga
 {
-	uint8_t	vram[640*480];
+	uint8_t	*vram;
 	uint8_t	dac[256][3];
 	int	mode;
 };
 
 extern Vga vga;	/* the video card (video.c) */
 extern uint8_t	PalEntries[768];	/* the palette Palette last set, which SkipLogo fades (video.c) */
+extern int32_t	Screen_X;	/* the screen's width, 640 or Wide_X (video.c) */
+extern int32_t	Screen_Y;	/* its height, 480 */
+extern int32_t	Wide_X;	/* the screen's width with WideScreen ON, set at the start (sys.c) */
+extern int32_t	FlagWideScreen;	/* WideScreen ON: the screen Wide_X wide */
 
 extern uint16_t	AsciiMode;	/* the keys passed to the BIOS's buffer too, for GetAscii (keyb.c) */
 extern char	PathConfigFile[];	/* lba.cfg's name, InitAdelineSystem's (sys.c) */

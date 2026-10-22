@@ -45,7 +45,7 @@ SmallSort(void *list, int32_t n, int32_t size)
 	}
 }
 
-/* CopyBlockMCGA is func.asm's CopyBlockMCGA: x0,y0 to x1,y1 of src, 640 wide, to the start of dst, 320 wide. xd and yd go unused. */
+/* CopyBlockMCGA is func.asm's CopyBlockMCGA: x0,y0 to x1,y1 of src, Screen_X wide, to the start of dst, 320 wide. xd and yd go unused. */
 void
 CopyBlockMCGA(int32_t x0, int32_t y0, int32_t x1, int32_t y1, void *src, int32_t xd, int32_t yd, void *dst)
 {
@@ -62,7 +62,7 @@ CopyBlockMCGA(int32_t x0, int32_t y0, int32_t x1, int32_t y1, void *src, int32_t
 	 */
 	for (h = y1 - y0 + 1; h > 0; h--) {
 		memcpy(d, s, x1-x0+1);
-		s += 640;
+		s += Screen_X;
 		d += 320;
 	}
 }

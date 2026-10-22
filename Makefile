@@ -177,6 +177,7 @@ NEW=\
 	sources/grille_a.o\
 	sources/lba2text.o\
 	sources/mcga.o\
+	sources/porttext.o\
 	sources/textfix.o\
 
 PORT=\
@@ -196,6 +197,7 @@ PORT=\
 	sys/qsort.o\
 	sys/rand.o\
 	sys/replay.o\
+	sys/wide.o\
 	sys/sdl.o\
 	sys/sound.o\
 	sys/sys.o\
@@ -244,6 +246,12 @@ SYSKEYSTEST=\
 	test/syskeystest.o\
 	sys/syskeys.o\
 
+# widetest: sys/wide.c's screenwidth, the wide screen's width held to
+# the display's shape (test/widetest.c).
+WIDETEST=\
+	test/widetest.o\
+	sys/wide.o\
+
 # clocktest: sys/timer.c's clock driven as the game drives it, the
 # retraces each loop of its calls waits for (test/clocktest.c).
 CLOCKTEST=\
@@ -273,6 +281,7 @@ CDIMAGETEST=\
 NEWDEFS=\
 	exttext\
 	lba2text\
+	porttext\
 
 DEFS=\
 	ambiance\

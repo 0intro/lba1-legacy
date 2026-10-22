@@ -199,7 +199,7 @@ AsmGouraudTriangleNoClip(void)
 }
 
 /*
- * The lines ymin to ymax of the tables filled from map, 640 bytes a
+ * The lines ymin to ymax of the tables filled from map, Screen_X bytes a
  * line, as texture.asm's three fillers did. A line of width w, its right
  * x less its left, is skipped if w is not above 0. The texel steps by
  * the difference of its ends plus one over w, of which 16 bits count.
@@ -262,7 +262,7 @@ filltext(int32_t ymin, int32_t ymax, uint8_t *map, int mode, uint8_t dark)
 			ty += sy;
 		} while (--w != 0);
 	next:
-		line += 640;
+		line += Screen_X;
 		y++;
 	} while (--n != 0);
 }

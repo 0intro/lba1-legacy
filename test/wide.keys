@@ -1,0 +1,64 @@
+# A wide screen of 852x480 (fixtures/wide: holomap.keys's save outside
+# the prison and the CD's LBA.CFG with WideScreen: ON, recorded with -D
+# 1920x1080): the main menu's picture in the window of 640x480 in the
+# middle, black around it, the list, then the scene on the whole screen,
+# where Twinsen, sporty, runs along the path. Back in the normal
+# behaviour, the inventory and the behaviours open in the window over
+# the scene, the holomap in the window, F5's zoom fills the window's
+# place in 4:3, bars beside it, P's pause writes in the window's lower
+# left, and Escape's menu to quit opens in the window, where Continue
+# goes on with the game.
+hold 0.05
+sleep 40
+shot menu
+key Down Return
+sleep 3
+shot list
+key Return
+hold 0.15
+sleep 15
+shot outside
+key F2
+sleep 1
+down Left
+sleep 1.2
+up Left
+down Up
+sleep 6
+up Up
+sleep 2
+shot walked
+key F1
+sleep 1
+key Shift_L
+sleep 3
+shot inventory
+key Escape
+sleep 2
+down Control_L
+sleep 2
+shot behaviour
+up Control_L
+sleep 2
+key h
+sleep 8
+shot holomap
+key Escape
+sleep 6
+shot back
+key F5
+sleep 3
+shot zoom
+key F5
+sleep 3
+key p
+sleep 2
+shot pause
+key p
+sleep 2
+key Escape
+sleep 2
+shot quit
+key Return
+sleep 3
+shot end

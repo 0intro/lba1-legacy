@@ -195,9 +195,19 @@ Malloc(int32_t n)
 }
 
 void
+sdlscreen(void)
+{
+}
+
+void
 sdlfullscreen(int on)
 {
 	USED(on);
+}
+
+void
+sdlsize(void)
+{
 }
 
 int32_t
@@ -206,6 +216,15 @@ Def_WriteValue(unsigned char *path, unsigned char *key, int32_t v)
 	USED(path);
 	USED(key);
 	return v;
+}
+
+int32_t
+Def_WriteString(unsigned char *path, unsigned char *key, unsigned char *s)
+{
+	USED(path);
+	USED(key);
+	USED(s);
+	return 1;
 }
 
 void

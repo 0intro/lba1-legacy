@@ -63,9 +63,9 @@ DoFire(int32_t lig, int32_t col)
 			v = (*s++ >> 1) + c;
 			if (v > top)
 				v = top;
-			d[0] = d[1] = d[640] = d[641] = v;
+			d[0] = d[1] = d[Screen_X] = d[Screen_X+1] = v;
 			d += 2;
 		}
-		d += 640;
+		d += 2*Screen_X - 640;
 	}
 }

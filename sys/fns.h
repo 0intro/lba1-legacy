@@ -84,6 +84,7 @@ void	hookkeys(int);
 
 /* replay.c */
 void	recordinput(char*);
+void	recorddisplay(int, int);
 void	playinput(char*);
 int	playing(void);
 void	portexit(int);
@@ -99,6 +100,9 @@ void	summedmidi(uint64_t, int16_t*, int);
 void	waveto(char*);
 void	musicto(char*);
 
+/* wide.c */
+int32_t	screenwidth(int, int);
+
 /* modes.c */
 int	readmode(char*, char*, char**);
 int	readswitch(char*, char*, int);
@@ -108,6 +112,11 @@ char*	gamekeyname(int);
 
 /* video.c */
 void	videoinit(void);
+void	pushscreen(void);
+void	pushwindow(void);
+void	poparea(void);
+void	windowpicture(void*);
+void	writewide(void*);
 void	PalMulti(int16_t, int16_t, uint8_t*);
 
 /* sound.c */
@@ -197,6 +206,10 @@ void	miditick(uint64_t);
 
 /* sdl.c */
 void	fatal(char*, ...);
+void	sdldesktop(int*, int*);
+void	setdisplay(int, int);
+void	sdlscreen(void);
+void	sdlsize(void);
 void	sdlclose(void);
 uint64_t	sdlnanos(void);
 void	sdlsleep(uint64_t);
@@ -218,5 +231,6 @@ int	lbamain(int, char**);
 unsigned char*	Def_ReadString(unsigned char*, unsigned char*);
 int32_t	Def_ReadValue2(unsigned char*, unsigned char*, int32_t*);
 int32_t	Def_WriteValue(unsigned char*, unsigned char*, int32_t);
+int32_t	Def_WriteString(unsigned char*, unsigned char*, unsigned char*);
 void	ReadLbaWinSettings(void);
 uint32_t	Load(char*, void*);

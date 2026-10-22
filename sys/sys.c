@@ -22,6 +22,7 @@ void
 InitAdelineSystem(char *name, int32_t inits)
 {
 	unsigned char *p;
+	int dw, dh;
 
 	USED(inits);
 	printf("\nCopyright (c) Adeline Software International 1994, All Rights Reserved.\n\n");
@@ -38,6 +39,11 @@ InitAdelineSystem(char *name, int32_t inits)
 	p = Def_ReadString((unsigned char*)name, (unsigned char*)"MidiType");
 	if (p != NULL && *p != 0)
 		MidiFM = watcomstricmp((char*)p, "FM") == 0;
+	sdldesktop(&dw, &dh);
+	recorddisplay(dw, dh);
+	Wide_X = screenwidth(dw, dh);
+	if (FlagWideScreen)
+		Screen_X = Wide_X;
 	soundinit();
 	videoinit();
 	clockinit();

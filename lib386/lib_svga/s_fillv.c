@@ -7,7 +7,7 @@
 /*
  * The fillers of s_fillv.asm: the lines of a polygon that ComputePoly
  * or ComputeSphere left in TabVerticG and TabVerticD, from Ymin to Ymax,
- * filled in Log in one of nine ways, 640 bytes a line. A line whose
+ * filled in Log in one of nine ways, Screen_X bytes a line. A line whose
  * right end is left of its left is skipped, the Gouraud fillers moving
  * on past it in TabCoulG and TabCoulD.
  */
@@ -108,7 +108,7 @@ triste(Fill *f)
 		w = ends(f, &p);
 		if (w != 0)
 			memset(p, f->col, w);
-		f->line += 640;
+		f->line += Screen_X;
 	} while (--f->n != 0);
 }
 
@@ -147,7 +147,7 @@ down:
 	if ((c & 15) == 0)
 		goto turnup;
 nextdown:
-	f->line += 640;
+	f->line += Screen_X;
 	if (--f->n != 0)
 		goto down;
 	return;
@@ -159,7 +159,7 @@ turnup:
 	c--;
 	if ((c & 15) == 0)
 		goto nextdown;
-	f->line += 640;
+	f->line += Screen_X;
 	if (--f->n != 0)
 		goto up;
 }
@@ -196,7 +196,7 @@ down:
 	if ((c & 15) == 0)
 		goto turnup;
 nextdown:
-	f->line += 640;
+	f->line += Screen_X;
 	if (--f->n != 0)
 		goto down;
 	return;
@@ -213,7 +213,7 @@ turnup:
 	if ((c & 15) == 0)
 		goto nextdown;
 nextup:
-	f->line += 640;
+	f->line += Screen_X;
 	if (--f->n != 0)
 		goto up;
 }
@@ -260,7 +260,7 @@ marbre(Fill *f)
 				v = s;
 			}
 		}
-		f->line += 640;
+		f->line += Screen_X;
 	} while (--f->n != 0);
 }
 
@@ -288,7 +288,7 @@ tele(Fill *f)
 				b++;
 			}
 		}
-		f->line += 640;
+		f->line += Screen_X;
 	} while (--f->n != 0);
 }
 
@@ -310,7 +310,7 @@ trans(Fill *f)
 			for (k = 0; k < (w>>1)*2; k++)
 				p[k] = (p[k] & 0x0F) | c;
 		}
-		f->line += 640;
+		f->line += Screen_X;
 	} while (--f->n != 0);
 }
 
@@ -336,7 +336,7 @@ trame(Fill *f)
 			for (k = 0; k < w; k++)
 				p[2*k] = f->col;
 		}
-		f->line += 640;
+		f->line += Screen_X;
 	} while (--f->n != 0);
 }
 
@@ -357,7 +357,7 @@ triche(Fill *f)
 		 * intensity of the line above. This moves on past every line.
 		 */
 		f->cl++;
-		f->line += 640;
+		f->line += Screen_X;
 	} while ((uint16_t)--f->n != 0);
 }
 
@@ -431,7 +431,7 @@ gouraud(Fill *f)
 					p[k] = v >> 8;
 			}
 		}
-		f->line += 640;
+		f->line += Screen_X;
 	} while (--f->n != 0);
 }
 
@@ -524,6 +524,6 @@ dith(Fill *f)
 		if (--cnt != 0)
 			goto pair;
 	next:
-		f->line += 640;
+		f->line += Screen_X;
 	} while (--f->n != 0);
 }

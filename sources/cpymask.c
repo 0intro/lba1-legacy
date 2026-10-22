@@ -8,8 +8,8 @@
  * CopyMask is cpymask.asm's CopyMask: through mask num of bank, the
  * pixels of src at x,y copied to the same place in Log. A mask has a
  * graph's header (see graph_a.c), then a line at a time a count of runs
- * and the runs, alternately of pixels to leave and to copy. Clipped,
- * lines go 640 apart, and the state machine below is the assembly's,
+ * and the runs, alternately of pixels to leave and to copy. Lines go
+ * Screen_X apart. Clipped, the state machine below is the assembly's,
  * its counts bytes compared unsigned.
  */
 void
@@ -184,7 +184,7 @@ CopyMask(int32_t num, int32_t x, int32_t y, void *bank, void *src)
 		if (--nl == 0)
 			return;
 		m++;
-		sl += 640;
-		dl += 640;
+		sl += Screen_X;
+		dl += Screen_X;
 	}
 }

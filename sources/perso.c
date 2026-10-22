@@ -231,6 +231,7 @@ void	Introduction()
 #endif
 
 		Load_HQR( PATH_RESSOURCE"ress.hqr", Screen, RESS_TWINSUN_PCR ) ;
+		windowpicture( Screen ) ;
 		CopyScreen( Screen, Log ) ;
 		Load_HQR( PATH_RESSOURCE"ress.hqr", PalettePcx, RESS_TWINSUN_PAL ) ;
 		Flip() ;
@@ -247,6 +248,7 @@ void	Introduction()
 
 		SetBlackPal() ;
 		Load_HQR( PATH_RESSOURCE"ress.hqr", Screen, RESS_INTRO_2_PCR ) ;
+		windowpicture( Screen ) ;
 		CopyScreen( Screen, Log ) ;
 		Load_HQR( PATH_RESSOURCE"ress.hqr", PalettePcx, RESS_INTRO_2_PAL ) ;
 		Flip() ;
@@ -257,6 +259,7 @@ void	Introduction()
 
 		SetBlackPal() ;
 		Load_HQR( PATH_RESSOURCE"ress.hqr", Screen, RESS_INTRO_3_PCR ) ;
+		windowpicture( Screen ) ;
 		CopyScreen( Screen, Log ) ;
 		Load_HQR( PATH_RESSOURCE"ress.hqr", PalettePcx, RESS_INTRO_3_PAL ) ;
 		Flip() ;
@@ -565,6 +568,7 @@ startloop:
 
 				FadeToBlack( PtrPal ) ;
 				Load_HQR( PATH_RESSOURCE"ress.hqr", Screen, RESS_TWINSUN_PCR ) ;
+				windowpicture( Screen ) ;
 				CopyScreen( Screen, Log ) ;
 				Load_HQR( PATH_RESSOURCE"ress.hqr", PalettePcx, RESS_TWINSUN_PAL ) ;
 				Flip() ;
@@ -1089,7 +1093,11 @@ Text( 10,70, "%FMemoLabelTrack: %d ", ptrobj->MemoLabelTrack ) ;
 				ptrobj->PosObjY-StartYCube*SIZE_BRICK_Y,
 				ptrobj->PosObjZ-StartZCube*SIZE_BRICK_XZ ) ;
 
-		if( Xp<80 OR Xp>539 OR Yp<80 OR Yp>429 )
+		/*
+		 * FEATURE: the camera follows Twinsen within the same margins
+		 * from the edges of a screen of any size. The port's own.
+		 */
+		if( Xp<80 OR Xp>LARGEUR_ECRAN-101 OR Yp<80 OR Yp>HAUTEUR_ECRAN-51 )
 		{
 			xm = (ptrobj->PosObjX+DEMI_BRICK_XZ)/SIZE_BRICK_XZ ;
 			ym =  ptrobj->PosObjY/SIZE_BRICK_Y ;
@@ -1234,6 +1242,10 @@ void	WriteVolumeSettings()
 
 void	InitProgram()
 {
+#ifndef	DOS
+	WORD	n ;
+
+#endif
 	InitAdelineSystem( "LBA.CFG",	INIT_SVGA +
 					INIT_WAVE +
 					INIT_MIXER +
@@ -1254,6 +1266,27 @@ void	InitProgram()
 	 * Taken from the Classic 3.2.3.
 	 */
 	FlagSkipLogo = gamekey( PathConfigFile, "SkipLogo" ) ;
+
+	/*
+	 * FEATURE: Widescreen display leaves the option menu where the
+	 * display is 4:3 or narrower, which gives the screen 640x480 at
+	 * either choice. The port's own.
+	 */
+	if( Wide_X == 640 )
+	{
+		for( n=4; n<4+2*GameOptionMenu[1]; n+=2 )
+		{
+			if( GameOptionMenu[n+1] == 0x2001 )	// affichage écran large
+			{
+				for( ; n<4+2*GameOptionMenu[1]-2; n++ )
+				{
+					GameOptionMenu[n] = GameOptionMenu[n+2] ;
+				}
+				GameOptionMenu[1]-- ;
+				break ;
+			}
+		}
+	}
 #endif
 }
 
@@ -1431,7 +1464,7 @@ int	main( int argc, char *argv[] )
 
 // presentation
 
-	Screen = Malloc( 640*480 + 500 ) ;	// + decomp marge
+	Screen = Malloc( LARGEUR_MAX*HAUTEUR_ECRAN + 500 ) ;	// + decomp marge
 	if( !Screen )	TheEnd( NOT_ENOUGH_MEM, "Screen" ) ;
 
 #ifndef	DEBUG_TOOLS
@@ -1660,6 +1693,7 @@ int	main( int argc, char *argv[] )
 //	FadeToBlack( PalettePcx ) ;
 
 	Load_HQR( PATH_RESSOURCE"ress.hqr", Screen, RESS_MENU_PCR ) ;
+	windowpicture( Screen ) ;
 	CopyScreen( Screen, Log ) ;
 	Flip() ;
 	FadeToPal( PtrPal ) ;

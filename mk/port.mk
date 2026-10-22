@@ -70,6 +70,7 @@ TESTS=\
 	emu8ktest\
 	cfgtest\
 	syskeystest\
+	widetest\
 	clocktest\
 	filestest\
 	cdimagetest\
@@ -144,6 +145,9 @@ $(O)/cfgtest$(EXE): $(addprefix $(O)/,$(CFGTEST)) $(MANIFEST)
 	$(LINK)
 
 $(O)/syskeystest$(EXE): $(addprefix $(O)/,$(SYSKEYSTEST)) $(MANIFEST)
+	$(LINK)
+
+$(O)/widetest$(EXE): $(addprefix $(O)/,$(WIDETEST)) $(MANIFEST)
 	$(LINK)
 
 $(O)/clocktest$(EXE): $(addprefix $(O)/,$(CLOCKTEST)) $(MANIFEST)

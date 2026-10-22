@@ -114,6 +114,8 @@ void    SimpleInitSvga( void )                          ;
 #ifndef	DOS
 extern  LONG    FlagFullScreen                          ;
 void    WriteFullScreen( void )                         ;
+extern  LONG    FlagWideScreen                          ;
+void    writewide( void *b )                            ;
 extern  UBYTE   PalEntries[]                            ;
 #endif
 /*-----------------------------------------------------------------------------*/

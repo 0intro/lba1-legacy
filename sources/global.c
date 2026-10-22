@@ -241,7 +241,15 @@ T_HQR_HEADER	*HQR_Anims ;
 LONG	NbObjets = 0 ;
 T_OBJET	ListObjet[MAX_OBJETS] ;
 
+#ifdef	DOS
 T_SORT	ListTri[MAX_OBJETS+MAX_EXTRAS] ;
+#else
+/*
+ * FEATURE: room for each actor and extra with its shadow, which a
+ * screen larger than 640x480 can show all at once. The port's own.
+ */
+T_SORT	ListTri[(MAX_OBJETS+MAX_EXTRAS)*2] ;
+#endif
 
 WORD	NumObjFollow = NUM_PERSO ;
 

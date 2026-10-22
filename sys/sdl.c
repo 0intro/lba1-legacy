@@ -16,10 +16,9 @@
 
 enum
 {
-	Width = 640,
-	Height = 480,
 	Ext = 0x100,	/* an extended key: E0 before its code */
 	Kw = 0x2C,	/* W on AZERTY, the game's K_W */
+	Winh = 2*480,	/* the window's first height at most: the game's 480 lines twice */
 	Quiet = 16,	/* a sample of the music within this of 0 is silence: -66 dB */
 	Drift = 5000,	/* the most steer nudges a stream's rate, in millionths */
 };
@@ -27,10 +26,15 @@ enum
 static SDL_Window *window;
 static SDL_Renderer *renderer;
 static SDL_Texture *texture;
-static uint32_t pixels[Width*Height];
-static Vga last;
+static uint32_t *pixels;
+static uint8_t *lastvram;	/* the video memory, the DAC and the mode last shown */
+static uint8_t lastdac[256][3];
+static int lastmode;
 static int stale = 1;
 static int dummy;	/* SDL's dummy video, where nothing shows */
+static int winw, winh;	/* the window's first size */
+static int recentre;	/* the window to be centred again as it leaves the whole display */
+static int dispw, disph, dispset;	/* the display setdisplay gave, -D's or a record's */
 static int textinput;
 static int lastscan;
 static SDL_AtomicInt polled;
@@ -57,7 +61,7 @@ static const char prefapp[] = "lba1";
 /*
  * The screen's scale mode: SDL 3.4's pixel art mode, which draws each
  * pixel the same size at any scale and blends the line between two,
- * where the headers name it, the nearest pixel otherwise. sdlinit
+ * where the headers name it, the nearest pixel otherwise. sdlscreen
  * takes the nearest pixel too from a library older than 3.4, which a
  * build on 3.4's headers may run on.
  */
@@ -322,18 +326,144 @@ sdlinit(void)
 	 * when FlagFullScreen says so, as the Classic 3.2.3 makes its
 	 * window hidden for the whole display.
 	 */
-	if (!SDL_CreateWindowAndRenderer("Little Big Adventure", 2*Width, 2*Height,
+	if (!SDL_CreateWindowAndRenderer("Little Big Adventure", 2*Screen_X, 2*Screen_Y,
 	    SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN, &window, &renderer))
 		fatal("SDL_CreateWindowAndRenderer: %s", SDL_GetError());
-	SDL_SetRenderLogicalPresentation(renderer, Width, Height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+	SDL_StopTextInput(window);
+	startwriter();
+}
+
+/* The window's display: the one SDL gives it, or the primary. */
+static SDL_DisplayID
+windisplay(void)
+{
+	SDL_DisplayID d;
+
+	d = SDL_GetDisplayForWindow(window);
+	if (d == 0)
+		d = SDL_GetPrimaryDisplay();
+	return d;
+}
+
+/*
+ * FEATURE: the display's size, which the wide screen takes its shape
+ * from: the one -D or a record gave (setdisplay), else the desktop's,
+ * or 0 by 0 on SDL's error. The port's own.
+ */
+void
+sdldesktop(int *w, int *h)
+{
+	const SDL_DisplayMode *m;
+
+	if (dispset) {
+		*w = dispw;
+		*h = disph;
+		return;
+	}
+	*w = *h = 0;
+	m = SDL_GetDesktopDisplayMode(windisplay());
+	if (m == NULL)
+		return;
+	*w = m->w;
+	*h = m->h;
+}
+
+/* setdisplay: the first call's w by h taken as the display. */
+void
+setdisplay(int w, int h)
+{
+	if (dispset)
+		return;
+	dispw = w;
+	disph = h;
+	dispset = 1;
+}
+
+/*
+ * The window's first size for the screen's width: the screen's times
+ * the largest whole number the display's usable area takes, the whole
+ * display where the window manager gives that area empty, but at most
+ * the number that keeps it within Winh lines, or for a screen larger
+ * than that area the largest of the screen's shape it takes. The
+ * renderer draws the screen at that width. The window's display is
+ * given back.
+ */
+static SDL_DisplayID
+place(void)
+{
+	SDL_DisplayID d;
+	SDL_Rect r;
+	int k;
+
+	d = windisplay();
+	winw = Screen_X;
+	winh = Screen_Y;
+	if (!SDL_GetDisplayUsableBounds(d, &r) || r.w <= 0 || r.h <= 0)
+		if (!SDL_GetDisplayBounds(d, &r))
+			r.w = r.h = 0;
+	if (r.w > 0 && r.h > 0) {
+		k = r.w/Screen_X < r.h/Screen_Y ? r.w/Screen_X : r.h/Screen_Y;
+		if (k > Winh/Screen_Y)
+			k = Winh/Screen_Y;
+		if (k >= 1) {
+			winw = k*Screen_X;
+			winh = k*Screen_Y;
+		} else if (r.w*Screen_Y < r.h*Screen_X) {
+			winw = r.w;
+			winh = r.w*Screen_Y/Screen_X;
+		} else {
+			winw = r.h*Screen_X/Screen_Y;
+			winh = r.h;
+		}
+	}
+	SDL_SetRenderLogicalPresentation(renderer, Screen_X, Screen_Y, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+	return d;
+}
+
+/*
+ * The screen's texture and what sdlshow keeps, made once for the screen
+ * Wide_X wide, the widest the run takes, and the window at its first
+ * size, centred on the display as SDL centred the window it made.
+ */
+void
+sdlscreen(void)
+{
+	SDL_DisplayID d;
+
+	d = place();
+	SDL_SetWindowSize(window, winw, winh);
+	SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(d), SDL_WINDOWPOS_CENTERED_DISPLAY(d));
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XRGB8888,
-		SDL_TEXTUREACCESS_STREAMING, Width, Height);
+		SDL_TEXTUREACCESS_STREAMING, Wide_X, Screen_Y);
 	if (texture == NULL)
 		fatal("SDL_CreateTexture: %s", SDL_GetError());
 	if (SDL_GetVersion() < SDL_VERSIONNUM(3, 4, 0) || !SDL_SetTextureScaleMode(texture, scalemode))
 		SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
-	SDL_StopTextInput(window);
-	startwriter();
+	pixels = malloc((size_t)Wide_X*Screen_Y*sizeof pixels[0]);
+	lastvram = calloc((size_t)Wide_X*Screen_Y, 1);
+	if (pixels == NULL || lastvram == NULL)
+		fatal("no memory for a screen of %dx%d", (int)Wide_X, (int)Screen_Y);
+}
+
+/*
+ * FEATURE: the screen shown at its new width after Widescreen display's
+ * choice, and the window at its first size for that width in the
+ * display's middle, at once in a window, as it leaves the whole display
+ * otherwise. The port's own.
+ */
+void
+sdlsize(void)
+{
+	SDL_DisplayID d;
+
+	d = place();
+	if (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) {
+		recentre = 1;
+	} else {
+		SDL_SetWindowSize(window, winw, winh);
+		SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(d), SDL_WINDOWPOS_CENTERED_DISPLAY(d));
+	}
+	stale = 1;
 }
 
 void
@@ -373,8 +503,18 @@ sdlfullscreen(int on)
 		if (!SDL_HideCursor())
 			fprintf(stderr, "lba: SDL_HideCursor: %s\n", SDL_GetError());
 	} else {
-		if (!SDL_SetWindowSize(window, 2*Width, 2*Height))
+		if (!SDL_SetWindowSize(window, winw, winh))
 			fprintf(stderr, "lba: SDL_SetWindowSize: %s\n", SDL_GetError());
+		/*
+		 * FEATURE: the window centred again on its display after the
+		 * wide screen's switch changed the screen's width on the whole
+		 * display. The port's own.
+		 */
+		if (recentre) {
+			SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetDisplayForWindow(window)),
+				SDL_WINDOWPOS_CENTERED_DISPLAY(SDL_GetDisplayForWindow(window)));
+			recentre = 0;
+		}
 		if (!SDL_ShowCursor())
 			fprintf(stderr, "lba: SDL_ShowCursor: %s\n", SDL_GetError());
 	}
@@ -707,32 +847,42 @@ dac8(uint8_t v)
 /*
  * Show the screen: its mode's part of the video memory through the DAC,
  * the 6-bit values widened to 8, unless it is as last shown and the
- * window still has it. The retrace is timer.c's.
+ * window still has it. The retrace is timer.c's. Mode 13h fills the
+ * largest 4:3 rectangle in the middle of the screen, as a monitor
+ * showed it. Under SDL's dummy video sdlshow returns at once.
  */
 void
 sdlshow(void)
 {
 	uint32_t pal[256];
-	SDL_FRect src;
-	int i, w, h;
+	SDL_FRect src, dst;
+	int i, w, h, dw, dh;
 
 	if (dummy)
 		return;
-	if (!stale && memcmp(&vga, &last, sizeof vga) == 0)
+	w = vga.mode == Mcga ? 320 : Screen_X;
+	h = vga.mode == Mcga ? 200 : Screen_Y;
+	if (!stale && vga.mode == lastmode && memcmp(vga.dac, lastdac, sizeof lastdac) == 0
+	&& memcmp(vga.vram, lastvram, (size_t)w*h) == 0)
 		return;
-	last = vga;
+	lastmode = vga.mode;
+	memcpy(lastdac, vga.dac, sizeof lastdac);
+	memcpy(lastvram, vga.vram, (size_t)w*h);
 	stale = 0;
 	for (i = 0; i < 256; i++)
 		pal[i] = 0xFF000000u | dac8(vga.dac[i][0])<<16 | dac8(vga.dac[i][1])<<8 | dac8(vga.dac[i][2]);
-	w = vga.mode == Mcga ? 320 : Width;
-	h = vga.mode == Mcga ? 200 : Height;
 	for (i = 0; i < w*h; i++)
 		pixels[i] = pal[vga.vram[i]];
 	SDL_UpdateTexture(texture, &(SDL_Rect){0, 0, w, h}, pixels, w*4);
 	src = (SDL_FRect){0, 0, w, h};
+	dw = Screen_X;
+	dh = Screen_Y;
+	if (vga.mode == Mcga)
+		dw = Screen_Y*4/3;
+	dst = (SDL_FRect){(Screen_X - dw) / 2, (Screen_Y - dh) / 2, dw, dh};
 	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 	SDL_RenderClear(renderer);
-	SDL_RenderTexture(renderer, texture, &src, NULL);
+	SDL_RenderTexture(renderer, texture, &src, &dst);
 	SDL_RenderPresent(renderer);
 }
 
@@ -856,7 +1006,7 @@ sdlpoll(void)
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: lba [-g gamedir]... [-c cd]... [-p prefdir] [-r record | -i record] [-s sums] [-S n[-m[/k]]] [-w wave] [-m music]\n");
+	fprintf(stderr, "usage: lba [-g gamedir]... [-c cd]... [-p prefdir] [-D WxH] [-r record | -i record] [-s sums] [-S n[-m[/k]]] [-w wave] [-m music]\n");
 	exit(2);
 }
 
@@ -867,11 +1017,12 @@ usage(void)
  * order given, and the preferences, where everything written goes. By
  * default the game's is the current one, the CD's the first game
  * directory's parent, and the preferences SDL's. The configuration file
- * is read after them from the program's directory (files.c). The input
- * can be recorded (-r) or played from a record (-i), the screens shown
- * summed (-s), the nth, or the nth to the mth (every kth), written as
- * lban.bmp (-S), and the samples mixed (-w) and the music made (-m)
- * written raw: replay.c.
+ * is read after them from the program's directory (files.c). The wide
+ * screen takes its shape from the display, or from the size -D gives,
+ * which a record keeps for its replays. The input can be recorded (-r)
+ * or played from a record (-i), the screens shown summed (-s), the nth,
+ * or the nth to the mth (every kth), written as lban.bmp (-S), and the
+ * samples mixed (-w) and the music made (-m) written raw: replay.c.
  */
 int
 main(int argc, char *argv[])
@@ -879,6 +1030,7 @@ main(int argc, char *argv[])
 	char *game[Ngame], *cd[Ncd], *pref, *rec, *in, *sums, *e, cdbuf[1024];
 	const char *base;
 	uint32_t n, m, k;
+	long dw, dh;
 	int i, ngame, ncd;
 
 	meminit();
@@ -904,6 +1056,13 @@ main(int argc, char *argv[])
 			break;
 		case 'p':
 			pref = argv[++i];
+			break;
+		case 'D':
+			dw = strtol(argv[++i], &e, 10);
+			dh = *e == 'x' ? strtol(e+1, &e, 10) : 0;
+			if (dw <= 0 || dw > 65535 || dh <= 0 || dh > 65535 || *e != '\0')
+				usage();
+			setdisplay((int)dw, (int)dh);
 			break;
 		case 'r':
 			rec = argv[++i];

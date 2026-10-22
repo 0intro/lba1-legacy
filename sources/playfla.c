@@ -656,12 +656,14 @@ void	PlayDiskFla( UBYTE *name_anim )
 		{
 		case 200:
 			Load_HQR( PATH_RESSOURCE"ress.hqr", Screen, RESS_BUMPER_PCR ) ;
+			windowpicture( Screen ) ;
 			CopyScreen( Screen, Log ) ;
 			Load_HQR( PATH_RESSOURCE"ress.hqr", PalettePcx, RESS_BUMPER_PAL ) ;
 			break ;
 
 		case 201:
 			Load_HQR( PATH_RESSOURCE"ress.hqr", Screen, RESS_TWINSUN_PCR ) ;
+			windowpicture( Screen ) ;
 			CopyScreen( Screen, Log ) ;
 			Load_HQR( PATH_RESSOURCE"ress.hqr", PalettePcx, RESS_TWINSUN_PAL ) ;
 			break ;
@@ -669,6 +671,7 @@ void	PlayDiskFla( UBYTE *name_anim )
 		default:
 			// methode avec PCX raw format
 			Load_HQR( PATH_RESSOURCE"fla_pcx.hqr", Screen, listindex[n]+1 ) ;
+			windowpicture( Screen ) ;
 			CopyScreen( Screen, Log ) ;
 			Load_HQR( PATH_RESSOURCE"fla_pcx.hqr", PalettePcx, listindex[n] ) ;
 			break;

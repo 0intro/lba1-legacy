@@ -1849,6 +1849,15 @@ char    *GetMultiText( LONG text, char *dst )
 		strcpy( dst, GetLba2Text( text ) ) ;
 		return dst ;
 	}
+	/*
+	 * FEATURE: a text numbered from 0x2000 is one of the port's own,
+	 * Widescreen display's. The port's own.
+	 */
+	if( text & 0x2000 )
+	{
+		strcpy( dst, GetPortText( text ) ) ;
+		return dst ;
+	}
 #endif
 	/*
 	 * FIXED: LBA.EXE keys the text it keeps on its number and the

@@ -25,4 +25,7 @@ extern void ManualRealAngle(T_OBJET *);
 extern void ClearRealAngle(T_OBJET *);
 extern void DoDir(int16_t );
 extern void AffScene(int32_t );
+#ifndef	DOS
+extern void RedrawScene(void);
+#endif
 extern void CheckZoneSce(T_OBJET *,int16_t );

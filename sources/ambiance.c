@@ -221,7 +221,11 @@ WORD	GiveBalance( WORD xp, WORD yp, LONG volume, ULONG *volleft, ULONG *volright
 	LONG	balance ;
 	int	flag = 0 ;
 
-	if( (yp > 240+480)
+	/*
+	 * FEATURE: the balance over the whole screen, however wide and tall,
+	 * faded out 240 above and below it and 320 beside it. The port's own.
+	 */
+	if( (yp > 240+HAUTEUR_ECRAN)
 	OR  (yp < -240) )	return FALSE ;
 
 	// baisse volume vers le haut à partir de Y<0 jusqu'a -480
@@ -231,9 +235,9 @@ WORD	GiveBalance( WORD xp, WORD yp, LONG volume, ULONG *volleft, ULONG *volright
 		flag = 1 ;
 	}
 	// baisse volume vers le bas à partir de Y>479  jusqu'a 480+480
-	if( yp > 479 )
+	if( yp > HAUTEUR_ECRAN-1 )
 	{
-		volume = RegleTrois32( 0, volume, 240, 240+480-yp ) ;
+		volume = RegleTrois32( 0, volume, 240, 240+HAUTEUR_ECRAN-yp ) ;
 		flag = 1 ;
 	}
 
@@ -248,21 +252,21 @@ WORD	GiveBalance( WORD xp, WORD yp, LONG volume, ULONG *volleft, ULONG *volright
 	}
 
 	// gere attenuation du volume sur le cote droit
-	if( (xp >= 640) AND (xp < 640+320) )
+	if( (xp >= LARGEUR_ECRAN) AND (xp < LARGEUR_ECRAN+320) )
 	{
 		*volleft  = 0 ;
-		*volright = RegleTrois32( 0, (volume*100)/128, 320, 320+640-xp ) ;
+		*volright = RegleTrois32( 0, (volume*100)/128, 320, 320+LARGEUR_ECRAN-xp ) ;
 //		*volright = RegleTrois32( 0, volume, 320, 320+640-xp ) ;
 		return TRUE ;
 	}
 
 	// sinon gere la balance gauche/droite sur l'ecran
 	// l'eventuelle attenuation du volume sur Y est toujour la
-	if( (xp >= 0) AND (xp < 640) )
+	if( (xp >= 0) AND (xp < LARGEUR_ECRAN) )
 	{
 		if (flag) volume = (volume*100)/128;
 
-		balance = RegleTrois32( 0,256, 640, xp ) ;
+		balance = RegleTrois32( 0,256, LARGEUR_ECRAN, xp ) ;
 		Balance(	balance, volume,
 				volleft, volright  ) ;
 		return TRUE ;
