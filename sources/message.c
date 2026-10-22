@@ -135,9 +135,9 @@ LONG	LastFileInit=-1	;
 char	*TabLanguage[] = {
 			//	Ne pas toucher l'ordre cause HQR
 	"English",
-	"Français",
+	"Fran\207ais",
 	"Deutsch",
-	"Español",
+	"Espa\244ol",
 	"Italiano" 	}	;
 
 

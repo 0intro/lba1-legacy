@@ -490,7 +490,7 @@ WORD	FileSelector(	UBYTE *titre,
 				if( FileSize( SelectorPathname ) != 0L )
 				{
 					strcpy( workstring, SelectorPathname ) ;
-					strcat( workstring, " existe déjà !" ) ;
+					strcat( workstring, " existe d\202j\205 !" ) ;
 					if( Confirm(workstring, "Ecrase", "Oups") == 1 )
 					{	/* ok */
 						strcpy( defaultname, SelectorPathname ) ;
