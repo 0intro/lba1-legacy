@@ -8,8 +8,9 @@
  * screen saver, 0x10 a fade at each change of scene, 0x20 moves
  * relative to the screen, 0x40 no Alt+F4, 0x80 no Windows keys. The
  * port reads 1, the original game play at each start, 2, the bump into
- * walls, which the option menu switches, and 4, W as the action. Taken
- * from the Classic 3.2.3, as LbaWin 0.7.4 made it.
+ * walls, which the option menu switches,
+ * 4, W as the action, and 0x10, the fades. Taken from the Classic
+ * 3.2.3, as LbaWin 0.7.4 made it.
  */
 
 /*

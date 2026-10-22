@@ -392,13 +392,24 @@ void	ChangeCube()
 
 	HQ_StopSample() ;
 
-	if( FlagPalettePcx )	FadeToBlack( PalettePcx ) ;
-	else			FadeToBlack( PtrPal ) ;
-
-	if( !FlagMCGA )
+#ifndef	DOS
+	/*
+	 * FEATURE: the fade at a change of scene, LbaWinSettings's 0x10.
+	 * With 0x10 clear the scene left stays on the screen until the next
+	 * one is drawn. Taken from the Classic 3.2.3, as LbaWin 0.8.1 made
+	 * it.
+	 */
+	if( LbaWinSettings & 0x10 )
+#endif
 	{
-		Cls() ;
-		Flip() ;
+		if( FlagPalettePcx )	FadeToBlack( PalettePcx ) ;
+		else			FadeToBlack( PtrPal ) ;
+
+		if( !FlagMCGA )
+		{
+			Cls() ;
+			Flip() ;
+		}
 	}
 
 // demo version
@@ -438,7 +449,25 @@ void	ChangeCube()
 		SetBlackPal() ;
 		HoloTraj( NumHolomapTraj ) ;
 		NumHolomapTraj = -1 ;
+#ifndef	DOS
+		FlagFade = TRUE ;
+#endif
 	}
+#ifndef	DOS
+	/*
+	 * FEATURE: the fade at a change of scene. The new scene fades in
+	 * after a holomap trajectory, and with LbaWinSettings's 0x10.
+	 * Taken from the Classic 3.2.3.
+	 *
+	 * FIXED: the Classic leaves the palette of the scene left, the
+	 * museum's by night or the alarm's, to the next one, which comes
+	 * in without the fade. Its palette is set at its first frame
+	 * (FlagPal, as LBA2 sets the palette of a scene come in without a
+	 * fade).
+	 */
+	else if( LbaWinSettings & 0x10 )	FlagFade = TRUE ;
+	else if( !FlagFade )			FlagPal = TRUE ;
+#endif
 
 	if( (NumCube == 116) OR (NumCube == 117) )	Island = 10 ;
 
@@ -498,7 +527,9 @@ void	ChangeCube()
 	ZoneGrm = -1 ;
 	IndexGrm = -1 ;
 	FirstTime = TRUE ;
+#ifdef	DOS
 	FlagFade = TRUE ;
+#endif
 	CameraZone = FALSE ;
 //	NumCube = NewCube ;
 	NewCube = -1 ;
@@ -3337,6 +3368,22 @@ void	AffScene( LONG flagflip )
 			RestoreTimer() ;
 		}
 	}
+#ifndef	DOS
+	/*
+	 * FIXED: the Classic leaves a scene come in without a fade
+	 * (LbaWinSettings's 0x10) the palette of the scene left. The scene
+	 * takes its own at its first frame, where the fade in would end on
+	 * it, as LBA2 does with its FlagPal. A fade in that frame's scripts
+	 * asked for, a movie's or the zoom's, ends on it itself.
+	 */
+	if( FlagPal AND !FlagFade )
+	{
+		if( FlagPalettePcx )	Palette( PalettePcx ) ;
+		else			Palette( PtrPal ) ;
+		FlagBlackPal = FALSE ;
+	}
+	FlagPal = FALSE ;
+#endif
 	if( FlagFade )
 	{
 		if( FlagPalettePcx )	FadeToPal( PalettePcx ) ;

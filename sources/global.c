@@ -26,6 +26,9 @@ WORD	LastFire = 0 ;
 LONG	FlagVsync = 0 ;
 WORD	FlagMCGA = FALSE ;
 LONG	FlagCredits = FALSE ;
+#ifndef	DOS
+LONG	FlagPal = FALSE ;	// FIXED: the Classic leaves a scene come in without a fade the palette of the scene left. FlagPal has the scene's own palette set at its first frame, as LBA2's does.
+#endif
 
 UBYTE	String[256] ;
 WORD	Value ;

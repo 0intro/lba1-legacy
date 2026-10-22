@@ -106,6 +106,9 @@ extern	WORD	LastFire ;
 extern	LONG	FlagVsync ;
 extern	WORD	FlagMCGA ;
 extern	LONG	FlagCredits ;
+#ifndef	DOS
+extern	LONG	FlagPal ;
+#endif
 
 extern	UBYTE	String[] ;
 extern	UBYTE	EditString[] ;

@@ -1,0 +1,26 @@
+# A change of scene without the fade, LbaWinSettings: 194, 0x10 clear
+# (fixtures/nofade: the CD's LBA.CFG with that key and a save with
+# Twinsen outside the prison's back door, facing
+# it). He walks into the door's zone and Space opens the door, whose
+# script walks him in: the yard stays on the screen until the prison's
+# first frame, which comes in at once, in its palette.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 12
+shot start
+down Up
+sleep 0.8
+up Up
+sleep 1
+key space
+sleep 2
+shot door
+sleep 8
+shot inside
+sleep 2
+shot end

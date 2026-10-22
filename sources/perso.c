@@ -186,6 +186,8 @@ void	InitGame( int argc, UBYTE *argv[] )
 	 * It is emptied here, with the rest of the game.
 	 */
 	MemoComportement = -1 ;
+
+	FlagPal = FALSE ;		// la palette d'un premier affichage
 #endif
 
 	if( argc == -1 )
@@ -412,7 +414,17 @@ startloop:
 		}
 	}
 	else
+#ifdef	DOS
 	if( !FlagFade )
+#else
+	/*
+	 * FIXED: a scene come in without a fade (LbaWinSettings's 0x10)
+	 * reads the keys before its first frame is drawn, where Escape would
+	 * show the scene left. The keys wait for that frame, as they wait
+	 * for a fade in.
+	 */
+	if( !FlagFade AND !FlagPal )
+#endif
 	{
 		if( (MyKey == K_ESC)
 		AND (ListObjet[NUM_PERSO].LifePoint > 0)

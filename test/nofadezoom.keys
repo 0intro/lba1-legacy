@@ -1,0 +1,17 @@
+# Into scene 108's zoomed view without the fade, LbaWinSettings: 194
+# (fixtures/nofadezoom: the sweep's save of scene 107 with Twinsen put
+# above its zone 6, SceneStartX, Y, Z at bytes 270-275, 768 2560 16128,
+# and nofadedark's lba.cfg). The save loads from the list, and Twinsen
+# falls into the zone, which changes to scene 108 in its zone 0, whose
+# script takes the zoomed view at the scene's first frame: the zoom
+# fades the scene left to black, and scene 108 fades in from black.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+sleep 2
+shot fall
+sleep 6
+shot zoom

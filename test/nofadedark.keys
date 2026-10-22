@@ -1,0 +1,22 @@
+# Out of the museum by night without the fade, LbaWinSettings: 194
+# (fixtures/nofadedark: the CD's LBA.CFG with that key and a
+# save of the museum by night, Twinsen put inside its side door, zone 22,
+# at 10752 256 31744 and facing it, bytes 270 to 277). Up as the save
+# loads walks him out before a guard takes him, into scene 42, which
+# comes in at once in its own palette, where the Classic keeps the
+# museum's.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+sleep 0.3
+down Up
+sleep 1.8
+up Up
+shot out
+sleep 2
+shot street
+sleep 2
+shot end

@@ -342,10 +342,13 @@ main(int argc, char **argv)
 	setting(212);	/* the Classic's: Hit walls off */
 	put("S.CFG", "LbaWinSettings: 1\r\n");
 	ReadLbaWinSettings();
-	setting(19);	/* keep original game play sets 0x10 too */
+	setting(19);	/* keep original game play sets the fades too */
 	put("S.CFG", "LbaWinSettings: 197\r\n");
 	ReadLbaWinSettings();
 	setting(211);
+	put("S.CFG", "LbaWinSettings: 194\r\n");
+	ReadLbaWinSettings();
+	setting(194);	/* the fades off */
 
 	if (fails != 0)
 		return 1;
