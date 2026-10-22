@@ -70,6 +70,9 @@ extern int32_t LanguageOptions(void);
 extern int32_t OptionsMenu(void);
 extern void VolumeOptions(void);
 extern void SavedGameManagement(void);
+#ifndef	DOS
+extern int32_t ControlsOptions(void);
+#endif
 extern void AdvancedOptions(void);
 #ifndef	DOS
 extern void BuildGameMainMenu(int32_t );

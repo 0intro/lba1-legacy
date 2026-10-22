@@ -19,8 +19,10 @@ sys/compat.c _dos_getdrive lba1	game: the C library calls each game makes
 sys/compat.c _dos_setdrive lba1	game: the C library calls each game makes
 sys/compat.c watcomchdir lba1	game: the C library calls each game makes
 sys/compat.c watcomgetcwd lba1	game: the C library calls each game makes
+sys/compat.c watcomltoa lba1	game: the C library calls each game makes
 sys/compat.c watcommakepath lba2	game: the C library calls each game makes
 sys/compat.c watcommemicmp lba2	game: the C library calls each game makes
+sys/compat.c watcomultoa lba1	game: the C library calls each game makes
 sys/compat.c watcomvbprintf lba2	game: the C library calls each game makes
 sys/compat.h * lba1	game: the C library, Watcom's names and DOS's calls each game's code was written for
 sys/compat.h * lba2	game: the C library, Watcom's names and DOS's calls each game's code was written for
@@ -144,10 +146,14 @@ sys/keyb.c #include <system/keybdos.h> lba2	game: keyboard.asm's handler, Joy, F
 sys/keyb.c AsciiMode apart	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c ClearAsciiBuffer apart	game: each game's declarations, lib_sys.h's in LBA1, keybdos.h's in LBA2
 sys/keyb.c ClearKeyboard lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c ClearPadButtons lba2	game: LBA2's pad tables in DOS keys, where LBA1's lie in sys/input.c over virtual keys
 sys/keyb.c Fire lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c FlagExtendScan lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c FuncKey lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c GetAscii apart	game: each game's declarations, lib_sys.h's in LBA1, keybdos.h's in LBA2
+sys/keyb.c GetBindInput lba2	game: LBA2's pad tables in DOS keys, where LBA1's lie in sys/input.c over virtual keys
+sys/keyb.c GetPadKey lba2	game: LBA2's pad tables in DOS keys, where LBA1's lie in sys/input.c over virtual keys
+sys/keyb.c InitGamepad lba2	game: LBA2's pad tables in DOS keys, where LBA1's lie in sys/input.c over virtual keys
 sys/keyb.c InitKeyboard lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c InputActions lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c Joy lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
@@ -157,8 +163,11 @@ sys/keyb.c KeybCodeEnd lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey,
 sys/keyb.c KeybCodeStart lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c KeybDataEnd lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c KeybDataStart lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c LastPadButton lba2	game: LBA2's pad tables in DOS keys, where LBA1's lie in sys/input.c over virtual keys
 sys/keyb.c Old_PM09_Off lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c Old_PM09_Sel lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c PadButton lba2	game: LBA2's pad tables in DOS keys, where LBA1's lie in sys/input.c over virtual keys
+sys/keyb.c PadButtons lba2	game: LBA2's pad tables in DOS keys, where LBA1's lie in sys/input.c over virtual keys
 sys/keyb.c PadKeyMap lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c PadKeyMapAscii lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c PadKeyMapMenu lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
@@ -166,11 +175,19 @@ sys/keyb.c PadMenuMode lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey,
 sys/keyb.c PatchExtended lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c Stack lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c TabKeys lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c decl padholds lba2	game: LBA2's pad tables in DOS keys, where LBA1's lie in sys/input.c over virtual keys
 sys/keyb.c enum Firstrepeat lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c enum Nbios apart	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c extended lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c func lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c kbdown lba2	game: LBA2's pad tables in DOS keys, where LBA1's lie in sys/input.c over virtual keys
+sys/keyb.c kbholds lba2	game: LBA2's pad tables in DOS keys, where LBA1's lie in sys/input.c over virtual keys
+sys/keyb.c padheld lba2	game: LBA2's pad tables in DOS keys, where LBA1's lie in sys/input.c over virtual keys
+sys/keyb.c padholds lba2	game: LBA2's pad tables in DOS keys, where LBA1's lie in sys/input.c over virtual keys
 sys/keyb.c padkey lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c padkeys lba2	game: LBA2's pad tables in DOS keys, where LBA1's lie in sys/input.c over virtual keys
+sys/keyb.c padrelease lba2	game: LBA2's pad tables in DOS keys, where LBA1's lie in sys/input.c over virtual keys
+sys/keyb.c padrepeat lba2	game: LBA2's pad tables in DOS keys, where LBA1's lie in sys/input.c over virtual keys
 sys/keyb.c padword lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c repeatat lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c repeatkey lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
@@ -202,16 +219,21 @@ sys/mem.c largest lba2	game: each game's memory calls on the one arena, lib_sys'
 sys/mem.c tohost lba2	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
 sys/mem.c typedef MEMINFO lba2	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
 sys/mem.c watcomexpand lba2	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
+sys/replay.c duevk lba1	game: the keys outside XT, which LBA1's Classic input reads
+sys/replay.c keyboard lba1	game: the keys outside XT, which LBA1's Classic input reads
+sys/replay.c keyin apart	game: LBA1's Classic input, its keys outside XT in v lines and a k line's virtual key, and its GamePad's gate on the pad's lines
 sys/replay.c music lba1	game: LBA1's music chip's frames, written raw by -m
 sys/replay.c musicto lba1	game: LBA1's music chip
-sys/replay.c next apart	game: LBA2's pad's buttons in p lines
-sys/replay.c replay apart	game: LBA2's pad's buttons in p lines
+sys/replay.c next apart	game: LBA1's Classic input, its keys outside XT in v lines and a k line's virtual key, and its GamePad's gate on the pad's lines
+sys/replay.c replay apart	game: LBA1's Classic input, its keys outside XT in v lines and a k line's virtual key, and its GamePad's gate on the pad's lines
 sys/replay.c summed apart	game: mode 13h's screens in LBA1, 320x200 and the mode summed
 sys/replay.c summedmidi lba1	game: LBA1's music chip
+sys/replay.c vkin lba1	game: the keys outside XT, which LBA1's Classic input reads
 sys/replay.c writebmp apart	game: mode 13h's screens in LBA1, 320x200 and the mode summed
 sys/sdl.c actionkey lba1	game: LbaWinSettings' 4, W on AZERTY
 sys/sdl.c enum Ext apart	game: each game's constants beside the window's, LBA1's W on AZERTY and its music's silence, LBA2's release bit
-sys/sdl.c key apart	game: the W of LbaWinSettings' 4
+sys/sdl.c key apart	game: the W of LbaWinSettings' 4 and the virtual keys of LBA1's Classic input
+sys/sdl.c keyvk lba1	game: LBA1's Classic input, which reads virtual keys
 sys/sdl.c lastmode lba1	game: mode 13h, where LBA1 plays its movies
 sys/sdl.c lastw lba2	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, its texture's border column and row for the filter at either mode's edge, LBA2's one mode, its texture made again at each width
 sys/sdl.c main apart	game: each program's start, LBA1's in InitAdelineSystem, LBA2's display, wide screen and clock in main before the 1997 game's parameters, and LBA1's music written raw by -m, beside the sound by -w in both
@@ -227,10 +249,11 @@ sys/sdl.c quiet lba1	game: the music's chip, the OPL3 or the EMU8000
 sys/sdl.c sdlcdgain apart	game: LBA1's stream of the music chip, and its samples' volume as the wave stream's gain, LBA2's MSS mixing its own
 sys/sdl.c sdlclose apart	game: LBA1's ClearAdelineSystem, the 1994 code's end, closes SDL first, LBA2's 1997 code ends through exit alone
 sys/sdl.c sdlinit apart	game: each program's name
+sys/sdl.c sdlkeytovk lba1	game: LBA1's Classic input, which reads virtual keys
 sys/sdl.c sdllate apart	game: LBA1's stream of the music chip, and its samples' volume as the wave stream's gain, LBA2's MSS mixing its own
 sys/sdl.c sdlmidi lba1	game: the music's chip, the OPL3 or the EMU8000
 sys/sdl.c sdlmidigain lba1	game: the music's chip, the OPL3 or the EMU8000
-sys/sdl.c sdlpoll apart	game: LBA2's mouse, which the 1997 code reads in its editor
+sys/sdl.c sdlpoll apart	game: LBA2's mouse, which the 1997 code reads in its editor, and LBA1's keys' virtual codes for the Classic's input
 sys/sdl.c sdlscreen apart	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, its texture's border column and row for the filter at either mode's edge, LBA2's one mode, its texture made again at each width
 sys/sdl.c sdlshow apart	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, its texture's border column and row for the filter at either mode's edge, LBA2's one mode, its texture made again at each width
 sys/sdl.c sdlsize apart	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, its texture's border column and row for the filter at either mode's edge, LBA2's one mode, its texture made again at each width
@@ -276,14 +299,14 @@ sys/timer.c divisor lba2	game: MSS's PIT, its interrupts and LBA2.EXE's millisec
 sys/timer.c enum Pitclock lba2	game: LBA1's PIT tick and mode 13h's frame, LBA2's PIT clock and MSS's spin
 sys/timer.c enum Tick lba1	game: LBA1's PIT tick and mode 13h's frame, LBA2's PIT clock and MSS's spin
 sys/timer.c frame apart	game: LBA1's frame by the screen's mode, mode 13h's 70.09 Hz beside VGA's 59.94 Hz, LBA2's one
-sys/timer.c idle apart	game: the devices each pump drives, LBA1's PIT ticks, its wave, CD and music chip, LBA2's MSS interrupts, its CD and its pad's repeats
+sys/timer.c idle apart	game: the devices each pump drives, LBA1's PIT ticks, its wave, CD and music chip and the Classic's input, LBA2's MSS interrupts, its CD and its pad's repeats
 sys/timer.c interrupts lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c irqat lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c millis lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c msat lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c paces lba1	game: LBA1's frame by the screen's mode, mode 13h's 70.09 Hz beside VGA's 59.94 Hz, LBA2's one
 sys/timer.c pitcount lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
-sys/timer.c pump apart	game: the devices each pump drives, LBA1's PIT ticks, its wave, CD and music chip, LBA2's MSS interrupts, its CD and its pad's repeats
+sys/timer.c pump apart	game: the devices each pump drives, LBA1's PIT ticks, its wave, CD and music chip and the Classic's input, LBA2's MSS interrupts, its CD and its pad's repeats
 sys/timer.c setpit lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c synced lba1	game: LBA1's frame by the screen's mode, mode 13h's 70.09 Hz beside VGA's 59.94 Hz, LBA2's one
 sys/timer.c tick lba1	game: timer_a.asm's counts at the PIT's 50 Hz
@@ -542,6 +565,23 @@ test/filestest.c voices lba1	game: each game's cases, through its calls and its 
 test/filestest.c volumes lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
 test/filestest.c writable lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
 test/filestest.c writeall apart	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/padtest.c AsciiMode apart	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
+test/padtest.c FlagGamePad lba1	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
+test/padtest.c LbaWinSettings lba1	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
+test/padtest.c Screen_X apart	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
+test/padtest.c Screen_Y lba1	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
+test/padtest.c Wide_X apart	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
+test/padtest.c bindconfig lba2	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
+test/padtest.c clockinit lba2	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
+test/padtest.c keyin apart	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
+test/padtest.c mousebutton lba2	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
+test/padtest.c mousemoved lba2	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
+test/padtest.c musicto lba1	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
+test/padtest.c readdisplaynum lba2	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
+test/padtest.c recorddisplay lba2	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
+test/padtest.c usvkey lba1	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
+test/padtest.c vkin lba1	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
+test/padtest.c wideinit lba2	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
 test/syskeystest.c LbaWinSettings lba1	game: each game's settings
 test/syskeystest.c hookcases apart	game: each game's settings
 test/syskeystest.c main apart	game: each game's settings

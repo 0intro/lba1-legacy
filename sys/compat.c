@@ -95,6 +95,32 @@ watcomitoa(int v, char *s, int radix)
 	return s;
 }
 
+/* watcomltoa is Watcom's ltoa, whose long is 32 bits: itoa's. */
+char*
+watcomltoa(long v, char *s, int radix)
+{
+	return watcomitoa((int)v, s, radix);
+}
+
+/* watcomultoa is Watcom's ultoa: the value as a uint32_t. */
+char*
+watcomultoa(unsigned long v, char *s, int radix)
+{
+	char buf[34], *p, *q;
+	uint32_t u;
+
+	u = v;
+	p = buf;
+	do {
+		*p++ = "0123456789abcdefghijklmnopqrstuvwxyz"[u % radix];
+		u /= radix;
+	} while (u != 0);
+	for (q = s; p > buf; )
+		*q++ = *--p;
+	*q = 0;
+	return s;
+}
+
 static void
 part(char *dst, size_t max, const char *a, const char *b)
 {

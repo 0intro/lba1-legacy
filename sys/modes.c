@@ -163,4 +163,10 @@ readplatform(char *name, int *sync)
 	 * port's own, as LBA2's port paces its own.
 	 */
 	*sync = onoff(name, "DisplaySync", 1);
+	/*
+	 * FEATURE: GamePad, the Classic 3.2.3's input with ON, the keys read
+	 * through the bindings of lba.cfg's Input keys, and the 1994
+	 * keyboard's alone with OFF. The switch the port's own.
+	 */
+	FlagGamePad = onoff(name, "GamePad", 1);
 }

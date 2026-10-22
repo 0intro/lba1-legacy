@@ -75,6 +75,44 @@ void	InitIncrustDisp(	WORD type,
 	}
 }
 
+#ifndef	DOS
+/*──────────────────────────────────────────────────────────────────────────*/
+/*
+ * FEATURE: the behaviour's name shown a second at the screen's bottom
+ * left as the previous and the next behaviour's inputs step it, the
+ * names shown before cleared. InitIncrustComportement is TLBA1C.exe
+ * 0x419d40. Taken from the Classic 3.2.3.
+ */
+
+void	InitIncrustComportement( WORD comportement )
+{
+	ClearIncrustComportement() ;
+	InitIncrustDisp( INCRUST_COMPORTEMENT, comportement,
+			 10, HAUTEUR_ECRAN-40,
+			 15, 0, 1 ) ;
+}
+
+/*
+ * ClearIncrustComportement is TLBA1C.exe 0x419e10: the behaviour's name
+ * taken off, as a dialogue or a found object opens.
+ */
+void	ClearIncrustComportement()
+{
+	T_INCRUST_DISP	*ptrdisp ;
+	WORD	n ;
+
+	ptrdisp = ListIncrustDisp ;
+
+	for( n=0; n<MAX_INCRUST_DISP; n++, ptrdisp++ )
+	{
+		if( ptrdisp->Type == INCRUST_COMPORTEMENT )
+		{
+			ptrdisp->Num = -1 ;
+		}
+	}
+}
+#endif
+
 /*──────────────────────────────────────────────────────────────────────────*/
 
 void	ChangeIncrustPos( WORD xp0, WORD yp0, WORD xp1, WORD yp1 )

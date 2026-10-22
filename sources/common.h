@@ -322,6 +322,9 @@ typedef	struct	{	WORD	Alpha ;
 #define	INCRUST_CMPT		2
 #define	INCRUST_OBJ		3
 #define	INCRUST_TEXT		4
+#ifndef	DOS
+#define	INCRUST_COMPORTEMENT	5	// FEATURE: the behaviour's name. Taken from the Classic 3.2.3.
+#endif
 
 typedef struct	{	WORD	Num ;
 			WORD	X ;

@@ -99,6 +99,7 @@ static const struct {
 extern volatile uint32_t	TimerSystem;	/* sys/timer.c's, the system's time in its ticks */
 
 Vga	vga;	/* sys/video.c's */
+int32_t	FlagGamePad;	/* sys/input.c's */
 static uint64_t	display;	/* ns, the frame of the window's display, sdlwindowframe's */
 static uint64_t	refresh;	/* ns, the run's display frame, sdlrefresh's */
 static int	vsyncs = -1;	/* the refreshes the last sdlvsync asked */
@@ -174,6 +175,12 @@ void
 replay(uint64_t n)
 {
 	USED(n);
+}
+
+void
+ReadInputs(uint32_t context)
+{
+	USED(context);
 }
 
 void

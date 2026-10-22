@@ -21,6 +21,8 @@ enum
 	Winh = 2*480,	/* the window's first height at most: the game's 480 lines twice */
 	Quiet = 16,	/* a sample of the music within this of 0 is silence: -66 dB */
 	Drift = 5000,	/* the most steer nudges a stream's rate, in millionths */
+	Deadzone = 10000,	/* a stick's or a trigger's, the Classic's */
+	Firstaxis = 21,	/* the code of the left stick's left, the axes' first */
 };
 
 static SDL_Window *window;
@@ -43,6 +45,7 @@ static int vsynclast;	/* the renderer's vsync, as made or as last asked */
 static int vsyncsaid;	/* the renderer's refusal said */
 static int textinput;
 static int lastscan;
+static uint32_t padcodes;	/* the gamepad's codes down, a bit each */
 static SDL_AtomicInt polled;
 static SDL_AtomicInt ending;	/* the program's end begun */
 static SDL_TimerID watchid;	/* the watchdog's timer */
@@ -125,6 +128,52 @@ static const uint16_t xt[SDL_SCANCODE_COUNT] = {
 	[SDL_SCANCODE_LCTRL] = 0x1D, [SDL_SCANCODE_LSHIFT] = 0x2A,
 	[SDL_SCANCODE_LALT] = 0x38, [SDL_SCANCODE_RCTRL] = Ext|0x1D,
 	[SDL_SCANCODE_RSHIFT] = 0x36, [SDL_SCANCODE_RALT] = Ext|0x38,
+};
+
+/*
+ * SDL's keys and the virtual keys the Classic gives them, SdlKeyToVk's
+ * cases (TLBA1C.exe 0x405ce0), the symbols among them a French
+ * keyboard's keys
+ */
+static struct {
+	SDL_Keycode	key;
+	uint8_t	vk;
+} keyvk[] = {
+	{SDLK_BACKSPACE, 0x08}, {SDLK_TAB, 0x09}, {SDLK_RETURN, 0x0D},
+	{SDLK_ESCAPE, 0x1B}, {SDLK_SPACE, 0x20}, {SDLK_EXCLAIM, 0x3D},
+	{SDLK_DOLLAR, 0x3B}, {SDLK_RIGHTPAREN, 0xBD}, {SDLK_ASTERISK, 0x3F},
+	{SDLK_COMMA, 0xBC}, {SDLK_0, 0x30}, {SDLK_1, 0x31}, {SDLK_2, 0x32},
+	{SDLK_3, 0x33}, {SDLK_4, 0x34}, {SDLK_5, 0x35}, {SDLK_6, 0x36},
+	{SDLK_7, 0x37}, {SDLK_8, 0x38}, {SDLK_9, 0x39}, {SDLK_COLON, 0x3E},
+	{SDLK_SEMICOLON, 0xBA}, {SDLK_LESS, 0x3C}, {SDLK_EQUALS, 0xBB},
+	{SDLK_CARET, 0x40}, {SDLK_A, 0x41}, {SDLK_B, 0x42}, {SDLK_C, 0x43},
+	{SDLK_D, 0x44}, {SDLK_E, 0x45}, {SDLK_F, 0x46}, {SDLK_G, 0x47},
+	{SDLK_H, 0x48}, {SDLK_I, 0x49}, {SDLK_J, 0x4A}, {SDLK_K, 0x4B},
+	{SDLK_L, 0x4C}, {SDLK_M, 0x4D}, {SDLK_N, 0x4E}, {SDLK_O, 0x4F},
+	{SDLK_P, 0x50}, {SDLK_Q, 0x51}, {SDLK_R, 0x52}, {SDLK_S, 0x53},
+	{SDLK_T, 0x54}, {SDLK_U, 0x55}, {SDLK_V, 0x56}, {SDLK_W, 0x57},
+	{SDLK_X, 0x58}, {SDLK_Y, 0x59}, {SDLK_Z, 0x5A}, {SDLK_DELETE, 0x2E},
+	{SDLK_CAPSLOCK, 0x14}, {SDLK_F1, 0x70}, {SDLK_F2, 0x71},
+	{SDLK_F3, 0x72}, {SDLK_F4, 0x73}, {SDLK_F5, 0x74}, {SDLK_F6, 0x75},
+	{SDLK_F7, 0x76}, {SDLK_F8, 0x77}, {SDLK_F9, 0x78}, {SDLK_F10, 0x79},
+	{SDLK_F11, 0x7A}, {SDLK_F12, 0x7B}, {SDLK_PRINTSCREEN, 0x2C},
+	{SDLK_SCROLLLOCK, 0x91}, {SDLK_PAUSE, 0x13}, {SDLK_INSERT, 0x2D},
+	{SDLK_HOME, 0x24}, {SDLK_PAGEUP, 0x21}, {SDLK_END, 0x23},
+	{SDLK_PAGEDOWN, 0x22}, {SDLK_RIGHT, 0x27}, {SDLK_LEFT, 0x25},
+	{SDLK_DOWN, 0x28}, {SDLK_UP, 0x26}, {SDLK_NUMLOCKCLEAR, 0x90},
+	{SDLK_KP_DIVIDE, 0x6F}, {SDLK_KP_MULTIPLY, 0x6A},
+	{SDLK_KP_MINUS, 0x6D}, {SDLK_KP_PLUS, 0x6B}, {SDLK_KP_ENTER, 0x6C},
+	{SDLK_KP_1, 0x61}, {SDLK_KP_2, 0x62}, {SDLK_KP_3, 0x63},
+	{SDLK_KP_4, 0x64}, {SDLK_KP_5, 0x65}, {SDLK_KP_6, 0x66},
+	{SDLK_KP_7, 0x67}, {SDLK_KP_8, 0x68}, {SDLK_KP_9, 0x69},
+	{SDLK_KP_0, 0x60}, {SDLK_KP_PERIOD, 0x6E}, {SDLK_APPLICATION, 0x5D},
+	{SDLK_F13, 0x7C}, {SDLK_F14, 0x7D}, {SDLK_F15, 0x7E},
+	{SDLK_F16, 0x7F}, {SDLK_F17, 0x80}, {SDLK_F18, 0x81},
+	{SDLK_F19, 0x82}, {SDLK_F20, 0x83}, {SDLK_F21, 0x84},
+	{SDLK_F22, 0x85}, {SDLK_F23, 0x86}, {SDLK_F24, 0x87},
+	{SDLK_LCTRL, 0xA2}, {SDLK_LSHIFT, 0xA0}, {SDLK_LALT, 0xA4},
+	{SDLK_LGUI, 0x5B}, {SDLK_RCTRL, 0xA3}, {SDLK_RSHIFT, 0xA1},
+	{SDLK_RALT, 0xA5}, {SDLK_RGUI, 0x5C},
 };
 
 /*
@@ -1085,19 +1134,56 @@ actionkey(int c, SDL_Keycode k)
 	return c;
 }
 
+/*
+ * SdlKeyToVk is TLBA1C.exe 0x405ce0: the virtual key of SDL's key k,
+ * Windows', or for a key keyvk leaves out, of the scan codes of
+ * APOSTROPHE and GRAVE, and 0 for the others.
+ */
+static int
+sdlkeytovk(SDL_Keycode k, SDL_Scancode sc)
+{
+	int i;
+
+	for (i = 0; i < (int)nelem(keyvk); i++)
+		if (keyvk[i].key == k)
+			return keyvk[i].vk;
+	if (sc == SDL_SCANCODE_APOSTROPHE)
+		return 0xC0;
+	if (sc == SDL_SCANCODE_GRAVE)
+		return 0xDE;
+	return 0;
+}
+
+/*
+ * A key down or up: its code to the keyboard, and its virtual key for
+ * the Classic's input where it is other than a US keyboard's.
+ */
 static void
 key(SDL_Scancode sc, SDL_Keycode k, int down)
 {
-	int c, i;
+	int c, i, vk;
 
 	c = xt[sc];
 	if (LbaWinSettings & 4)
 		c = actionkey(c, k);
-	if (c == 0)
+	/*
+	 * FEATURE: with GamePad a key that has no XT code, Print Screen,
+	 * Pause, the menu's key or F13 to F24, reaches the Classic's input
+	 * by its virtual key alone, as the Classic's ManageEvents gives it
+	 * KeyState. Taken from the Classic 3.2.3.
+	 */
+	if (c == 0) {
+		vk = sdlkeytovk(k, sc);
+		if (FlagGamePad && vk != 0)
+			vkin(vk, down);
 		return;
+	}
+	vk = sdlkeytovk(k, sc);
+	if (vk == usvkey(c, c & Ext))
+		vk = -1;
 	if (c & Ext)
-		keyin(0xE0);
-	keyin((c & 0x7F) | (down ? 0 : 0x80));
+		keyin(0xE0, -1);
+	keyin((c & 0x7F) | (down ? 0 : 0x80), vk);
 	if (!down)
 		return;
 	lastscan = c & 0x7F;
@@ -1145,6 +1231,138 @@ text(const char *s)
 	}
 }
 
+/*
+ * FEATURE: the pads, with GamePad, as the Classic's SDL driver takes
+ * them from SDL 2's GameController: every pad opened as it comes
+ * (sdlgamepad), its buttons 0 to 20 and, past a dead zone of 10000, the
+ * sticks' directions and the triggers, codes 21 to 30, each handed on
+ * (padin) as it goes down or up. SDL 3 numbers the buttons as SDL 2 but
+ * the face buttons, by their places where SDL 2 numbers a Nintendo
+ * pad's by their labels (padbutton), and adds five past the touchpad,
+ * which the port drops. Taken from the Classic 3.2.3.
+ */
+
+/* sdlgamepad: SDL's gamepads, whose events then come, an added one first for each there. */
+void
+sdlgamepad(void)
+{
+	if (!SDL_InitSubSystem(SDL_INIT_GAMEPAD))
+		fprintf(stderr, "lba: no gamepad: %s\n", SDL_GetError());
+}
+
+/* sdlpadclear: the codes down forgotten, as input.c's ClearInputs lets the pad's inputs go. */
+void
+sdlpadclear(void)
+{
+	padcodes = 0;
+}
+
+/* code down or up where it changes, as the Classic's PadButton's state says it */
+static void
+padpress(int code, int down)
+{
+	uint32_t bit;
+
+	bit = (uint32_t)1 << code;
+	if (down == ((padcodes & bit) != 0))
+		return;
+	if (down)
+		padcodes |= bit;
+	else
+		padcodes &= ~bit;
+	padin(code, down);
+}
+
+/*
+ * The pad's input of SDL's button b on the pad which: SDL 3 numbers the
+ * face buttons by their places, where the Classic's SDL 2 numbers a
+ * Nintendo pad's by their labels, A, B, X and Y its inputs 0 to 3,
+ * which their labels give back here. A face button of another label,
+ * and every other button, keeps its place's number.
+ */
+static int
+padbutton(SDL_JoystickID which, int b)
+{
+	SDL_Gamepad *g;
+
+	if (b > SDL_GAMEPAD_BUTTON_NORTH)
+		return b;
+	g = SDL_GetGamepadFromID(which);
+	if (g == NULL)
+		return b;
+	switch (SDL_GetGamepadButtonLabel(g, (SDL_GamepadButton)b)) {
+	case SDL_GAMEPAD_BUTTON_LABEL_A:
+		return SDL_GAMEPAD_BUTTON_SOUTH;
+	case SDL_GAMEPAD_BUTTON_LABEL_B:
+		return SDL_GAMEPAD_BUTTON_EAST;
+	case SDL_GAMEPAD_BUTTON_LABEL_X:
+		return SDL_GAMEPAD_BUTTON_WEST;
+	case SDL_GAMEPAD_BUTTON_LABEL_Y:
+		return SDL_GAMEPAD_BUTTON_NORTH;
+	default:
+		return b;
+	}
+}
+
+/*
+ * padaxis is TLBA1C.exe 0x405250 PadAxis and 0x4052e0 PadTrigger: a
+ * stick's axis past the dead zone either way presses its direction and
+ * lets the other go, within it lets both go, and a trigger past it
+ * presses its code.
+ *
+ * FIXED: the Classic presses the direction again at each motion of the
+ * stick past the dead zone, which presses its key again at each, a
+ * burst of presses. A direction is pressed as the stick crosses into
+ * it.
+ */
+static void
+padaxis(int axis, int value)
+{
+	int neg, pos;
+
+	if (axis == SDL_GAMEPAD_AXIS_LEFT_TRIGGER || axis == SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) {
+		padpress(Firstaxis + 8 + (axis - SDL_GAMEPAD_AXIS_LEFT_TRIGGER), value > Deadzone);
+		return;
+	}
+	if (axis < SDL_GAMEPAD_AXIS_LEFTX || axis > SDL_GAMEPAD_AXIS_RIGHTY)
+		return;
+	neg = Firstaxis + 2*axis;
+	pos = neg + 1;
+	if (value > Deadzone) {
+		padpress(neg, 0);
+		padpress(pos, 1);
+	} else if (value < -Deadzone) {
+		padpress(pos, 0);
+		padpress(neg, 1);
+	} else {
+		padpress(neg, 0);
+		padpress(pos, 0);
+	}
+}
+
+/*
+ * A gamepad come or gone, as TLBA1C.exe 0x405320, ManageEvents, opens
+ * the one come. SDL lets the buttons and the axes of one gone go before
+ * it says so.
+ *
+ * FIXED: the Classic leaves the handle of a gamepad gone open. It is
+ * closed.
+ */
+static void
+padplug(SDL_JoystickID id, int added)
+{
+	SDL_Gamepad *g;
+
+	if (added) {
+		if (SDL_OpenGamepad(id) == NULL)
+			fprintf(stderr, "lba: gamepad %u: %s\n", (unsigned)id, SDL_GetError());
+		return;
+	}
+	g = SDL_GetGamepadFromID(id);
+	if (g != NULL)
+		SDL_CloseGamepad(g);
+}
+
 void
 sdlpoll(void)
 {
@@ -1169,6 +1387,23 @@ sdlpoll(void)
 			break;
 		case SDL_EVENT_TEXT_INPUT:
 			text(e.text.text);
+			break;
+		/*
+		 * FEATURE: the pad's buttons, SDL 2's 21 that the Classic counts
+		 * (its pad's inputs 0 to 20), and its axes. Taken from the
+		 * Classic 3.2.3.
+		 */
+		case SDL_EVENT_GAMEPAD_ADDED:
+		case SDL_EVENT_GAMEPAD_REMOVED:
+			padplug(e.gdevice.which, e.type == SDL_EVENT_GAMEPAD_ADDED);
+			break;
+		case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+		case SDL_EVENT_GAMEPAD_BUTTON_UP:
+			if (e.gbutton.button <= SDL_GAMEPAD_BUTTON_TOUCHPAD)
+				padpress(padbutton(e.gbutton.which, e.gbutton.button), e.gbutton.down);
+			break;
+		case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+			padaxis(e.gaxis.axis, e.gaxis.value);
 			break;
 		case SDL_EVENT_WINDOW_EXPOSED:
 			applyvsync();

@@ -8,7 +8,19 @@
 
 extern	volatile	UWORD	Key	;	/* scan code keyboard */
 #ifndef	DOS
-extern	volatile	ULONG	InputActions ;	/* W held with LbaWinSettings's 4: 0x200 */
+extern	volatile	ULONG	InputActions ;	/* W held with LbaWinSettings's 4: 0x200, the Classic's inputs with GamePad */
+extern	LONG	FlagGamePad ;	/* the Classic's input, lba.cfg's GamePad */
+extern	ULONG	TabPadKey[] ;	/* the key each of the pad's inputs presses */
+extern	LONG	KeyVk ;		/* the Classic's Key, the virtual key last pressed */
+
+void	InitBindings( LONG nb, ULONG *codes, ULONG *actions ) ;
+void	ReadInputs( ULONG norepeat ) ;
+void	SetInputContext( LONG context ) ;
+void	ClearInputs( void ) ;
+int	AnyInput( void ) ;
+LONG	GetBindInput( int pad ) ;
+extern	ULONG	PadButtons ;	/* the pad's inputs held */
+extern	LONG	LastPadButton ;	/* the pad's input last pressed, 0x200 added */
 #endif
 
 #define	K_ESC		1
@@ -280,6 +292,7 @@ extern	LONG	LbaWinSettings ;
 
 void	ReadLbaWinSettings( void ) ;
 void	WriteLbaWinSettings( void ) ;
+LONG	ReadConfigValue( char *key, LONG dflt ) ;
 #endif
 /*──────────────────────────────────────────────────────────────────────────*/
 /*				BUFFER_A.ASM				*/

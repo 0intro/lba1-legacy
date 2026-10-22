@@ -1,0 +1,22 @@
+# A binding of lba.cfg, with GamePad (fixtures/rebind: the outside
+# save, and its LBA.CFG ending in Input0_1: 90 and Input0_2: 0, Forward
+# on Z alone). In play Z walks Twinsen forward, and Up, bound to none of
+# the inputs, leaves him standing.
+
+hold 0.15
+sleep 40
+key Down Return
+sleep 3
+key Return
+sleep 12
+shot scene
+down z
+sleep 1.5
+up z
+sleep 1
+shot walked
+down Up
+sleep 1.5
+up Up
+sleep 1
+shot stood

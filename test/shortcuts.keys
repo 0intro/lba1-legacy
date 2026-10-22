@@ -1,0 +1,47 @@
+# LbaWin's shortcuts and the Classic's previous and next behaviour, with
+# GamePad (fixtures/shortcuts: the clover's save given the magic ball,
+# the saber, the protopack and the Meca-Pinguin, the save's bytes 7, 8,
+# 18 and 20, ListFlagGame's 1, 2, 12 and 14, set to 1, and the CD's
+# LBA.CFG). Record it with that
+# fixture (e2e record -f dir shortcuts):
+#
+#     printf '\001' | dd of=S2292.LBA bs=1 seek=7 conv=notrunc
+#     printf '\001' | dd of=S2292.LBA bs=1 seek=8 conv=notrunc
+#     printf '\001' | dd of=S2292.LBA bs=1 seek=18 conv=notrunc
+#     printf '\001' | dd of=S2292.LBA bs=1 seek=20 conv=notrunc
+#
+# In play 9 steps the behaviour back, to the discreet one, and 0 on
+# again, each showing its name, J puts the protopack on and away, 1
+# takes the magic ball, 2 draws the saber, M puts the Meca-Pinguin down
+# and C uses a clover, Twinsen holding 20 life points of 50.
+
+hold 0.15
+sleep 40
+key Down Return
+sleep 3
+key Return
+sleep 12
+shot scene
+key 9
+sleep 2
+shot discreet
+key 0
+sleep 2
+shot normal
+key j
+sleep 3
+shot protopack
+key j
+sleep 3
+shot away
+key 1
+sleep 2
+key 2
+sleep 2
+shot saber
+key m
+sleep 4
+shot pingouin
+key c
+sleep 4
+shot clover

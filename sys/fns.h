@@ -87,13 +87,32 @@ int	altf4(int);
 int	altf4word(int);
 void	hookkeys(int);
 
+/* input.c */
+int	usvkey(int, int);
+void	vkcode(int, int);
+void	vkkey(int, int);
+void	KeyDown(void);
+void	KeyUp(int32_t);
+void	InitBindings(int32_t, uint32_t*, uint32_t*);
+void	ReadInputs(uint32_t);
+void	SetPadButton(int, int);
+int	TestPadButton(int);
+uint32_t	GetBinding(int);
+void	PadButton(int, int);
+void	ClearInputs(void);
+void	SetInputContext(int32_t);
+int	AnyInput(void);
+int32_t	GetBindInput(int);
+
 /* replay.c */
 void	recordinput(char*);
 void	recorddisplay(int, int);
 void	playinput(char*);
 int	playing(void);
 void	portexit(int);
-void	keyin(int);
+void	keyin(int, int);
+void	padin(int, int);
+void	vkin(int, int);
 void	wordin(int);
 void	replay(uint64_t);
 void	sumto(char*);
@@ -212,6 +231,8 @@ void	miditick(uint64_t);
 
 /* sdl.c */
 void	sdlfilter(int);
+void	sdlgamepad(void);
+void	sdlpadclear(void);
 void	fatal(char*, ...);
 void	sdldesktop(int*, int*);
 void	sdldisplay(void);

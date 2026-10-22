@@ -2,7 +2,7 @@
 # 1920x1080 (fixtures/widef6: holomap's save outside the prison,
 # fixtures/outside, and the CD's LBA.CFG with WideScreen: OFF,
 # recorded with -D 1920x1080). Continue saved game loads the save, and
-# Twinsen walks. F6 opens the option menu over the scene, its seventh
+# Twinsen walks. F6 opens the option menu over the scene, its eighth
 # entry Widescreen display: OFF, and Return turns it ON: the scene drawn
 # again under the menu on the whole screen of 852x480. Return to game
 # draws the scene on the whole screen, Twinsen where he stood in the
@@ -26,24 +26,24 @@ hold 0.05
 key F6
 sleep 3
 shot menu
-key Down Down Down Down Down Down
+key Down Down Down Down Down Down Down
 sleep 1
 key Return
 sleep 2
 shot on
-key Up Up Up Up Up Up
+key Up Up Up Up Up Up Up
 sleep 1
 key Return
 sleep 3
 shot wide
 key F6
 sleep 3
-key Down Down Down Down Down Down
+key Down Down Down Down Down Down Down
 sleep 1
 key Return
 sleep 2
 shot off
-key Up Up Up Up Up Up
+key Up Up Up Up Up Up Up
 sleep 1
 key Return
 sleep 3

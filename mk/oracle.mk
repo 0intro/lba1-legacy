@@ -22,11 +22,14 @@
 # (asmoracle.c, abi.c), asmoracle-asan, the same under
 # AddressSanitizer, lba2oracle, LBA2's packer of the saves and its
 # search of the nearest colour against ours (lba2oracle.c), LBA2's side
-# built for oraclecheck alone, from LBA2's sources (LBA2) with JWasm.
-# On a DOS target with the fixes, make test runs oracle, asmoracle,
-# waveoracle and the eight but mixoracle and ailoracle, which make check
-# adds, and on LBA.EXE's code (CC=watcom without FIXES) oracle,
-# waveoracle and memoracle, make check adding mixoracle.
+# built for oraclecheck alone, from LBA2's sources (LBA2) with JWasm,
+# and textoracle, s_string.asm's 8x8 text, which the game's DOS builds
+# keep in their library, against s_string.c (textoracle.c), its side
+# built for oraclecheck alone with JWasm. On a DOS target with the
+# fixes, make test runs oracle, asmoracle, waveoracle and the eight but
+# mixoracle and ailoracle, which make check adds, and on LBA.EXE's code
+# (CC=watcom without FIXES) oracle, waveoracle and memoracle, make check
+# adding mixoracle.
 
 ORACLE=build/oracle
 # -Werror lies in ORACLECC: a build that gives a compiler of its own
@@ -182,6 +185,10 @@ ASMSRC=\
 	lib386/lib_svga/s_fillv.c\
 	lib386/lib_svga/texture.c\
 
+TEXTSRC=\
+	tools/oracle/textoracle.c\
+	lib386/lib_svga/s_string.c\
+
 LBA2SRC=\
 	tools/oracle/lba2oracle.c\
 	lib386/lib_sys/lzss.c\
@@ -196,12 +203,12 @@ LBA2=$(abspath ../lba2-classic/SOURCES)
 # jwasm, which make fetch installs, reads options from JWASM
 unexport JWASM
 
-# oracles builds the oracles, lba2oracle's own side but its side of
-# LBA2's.
+# oracles builds the oracles, lba2oracle's and textoracle's own sides
+# but their sides of LBA2's and of the assembly.
 oracles: $(ORACLE)/oracle $(ORACLE)/fmoracle $(ORACLE)/aweoracle $(ORACLE)/waveoracle\
 	$(ORACLE)/cdoracle $(ORACLE)/keyoracle $(ORACLE)/timeoracle $(ORACLE)/vgaoracle\
 	$(ORACLE)/fileoracle $(ORACLE)/mixoracle $(ORACLE)/memoracle $(ORACLE)/ailoracle\
-	$(ORACLE)/asmoracle $(ORACLE)/lba2/ours.o
+	$(ORACLE)/asmoracle $(ORACLE)/lba2/ours.o $(ORACLE)/text/ours.o
 
 # asan builds asmoracle-asan.
 asan: $(ORACLE)/asmoracle-asan
@@ -302,15 +309,32 @@ $(ORACLE)/lba2/lba2.o: $(LBA2)/LZSS.CPP $(LBA2)/LZSS.H $(LBA2)/COMPRESS.ASM $(LB
 $(ORACLE)/lba2oracle: $(ORACLE)/lba2/ours.o $(ORACLE)/lba2/lba2.o
 	$(ORACLECC) $(ORACLELDFLAGS) -Wl,-z,noexecstack -o $@ $(ORACLE)/lba2/ours.o $(ORACLE)/lba2/lba2.o
 
+# textoracle's own side, ours and the oracle, linked into one object
+$(ORACLE)/text/ours.o: $(TEXTSRC) $(ORACLEHDR)
+	mkdir -p $(ORACLE)/text
+	$(ORACLECC) $(ORACLECFLAGS) $(ORACLEPORTFLAGS) -r -nostdlib -o $@ $(TEXTSRC)
+
+# s_string.asm's side, its symbols prefixed asm_, in the flat model
+$(ORACLE)/text/asm.o: lib386/lib_svga/s_string.asm lib386/lib_svga/svga.ash $(JWASM_OK)
+	mkdir -p $(ORACLE)/text
+	sed -e 's/\.model  SMALL, SYSCALL/.model  FLAT, SYSCALL/' lib386/lib_svga/s_string.asm >$(ORACLE)/text/s_string.asm
+	$(JWASMEXE) -q -Cx -Zg -W0 -Sa -DNoLanguage=SYSCALL -Djumps= -Ilib386/lib_svga -elf\
+		-Fo$(ORACLE)/text/s_string.o $(ORACLE)/text/s_string.asm
+	objcopy --prefix-symbols=asm_ $(ORACLE)/text/s_string.o $@
+
+$(ORACLE)/textoracle: $(ORACLE)/text/ours.o $(ORACLE)/text/asm.o
+	$(ORACLECC) $(ORACLELDFLAGS) -Wl,-z,noexecstack -o $@ $(ORACLE)/text/ours.o $(ORACLE)/text/asm.o
+
 # oraclecheck runs the oracles on the game's files in LBATMP: LBA.EXE's
 # image and the CD's drivers as tools/extract writes them.
 oraclecheck: $(ORACLE)/oracle $(ORACLE)/fmoracle $(ORACLE)/aweoracle $(ORACLE)/waveoracle\
-	$(ORACLE)/lba2oracle
+	$(ORACLE)/lba2oracle $(ORACLE)/textoracle
 	$(ORACLE)/oracle $(LBATMP)/elf/lba.elf re/lba.exe.sym
 	$(ORACLE)/fmoracle $(LBATMP)/elf/dll/a32sp2fm.elf $(LBATMP)/pc/LBA/MIDI_SB.HQR $(LBATMP)/pc/LBA/SAMPLE.OPL
 	$(ORACLE)/aweoracle $(LBATMP)/elf/dll/a32gfx.elf $(LBATMP)/pc/LBA/MIDI_MI.HQR $(LBATMP)/pc/LBA/MIDI_SB.HQR -
 	$(ORACLE)/waveoracle -g $(LBATMP)/pc/LBA $(LBATMP)/elf/dll/w_sb16.elf re/w_sb16.dll.sym
 	$(ORACLE)/lba2oracle -g $(LBATMP)/pc/LBA
+	$(ORACLE)/textoracle
 
 # emu8kdiff: our EMU8000 against 86Box's, built from its sources in
 # $(LBATMP)/downloads/86box (commit 9ce8877f) with

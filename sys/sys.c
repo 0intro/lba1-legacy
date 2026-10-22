@@ -46,6 +46,8 @@ InitAdelineSystem(char *name, int32_t inits)
 	Wide_X = screenwidth(dw, dh);
 	if (FlagWideScreen)
 		Screen_X = Wide_X;
+	if (FlagGamePad && !playing())
+		sdlgamepad();
 	soundinit();
 	videoinit();
 	clockinit();

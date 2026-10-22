@@ -27,8 +27,8 @@
  * lines after it, and lines longer than DefString, a key read past them
  * and a value kept to its first 255 bytes. Then LbaWin's settings, as
  * lib386/lib_sys/settings.c reads, forces and writes them, and the
- * switches WideScreen, SmoothScaling, IntegerScaling and DisplaySync,
- * each with its default, and DesiredDisplayNum. First,
+ * switches WideScreen, SmoothScaling, IntegerScaling, DisplaySync
+ * and GamePad, each with its default, and DesiredDisplayNum. First,
  * the port's keys as readplatform reads them, and the game's own
  * switches, SaveAnywhere and SkipLogo, as gamekey reads them for
  * sources/perso.c, from sys/lba.cfg, shipped beside the program and
@@ -47,6 +47,7 @@ char*	gamekeyname(int);
 char	PathConfigFile[260];	/* sys/sys.c's, which cfgtest leaves out */
 int32_t	FlagWideScreen, FlagIntegerScaling, DesiredDisplayNum;	/* sys/video.c's */
 int32_t	FlagFullScreen = 1;	/* sys/video.c's, TLBA1C.exe 0x818854's value */
+int32_t	FlagGamePad;	/* sys/input.c's */
 static int32_t	smooth;	/* SmoothScaling, as readplatform gave it */
 
 static char *pref;
@@ -90,6 +91,11 @@ static struct {
 	{"IntegerScaling: OFF\r\n", "DisplaySync", 1, 1},	/* missing */
 	{"DisplaySync:\r\n", "DisplaySync", 1, 1},
 	{"DisplaySync: vsync\r\n", "DisplaySync", 1, -1},
+	{"GamePad: OFF\r\n", "GamePad", 1, 0},
+	{"gamepad: on\r\n", "GamePad", 1, 1},
+	{"DisplaySync: ON\r\n", "GamePad", 1, 1},	/* missing */
+	{"GamePad:\r\n", "GamePad", 1, 1},
+	{"GamePad: pad\r\n", "GamePad", 1, -1},
 };
 
 /* SetSmoothScaling is sys/video.c's: here the flag kept. */
@@ -235,7 +241,7 @@ longcase(void)
 /* The port's keys, in readplatform's order */
 static char *names[] = {
 	"LbaWinSettings", "LbaWinFullScreen", "WideScreen", "DesiredDisplayNum",
-	"SmoothScaling", "IntegerScaling", "DisplaySync",
+	"SmoothScaling", "IntegerScaling", "DisplaySync", "GamePad",
 };
 
 /* readplatform's values for the configuration file name into v, in names' order */
@@ -253,6 +259,7 @@ platform(char *name, int32_t *v)
 	v[4] = smooth;
 	v[5] = FlagIntegerScaling;
 	v[6] = sync;
+	v[7] = FlagGamePad;
 }
 
 /* key named in sys/lba.cfg, and its value a where the CD's LBA.CFG leaves it out the same as b, sys/lba.cfg's */

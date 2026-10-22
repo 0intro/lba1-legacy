@@ -65,24 +65,29 @@ HOSTPATH_linux=$(1)
 HOSTPATH_windows='Z:$(subst /,\,$(abspath $(1)))'
 HOSTPATH=$(HOSTPATH_$(OS))
 
-# TESTS lists the unit tests.
+# TESTS lists the unit tests of every target, TESTS_linux those of Linux
+# alone: padtest drives SDL's virtual gamepad.
 TESTS=\
 	emu8ktest\
 	cfgtest\
+	inputtest\
 	syskeystest\
 	widetest\
 	clocktest\
 	filestest\
 	cdimagetest\
 
+TESTS_linux=\
+	padtest\
+
 # The objects, the game's in their link order, and their directories.
 OFILES=$(addprefix $(O)/,$(GAME) $(LIBS) $(NEW) $(CARRIED) $(PORT) $(OPL3) $(ARRAYS))
 NEWOFILES=$(addprefix $(O)/,$(NEW) $(CARRIED) $(TESTS:%=test/%.o))
-DIRS=$(patsubst %/,%,$(sort $(dir $(OFILES) $(NEWOFILES))))
+DIRS=$(patsubst %/,%,$(sort $(dir $(OFILES) $(NEWOFILES) $(O)/test/padtest.o)))
 
 # all builds the game, lba.cfg beside it and the unit tests.
 all: $(O)/lba$(EXE) $(O)/lba.cfg $(DLL_$(OS))\
-	$(TESTS:%=$(O)/%$(EXE))
+	$(TESTS:%=$(O)/%$(EXE)) $(TESTS_$(OS):%=$(O)/%$(EXE))
 
 # The distribution holds the game and lba.cfg, the tree's licence and
 # those of the code it carries, and on Windows SDL3.dll and its licence.
@@ -144,6 +149,9 @@ $(O)/emu8ktest$(EXE): $(addprefix $(O)/,$(EMU8KTEST)) $(MANIFEST)
 $(O)/cfgtest$(EXE): $(addprefix $(O)/,$(CFGTEST)) $(MANIFEST)
 	$(LINK)
 
+$(O)/inputtest$(EXE): $(addprefix $(O)/,$(INPUTTEST)) $(MANIFEST)
+	$(LINK)
+
 $(O)/syskeystest$(EXE): $(addprefix $(O)/,$(SYSKEYSTEST)) $(MANIFEST)
 	$(LINK)
 
@@ -159,6 +167,9 @@ $(O)/filestest$(EXE): $(addprefix $(O)/,$(FILESTEST)) $(MANIFEST)
 $(O)/cdimagetest$(EXE): $(addprefix $(O)/,$(CDIMAGETEST)) $(MANIFEST)
 	$(LINK)
 
+$(O)/padtest$(EXE): $(addprefix $(O)/,$(PADTEST)) $(MANIFEST)
+	$(LINK) $(SDLLIBS) -lm
+
 # livemusic.so: test/livemusic's preload, which watches the music's
 # stream in play and stalls the game, on Linux alone, as Wine's builds
 # refuse a preload.
@@ -173,8 +184,8 @@ $(addprefix $(O)/,$(GAME) $(LIBS)): $(O)/%.o: %.c | $(DIRS)
 $(NEWOFILES): $(O)/%.o: %.c | $(DIRS)
 	$(COMPILE) $(CFLAGS) $(NEWFLAGS) -c -o $@ $<
 
-# sys/, which reads SDL's headers.
-$(addprefix $(O)/,$(PORT)): $(O)/%.o: %.c $(SDLDEP_$(OS)) | $(DIRS)
+# sys/ and padtest, which read SDL's headers.
+$(addprefix $(O)/,$(PORT) test/padtest.o): $(O)/%.o: %.c $(SDLDEP_$(OS)) | $(DIRS)
 	$(COMPILE) $(CFLAGS) $(NEWFLAGS) $(SDLCFLAGS) -c -o $@ $<
 
 # Nuked OPL3 as published.

@@ -1,3 +1,7 @@
 extern void InitIncrustDisp(int16_t ,int16_t ,int16_t ,int16_t ,int16_t ,int16_t ,int16_t );
+#ifndef	DOS
+extern void InitIncrustComportement(int16_t );
+extern void ClearIncrustComportement(void);
+#endif
 extern void ChangeIncrustPos(int16_t ,int16_t ,int16_t ,int16_t );
 extern void DrawBulle(int16_t );

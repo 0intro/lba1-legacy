@@ -1,6 +1,14 @@
 extern void InitGameLists(void);
 extern void InitGame(int ,unsigned char **);
 extern void Introduction(void);
+#ifndef	DOS
+extern void ProtopackOnOff(void);
+extern void LaunchMecaPingouin(void);
+extern void UseClover(void);
+extern void UseMagicBall(void);
+extern void UseMagicSaber(void);
+extern void UseShortcuts(void);
+#endif
 extern int32_t MainLoop(void);
 extern void ReadVolumeSettings(void);
 extern void WriteVolumeSettings(void);

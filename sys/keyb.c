@@ -32,7 +32,7 @@ uint16_t	AsciiMode;
  * while W is down, whatever else is pressed, where Key keeps the last
  * key alone. Taken from the Classic 3.2.3.
  */
-/* InputActions is TLBA1C.exe 0x8dbe7c: the inputs held, of which the port keeps Talk/Search, W */
+/* InputActions is TLBA1C.exe 0x8dbe7c: the inputs held, Talk/Search's W here, and with GamePad every input, which ReadInputs writes */
 volatile uint32_t	InputActions;
 
 /* keyboard.asm's TabSpecialKey and TabSpecialFunc */

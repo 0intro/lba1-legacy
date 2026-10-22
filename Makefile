@@ -146,6 +146,7 @@ LIBS=\
 	lib386/lib_svga/gif.o\
 	lib386/lib_svga/pcx.o\
 	lib386/lib_svga/rect.o\
+	lib386/lib_svga/s_text.o\
 
 NEW=\
 	lib386/lib_3d/p_anim.o\
@@ -163,6 +164,7 @@ NEW=\
 	lib386/lib_svga/s_line.o\
 	lib386/lib_svga/s_poly.o\
 	lib386/lib_svga/s_screen.o\
+	lib386/lib_svga/s_string.o\
 	lib386/lib_svga/texture.o\
 	lib386/lib_svga/zoom.o\
 	lib386/lib_sys/buffer_a.o\
@@ -172,12 +174,14 @@ NEW=\
 	lib386/lib_sys/settings.o\
 	sources/adfli_a.o\
 	sources/balance.o\
+	sources/controls.o\
 	sources/cpymask.o\
 	sources/exttext.o\
 	sources/fire.o\
 	sources/func.o\
 	sources/gridfix.o\
 	sources/grille_a.o\
+	sources/input.o\
 	sources/lba2text.o\
 	sources/mcga.o\
 	sources/patch.o\
@@ -215,6 +219,7 @@ PORT=\
 	sys/xmidi.o\
 	sys/yamaha.o\
 	sys/cdimage.o\
+	sys/input.o\
 	sys/syskeys.o\
 
 OPL3=\
@@ -247,12 +252,32 @@ CFGTEST=\
 	sys/cdimage.o\
 	sys/lbacfg.o\
 
+# inputtest: the Classic's input, its keys' virtual keys and the inputs
+# its bindings give, read from lba.cfg (test/inputtest.c).
+INPUTTEST=\
+	test/inputtest.o\
+	lib386/lib_sys/def_file.o\
+	lib386/lib_sys/loadmall.o\
+	lib386/lib_sys/settings.o\
+	sources/input.o\
+	sys/compat.o\
+	sys/files.o\
+	sys/input.o\
+	sys/mem.o\
+	sys/cdimage.o\
+
 # syskeystest: sys/syskeys.c's answers to Alt+F4 and the Windows keys,
 # the hook's and the game's, held to what each event must give
 # (test/syskeystest.c).
 SYSKEYSTEST=\
 	test/syskeystest.o\
 	sys/syskeys.o\
+
+# padtest: sys/sdl.c's gamepad held to what each event must give, on
+# SDL's virtual gamepad (test/padtest.c).
+PADTEST=\
+	test/padtest.o\
+	sys/sdl.o\
 
 # widetest: sys/wide.c's screenwidth, the wide screen's width held to
 # the display's shape (test/widetest.c).
@@ -287,7 +312,9 @@ CDIMAGETEST=\
 # The game's modules whose .def files make defs writes, NEWDEFS the
 # port's own, which include sys/compat.h themselves.
 NEWDEFS=\
+	controls\
 	exttext\
+	input\
 	lba2text\
 	porttext\
 	savegame\

@@ -564,6 +564,7 @@ void	HoloMap()
 
 	UBYTE	savepalette[768] ;
 
+	SetInputContext( 1 ) ;	// FEATURE: the pad's keys the menus' (SetInputContext), as the Classic's HoloMap sets them. Taken from the Classic 3.2.3.
 #ifdef	FIXES
 	/*
 	 * FIXED: The holomap stops the samples and leaves Twinsen flying in
@@ -628,7 +629,13 @@ void	HoloMap()
 
 	current = NumCube ;
 
-	while( (Key != K_ESC) AND (Key != K_H) AND !(Fire&F_RETURN) )
+	/*
+	 * FEATURE: with GamePad Escape or the Menus input (TestKeyEsc) and the
+	 * Holomap input in H's place end the holomap, as the Classic's
+	 * HoloMap tests them (TLBA1C.exe 0x419190). Taken from the Classic
+	 * 3.2.3.
+	 */
+	while( NotKeyEsc() AND NotKeyInput( K_H, I_HOLOMAP ) AND !(Fire&F_RETURN) )
 	{
 	if( flagrebond )
 	{
@@ -856,6 +863,7 @@ Text( 0,30, "%Fcurrent:%d mess:%d ", current, ListHoloPos[current].Mess ) ;
 #endif
 
 	RestoreTimer() ;
+	SetInputContext( 0 ) ;
 }
 
 /*══════════════════════════════════════════════════════════════════════════*
@@ -1012,7 +1020,8 @@ void	HoloTraj( WORD numtraj )
 
 	n = 0 ;
 	memotimer = TimerRef ;
-	while( Key != K_ESC )
+	/* FEATURE: TestKeyEsc, Escape or with GamePad the Classic's Menus input. Taken from the Classic 3.2.3. */
+	while( NotKeyEsc() )
 	{
 		// cycle palette flotte
 		Vsync() ;

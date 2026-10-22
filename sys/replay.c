@@ -18,7 +18,11 @@
  * builds, frame by frame.
  *
  * A record is text, a line per input: the pump in decimal, then k and
- * the byte or b and the word, in hex. Its last line holds the pump the
+ * the byte or b and the word, in hex. A k line holds a second byte, its
+ * key's virtual key for the Classic's input (input.c), where that key
+ * is other than a US keyboard's, p a pad's input, its number, 0x80
+ * added at its release, and v a key that has no XT code, its virtual
+ * key, 0x100 added at its release. Its last line holds the pump the
  * run ended at and e. Its first lines name it (# lba input) and give
  * the display the run took (# display WxH) and its frame in ns (# frame
  * N, 0 for unknown), which a replay takes in place of its own, so that
@@ -44,6 +48,7 @@ static uint32_t shot = 1, lastshot, shotstep = 1;	/* none unless shotat */
 static uint64_t due;
 static int duekind;
 static unsigned dueval;
+static int duevk;	/* a k line's virtual key, or -1 */
 static uint32_t crctab[256];
 static uint32_t lastsum;
 
@@ -106,7 +111,7 @@ next(void)
 {
 	char line[128], kind;
 	uint64_t p, f;
-	unsigned v;
+	unsigned v, vk;
 	int n, w, h;
 
 	while (fgets(line, sizeof line, play) != NULL) {
@@ -117,12 +122,19 @@ next(void)
 		if (line[0] == '#' || line[0] == '\n' || line[0] == '\r')
 			continue;
 		v = 0;
-		n = sscanf(line, "%" SCNu64 " %c %x", &p, &kind, &v);
-		if (n < 2 || (kind != 'e' && n < 3) || strchr("kbe", kind) == NULL)
+		n = sscanf(line, "%" SCNu64 " %c %x %x", &p, &kind, &v, &vk);
+		if (n < 2 || (kind != 'e' && n < 3) || strchr("kbpve", kind) == NULL)
+			fatal("bad input line: %s", line);
+		if (n == 4 && (kind != 'k' || vk > 0xFF))
+			fatal("bad input line: %s", line);
+		if (kind == 'p' && ((v & 0x7F) >= 31 || v > 0xFF))
+			fatal("bad input line: %s", line);
+		if (kind == 'v' && ((v & 0xFF) == 0 || v > 0x1FF))
 			fatal("bad input line: %s", line);
 		due = p;
 		duekind = kind;
 		dueval = v;
+		duevk = n == 4 ? (int)vk : -1;
 		return;
 	}
 	due = 0;
@@ -146,19 +158,61 @@ playing(void)
 	return play != NULL;
 }
 
+/* A byte from the keyboard, with its virtual key or -1, to the game but for F4's that altf4 keeps out. */
+static void
+keyboard(int c, int vk)
+{
+	if (altf4(c))
+		return;
+	xtcode(c);
+	if (FlagGamePad)
+		vkcode(c, vk);
+}
+
 /*
- * A byte from the keyboard: the system's, unless playing a record,
- * recorded, then given to the game but for F4's that altf4 keeps out.
+ * A byte from the keyboard and its key's virtual key, -1 for a US
+ * keyboard's: the system's, unless playing a record, recorded, then
+ * given to the game.
  */
 void
-keyin(int c)
+keyin(int c, int vk)
+{
+	if (play != NULL)
+		return;
+	if (rec != NULL && vk >= 0)
+		fprintf(rec, "%" PRIu64 " k %x %x\n", pumps(), (unsigned)c, (unsigned)vk);
+	else if (rec != NULL)
+		fprintf(rec, "%" PRIu64 " k %x\n", pumps(), (unsigned)c);
+	keyboard(c, vk);
+}
+
+/*
+ * The pad's input n down or up: the system's, unless playing a record,
+ * recorded, then given to the Classic's input.
+ */
+void
+padin(int n, int down)
 {
 	if (play != NULL)
 		return;
 	if (rec != NULL)
-		fprintf(rec, "%" PRIu64 " k %x\n", pumps(), (unsigned)c);
-	if (!altf4(c))
-		xtcode(c);
+		fprintf(rec, "%" PRIu64 " p %x\n", pumps(), (unsigned)(n | (down ? 0 : 0x80)));
+	PadButton(n, down);
+}
+
+/*
+ * The keyboard's key of virtual key vk, which has no XT code, down or
+ * up: the system's, unless playing a record, recorded, then given to
+ * the Classic's input.
+ */
+void
+vkin(int vk, int down)
+{
+	if (play != NULL)
+		return;
+	if (rec != NULL)
+		fprintf(rec, "%" PRIu64 " v %x\n", pumps(), vk | (down ? 0 : 0x100));
+	vkkey(vk, down);
 }
 
 void
@@ -179,12 +233,19 @@ replay(uint64_t pump)
 	while (play != NULL && due <= pump) {
 		switch (duekind) {
 		case 'k':
-			if (!altf4((int)dueval))
-				xtcode((int)dueval);
+			keyboard((int)dueval, duevk);
 			break;
 		case 'b':
 			if (!altf4word((int)dueval))
 				biosword((int)dueval);
+			break;
+		case 'p':
+			if (FlagGamePad)
+				PadButton((int)(dueval & 0x7F), (dueval & 0x80) == 0);
+			break;
+		case 'v':
+			if (FlagGamePad)
+				vkkey((int)(dueval & 0xFF), (dueval & 0x100) == 0);
 			break;
 		default:
 			portexit(0);

@@ -310,6 +310,15 @@ sdllate(void)
 {
 }
 
+/* GamePad off, so that the pump is the 1994 one. */
+int32_t	FlagGamePad;
+
+void
+ReadInputs(uint32_t norepeat)
+{
+	USED(norepeat);
+}
+
 /* A replay's: the clock runs as fast as the oracle calls. */
 int
 playing(void)

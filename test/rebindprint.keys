@@ -1,0 +1,24 @@
+# A binding of lba.cfg to a key that has no XT code, with GamePad
+# (fixtures/rebindprint: the outside save, and its LBA.CFG ending in
+# Input0_1: 44 and Input0_2: 0, Forward on Print Screen alone). In play
+# Print Screen walks Twinsen forward, the record holding its virtual
+# key in v lines, and Up, bound to none of the inputs, leaves him
+# standing.
+
+hold 0.15
+sleep 40
+key Down Return
+sleep 3
+key Return
+sleep 12
+shot scene
+down Print
+sleep 1.5
+up Print
+sleep 1
+shot walked
+down Up
+sleep 1.5
+up Up
+sleep 1
+shot stood

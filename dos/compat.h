@@ -64,6 +64,28 @@ typedef unsigned long		uint32_t;
 #define poparea()
 #define windowpicture(p)
 
+/*
+ * The port's tests of Escape and of the keys of the Classic's inputs
+ * (sources/input.c) take with GamePad the Classic's inputs in the 1994
+ * game's keys' place: here the keys alone.
+ */
+#define TestKeyEsc()		(Key == K_ESC)
+#define NotKeyEsc()		(Key != K_ESC)
+#define MenusHeld()		0
+#define MyMenus()		0
+#define KeyInput(key, input)	(Key == (key))
+#define NotKeyInput(key, input)	(Key != (key))
+#define MyInput(key, input)	(MyKey == (key))
+#define ComportementHeld()	((Key >= K_F1) && (Key <= K_F4))
+#define KeyHeld()		(Key)
+#define PauseWait()		(!Key && !Joy && !Fire)
+
+/*
+ * The Classic's input context, the menus' or play's, which gives the
+ * pad's buttons their keys (sys/input.c): here empty.
+ */
+#define SetInputContext(context)
+
 #if __WATCOMC__ > 901
 /*
  * perso.c installs its critical error handler through _harderr_, the name

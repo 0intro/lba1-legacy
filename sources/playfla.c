@@ -517,7 +517,12 @@ void PlayAnimFla(char *name_anim)
 	strcat( ficname, name_anim ) ;
 	AddExt( ficname, ".FLA" ) ;
 
-	if( !InitFla( ficname ) )	return ;
+	SetInputContext( 1 ) ;	// FEATURE: the pad's keys the menus' (SetInputContext), as the Classic's PlayAnimFla sets them. Taken from the Classic 3.2.3.
+	if( !InitFla( ficname ) )
+	{
+		SetInputContext( 0 ) ;
+		return ;
+	}
 
 	if ( strcmp( HeaderFla.Version, VERSION ) == 0 )
 	{
@@ -531,7 +536,8 @@ void PlayAnimFla(char *name_anim)
 		FlagFirst = TRUE ;
 		while (sortie == FALSE )
 		{
-			if( Key == K_ESC ) sortie = TRUE;
+			/* FEATURE: TestKeyEsc, Escape or with GamePad the Classic's Menus input. Taken from the Classic 3.2.3. */
+			if( TestKeyEsc() ) sortie = TRUE;
 			cadence = TimerRef;
 
 			DrawNextFrameFla();
@@ -559,6 +565,7 @@ void PlayAnimFla(char *name_anim)
 		SetBlackPal() ;
 		Cls() ;
 	}
+	SetInputContext( 0 ) ;
 }
 
 /*══════════════════════════════════════════════════════════════════════════*
@@ -680,13 +687,14 @@ void	PlayDiskFla( UBYTE *name_anim )
 		FadeToPal( PalettePcx ) ;
 
 		timer = TimerRef + 2 * 50 ;
+		/* FEATURE: TestKeyEsc, Escape or with GamePad the Classic's Menus input. Taken from the Classic 3.2.3. */
 		while( TimerRef < timer )
 		{
-			if( Key == K_ESC ) break ;
+			if( TestKeyEsc() ) break ;
 			idle() ;
 		}
 
-		if( Key == K_ESC ) break ;
+		if( TestKeyEsc() ) break ;
 
 		FadeToBlack( PalettePcx ) ;
 	}

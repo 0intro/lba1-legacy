@@ -19,8 +19,22 @@ extern	LONG	FlagVoiceCD ;		// message.c's, the voices' file on the CD
 void	CloseFdNar( void ) ;		// message.c's
 #endif
 
+#ifdef	DOS
 #define	HAUTEUR_STANDARD	50
 #define	MENU_SPACE		6
+#else
+/*
+ * FEATURE: a menu's entries 50 lines high and 6 apart, or 46 and 4 on
+ * a page of nine, the option menu with Controls and Widescreen display,
+ * which the screen's 480 lines hold (DrawGameMenu). The port's own, as
+ * LBA2's port lays out its page of nine.
+ */
+#define	HAUTEUR_STANDARD	MenuHeight
+#define	MENU_SPACE		MenuSpace
+
+static	WORD	MenuHeight = 50 ;
+static	WORD	MenuSpace = 6 ;
+#endif
 
 #define	COUL_TEXT_MENU		15	// trouver blanc palette jeu
 #define	COUL_SELECT_MENU	68
@@ -80,7 +94,7 @@ UWORD	GameOptionMenu[] = {
 #ifdef	DOS
 			4,	// nb entries
 #else
-			8,	// nb entries
+			9,	// nb entries
 #endif
 			0,	// y from top.
 			0,	// .dia num
@@ -93,6 +107,7 @@ UWORD	GameOptionMenu[] = {
 #else
 			0, 47,	// advanced options
 			0, 0x1000,	// FEATURE: Choose language, before the switches. Taken from the Classic 3.2.3.
+			0, 0x1005,	// FEATURE: Controls, the Classic's controls pages, with GamePad, after Choose language. Taken from the Classic 3.2.3.
 			0, 0x1008,	// FEATURE: Fullscreen display, before Hit walls. Taken from the Classic 3.2.3.
 			0, 0x2001,	// FEATURE: Widescreen display, the wide screen's switch after the full screen's. The port's own.
 			0, 0x100A	// FEATURE: Hit walls, the option menu's last entry. Taken from the Classic 3.2.3.
@@ -111,6 +126,24 @@ UWORD	GameAdvancedMenu[] = {
 			7, 32,	// ombres on/off
 			8, 33	// zoom on/off
 				} ;
+
+#ifndef	DOS
+/*
+ * FEATURE: the controls' menu, TLBA1C.exe 0x819640: Keyboard Controls
+ * and Gamepad Controls, each opening its page. Taken from the Classic
+ * 3.2.3.
+ */
+UWORD	GameControlsMenu[] = {
+			0,	// selected
+			3,	// nb entries
+			0,	// y from top.
+			0,	// .dia num
+
+			0, 26,		// retour
+			0, 0x1006,	// Keyboard Controls
+			0, 0x1007	// Gamepad Controls
+				} ;
+#endif
 
 #ifndef	DOS
 /*
@@ -337,9 +370,11 @@ void	WaitReleaseSpace()
 	/*
 	 * FEATURE: the action key. W, held with LbaWinSettings's 4 set
 	 * (InputActions' 0x200, the Classic's Talk/Search), is waited for as
-	 * Space is, so that W held acts once. Taken from the Classic 3.2.3.
+	 * Space is, so that W held acts once, and with GamePad the Menus
+	 * input as Escape is (TestKeyEsc). Taken from the Classic 3.2.3.
 	 */
 	OR (InputActions & 0x200)
+	OR TestKeyEsc()
 #endif
 	) idle() ;
 #else
@@ -623,6 +658,7 @@ void	MenuComportement()
 	WORD	oldcomp ;
 	WORD	memoisland ;
 	LONG	memoflagspeak ;
+	SetInputContext( 1 ) ;	// FEATURE: the pad's keys the menus' (SetInputContext), as the Classic's MenuComportement sets them. Taken from the Classic 3.2.3.
 
 	SaveTimer() ;
 
@@ -666,7 +702,12 @@ void	MenuComportement()
 			HQR_Get( HQR_Anims, TabAnim[Comportement] ),
 			Ptr3do ) ;
 
-	while( (Fire & F_CTRL) OR ((Key>=K_F1) AND (Key<=K_F4)) )
+	/*
+	 * FEATURE: with GamePad the menu shows while its keys are held as the
+	 * Classic's inputs, its own and the behaviours' (ComportementHeld).
+	 * Taken from the Classic 3.2.3.
+	 */
+	while( (Fire & F_CTRL) OR ComportementHeld() )
 	{
 #ifdef	DEBUG_TOOLS
 		CheckSavePcx() ;
@@ -740,6 +781,7 @@ void	MenuComportement()
 #endif
 
 	RestoreTimer() ;
+	SetInputContext( 0 ) ;
 }
 
 /*══════════════════════════════════════════════════════════════════════════*
@@ -865,6 +907,7 @@ void	Inventory()
 	WORD	oldselect ;
 	WORD	memoalphalight, memobetalight ;
 	LONG	memoflagspeak ;
+	SetInputContext( 1 ) ;	// FEATURE: the pad's keys the menus' (SetInputContext), as the Classic's Inventory sets them. Taken from the Classic 3.2.3.
 
 	CopyScreen( Log, Screen ) ;
 
@@ -887,7 +930,8 @@ void	Inventory()
 	TestCoulDial( 4 ) ;
 	InitDialWindow() ;
 
-	while( Key != K_ESC )
+	/* FEATURE: TestKeyEsc, Escape or with GamePad the Classic's Menus input. Taken from the Classic 3.2.3. */
+	while( NotKeyEsc() )
 	{
 #ifdef	DEBUG_TOOLS
 		CheckSavePcx() ;
@@ -907,7 +951,7 @@ void	Inventory()
 			if( !Joy AND !Fire )	flag = 0 ;
 		}
 
-		if( (MyKey == K_ESC) OR (MyFire&F_SHIFT) )
+		if( (MyKey == K_ESC) OR MenusHeld() OR (MyFire&F_SHIFT) )
 		{
 			break ;
 		}
@@ -1019,6 +1063,7 @@ void	Inventory()
 	InitDial( START_FILE_ISLAND+Island ) ;
 
 	while( Key OR Fire ) idle() ;
+	SetInputContext( 0 ) ;
 }
 /*══════════════════════════════════════════════════════════════════════════*
     █▀▀▀▀ █▀▀▀█ █   █ ██▄ █ █▀▀▀▄       █▀▀▀█ █▀▀█      █ █▀▀▀▀ █▀▀▀▀ ▀▀█▀▀
@@ -1044,8 +1089,14 @@ void	DoFoundObj( WORD numobj )
 	LONG	memoflagspeak ;
 	LONG	speakfromcd  ;
 	LONG	memotimersystem ;
+	SetInputContext( 1 ) ;	// FEATURE: the pad's keys the menus' (SetInputContext), as the Classic's DoFoundObj sets them. Taken from the Classic 3.2.3.
 
 	ptrobj = &ListObjet[NUM_PERSO] ;
+
+#ifndef	DOS
+	/* FEATURE: the behaviour's name taken off, as the Classic's DoFoundObj takes it off. Taken from the Classic 3.2.3. */
+	ClearIncrustComportement() ;
+#endif
 
 	// reaff scene recentree sans twinkel
 
@@ -1252,13 +1303,14 @@ argexit:
 
 #ifdef	CDROM
 
+	/* FEATURE: TestKeyEsc, Escape or with GamePad the Classic's Menus input. Taken from the Classic 3.2.3. */
 	if( speakfromcd )
 	{
-		while( TestSpeakFromCD() AND (Key != K_ESC) ) idle() ;
+		while( TestSpeakFromCD() AND NotKeyEsc() ) idle() ;
 	}
 	else
 	{
-		while( TestSpeak() AND (Key != K_ESC) ) idle() ;
+		while( TestSpeak() AND NotKeyEsc() ) idle() ;
 	}
 	StopSpeak() ;
 #endif
@@ -1267,7 +1319,7 @@ argexit:
 	InitDial( START_FILE_ISLAND+Island ) ;
 
 #ifdef	FIXES
-	while( Key == K_ESC ) idle() ;
+	while( TestKeyEsc() ) idle() ;
 
 	/*
 	 * FIXED: LBA.EXE goes back to the game with the key that closed
@@ -1280,6 +1332,7 @@ argexit:
 #else
 	while( Key == K_ESC ) ;
 #endif
+	SetInputContext( 0 ) ;
 }
 
 /*══════════════════════════════════════════════════════════════════════════*/
@@ -1998,6 +2051,10 @@ WORD	InputPlayerName( WORD nummess, UBYTE *name )
 	WORD	car = 0 ;
 	WORD	retval = FALSE ;
 	UBYTE	incar ;
+#ifndef	DOS
+	LONG	gridkey = 0 ;	// GridInput's key and the time of its next repeat
+	ULONG	gridtimer = 0 ;
+#endif
 
 #ifndef	DOS
 	/*
@@ -2011,6 +2068,7 @@ WORD	InputPlayerName( WORD nummess, UBYTE *name )
 		UBYTE	memoplayername[MAX_SIZE_PLAYER_NAME+1] ;
 		WORD	x, y ;
 		LONG	akey ;
+		LONG	editkey = 0 ;	// EditInput's key taken
 		ULONG	timeraff, timernoaff ;
 
 		while( Key OR Fire ) idle() ;
@@ -2076,6 +2134,12 @@ WORD	InputPlayerName( WORD nummess, UBYTE *name )
 			do
 			{
 			akey = GetAscii() ;
+			/*
+			 * FEATURE: with GamePad the pad's Return, Escape and
+			 * Backspace, which make no word of the BIOS's, and the Menus
+			 * input as Escape (EditInput). The port's own.
+			 */
+			if( FlagGamePad )	akey = EditInput( akey, &editkey ) ;
 
 			if( !IsValidChar(akey) )	akey = 0 ;
 
@@ -2168,7 +2232,8 @@ try_again:
 
 	while( GetAscii() != 0 ) ;
 
-	while( Key != K_ESC )
+	/* FEATURE: TestKeyEsc, Escape or with GamePad the Classic's Menus input. Taken from the Classic 3.2.3. */
+	while( NotKeyEsc() )
 	{
 #ifdef	DEBUG_TOOLS
 		CheckSavePcx() ;
@@ -2179,6 +2244,15 @@ try_again:
 		MyKey = Key ;
 		MyJoy = Joy ;
 		MyFire = Fire ;
+#ifndef	DOS
+		/*
+		 * FEATURE: with GamePad the grid's keys read as the Classic's
+		 * InputPlayerName reads them (TLBA1C.exe 0x4123f0), by their
+		 * virtual keys, the pad's too (GridInput). Taken from the
+		 * Classic 3.2.3.
+		 */
+		if( FlagGamePad )	car = GridInput( car, &gridkey, &gridtimer ) ;
+#endif
 
 		///////////////
 
@@ -2678,6 +2752,24 @@ WORD	ChoosePlayerName( WORD mess, WORD flagflip, WORD flagnew )
 				mykey = Key ;
 				myjoy = Joy ;
 				myfire = Fire ;
+				/*
+				 * FEATURE: with GamePad LBA2's keys of its list, the
+				 * virtual keys of its Windows build (GAMEMENU.CPP):
+				 * Page Down and Page Up a page, Home the first save
+				 * and End the last, as the 1994 keyboard's diagonals
+				 * give them, Delete the deletion, as Del gives it,
+				 * and the Menus input Escape (TestKeyEsc). Taken from
+				 * LBA2.
+				 */
+				if( FlagGamePad )
+				{
+					if( TestKeyEsc() )		mykey = K_ESC ;
+					if( KeyVk == VK_NEXT )		myjoy = J_DOWN|J_RIGHT ;
+					else if( KeyVk == VK_PRIOR )	myjoy = J_UP|J_RIGHT ;
+					else if( KeyVk == VK_HOME )	myjoy = J_UP|J_LEFT ;
+					else if( KeyVk == VK_END )	myjoy = J_DOWN|J_LEFT ;
+					else if( KeyVk == VK_DELETE )	myfire |= F_SUPPR ;
+				}
 			}
 
 			DrawOneString( 320, ys, ptrlist[select], draw ) ;
@@ -2992,7 +3084,8 @@ WORD	ChoosePlayerName( WORD mess, WORD flagflip, WORD flagnew )
 
 	DrawSingleString( 320, 40, (UBYTE*)GetMultiText( mess,string ) ) ;
 
-	while( Key != K_ESC )
+	/* FEATURE: TestKeyEsc, Escape or with GamePad the Classic's Menus input. Taken from the Classic 3.2.3. */
+	while( NotKeyEsc() )
 	{
 		if( flag == 1 )
 		{
@@ -3199,6 +3292,12 @@ void	DrawGameMenu( UWORD *ptrmenu, WORD justone )
 
 	nb = *ptrmenu++ ;
 
+#ifndef	DOS
+	// FEATURE: a page of nine 46 lines high and 4 apart, which 480 lines hold. The port's own, as LBA2's port lays out its page of nine.
+	MenuHeight = nb>8 ? 46 : 50 ;
+	MenuSpace = nb>8 ? 4 : 6 ;
+#endif
+
 	y = *ptrmenu++ ;
 
 	ptrmenu++ ;	// dial num
@@ -3232,6 +3331,10 @@ void	DrawGameMenu( UWORD *ptrmenu, WORD justone )
 		y += HAUTEUR_STANDARD + MENU_SPACE ;
 	}
 
+#ifndef	DOS
+	MenuHeight = 50 ;
+	MenuSpace = 6 ;
+#endif
 	if( nb == 0 )	idle() ;
 }
 
@@ -3325,11 +3428,12 @@ WORD	DoGameMenu( UWORD *ptrmenu )
 
 #ifndef	DOS
 		/*
-		 * FEATURE: Escape makes that answer the selection, drawn as
+		 * FEATURE: Escape, or with GamePad the Menus input
+		 * (TestKeyEsc), makes that answer the selection, drawn as
 		 * chosen once the keys are released, then gives it. Taken from
 		 * the Classic 3.2.3.
 		 */
-		if( (Key == K_ESC) AND (escentry != 0xFFFF) )
+		if( TestKeyEsc() AND (escentry != 0xFFFF) )
 		{
 			selected = escentry ;
 			flag = 1 ;
@@ -3574,14 +3678,14 @@ WORD	DoGameMenu( UWORD *ptrmenu )
 		if( flagesc )	return ptrmenu[4 + 1 + selected*2] ; // <ESC>
 
 		/*
-		 * FEATURE: with SaveAnywhere, Escape gives 1000 in every menu
-		 * but a question's, which each menu takes as its way back, the
-		 * main menu going on with the game in play, or selecting Quit
-		 * with none. Taken from LBA2.
+		 * FEATURE: with SaveAnywhere, Escape (TestKeyEsc) gives 1000 in
+		 * every menu but a question's, which each menu takes as its way
+		 * back, the main menu going on with the game in play, or
+		 * selecting Quit with none. Taken from LBA2.
 		 */
 		if( FlagSaveAnywhere
 		AND (ptrmenu != GameChoiceMenu)
-		AND (Key == K_ESC) )
+		AND TestKeyEsc() )
 		{
 			return 1000 ;
 		}
@@ -3622,12 +3726,18 @@ void	ChangeTextLanguage( LONG n )
 	memoflagspeak = FlagSpeak ;
 	FlagSpeak = FALSE ;
 	InitDial( 0 ) ;
+	/*
+	 * FEATURE: with GamePad the behaviours' names read again in the
+	 * language, as the Classic's ChangeTextLanguage reads them. Taken
+	 * from the Classic 3.2.3.
+	 */
+	if( FlagGamePad )	InitComportementNames() ;
 	FlagSpeak = memoflagspeak ;
 
 	/*
 	 * FEATURE: PleaseWait, the voices' transfer's title, read again in
-	 * the language, where the Classic reads again its behaviours' names,
-	 * which it shows in play. The port's own.
+	 * the language, as the Classic reads again its behaviours' names.
+	 * The port's own.
 	 */
 	GetMultiText( 49, PleaseWait ) ;
 
@@ -3965,6 +4075,17 @@ LONG	OptionsMenu()
 				LanguageOptions() ;
 				break ;
 
+			/*
+			 * FEATURE: Controls opens the controls' menu, as the
+			 * Classic's option menu opens it. Taken from the Classic
+			 * 3.2.3.
+			 */
+			case 0x1005:	// Controls
+				CopyScreen( Screen, Log ) ;
+				Flip() ;
+				ControlsOptions() ;
+				break ;
+
 			case 0x1008:	// Fullscreen display: ON
 			case 0x1009:	// Fullscreen display: OFF
 				WriteFullScreen() ;
@@ -4200,6 +4321,38 @@ void	SavedGameManagement()
 
 /*──────────────────────────────────────────────────────────────────────────*/
 
+#ifndef	DOS
+/*
+ * FEATURE: ControlsOptions is TLBA1C.exe 0x4138b0: the controls' menu,
+ * each entry opening its page, the first and with SaveAnywhere Escape
+ * going back. Taken from the Classic 3.2.3.
+ */
+LONG	ControlsOptions()
+{
+	CopyScreen( Log, Screen ) ;
+	while( TRUE )
+	{
+		idle() ;
+		switch( DoGameMenu( GameControlsMenu ) )
+		{
+			case 26:
+			case 1000: // FEATURE: with SaveAnywhere, Escape, as LBA2's menus take it. Taken from LBA2.
+				CopyScreen( Screen, Log ) ;
+				Flip() ;
+				return FALSE ;
+
+			case 0x1006:
+				ControlsMenu( 0 ) ;
+				break ;
+
+			case 0x1007:
+				ControlsMenu( 1 ) ;
+				break ;
+		}
+	}
+}
+#endif
+/*──────────────────────────────────────────────────────────────────────────*/
 void	AdvancedOptions()
 {
 	WORD select ;
@@ -4407,6 +4560,7 @@ LONG	MainGameMenu()
 		{
 			if( gogame )
 			{
+				SetInputContext( 0 ) ;	// FEATURE: the pad's keys play's, as the Classic's MainGameMenu sets them. Taken from the Classic 3.2.3.
 				ret = MainLoop() ;
 
 				switch( ret )
@@ -4432,6 +4586,7 @@ LONG	MainGameMenu()
 						EscTimer = 0 ;
 						break ;
 				}
+				SetInputContext( 1 ) ;
 
 				CopyScreen( Log, Screen ) ;
 				gogame = FALSE ;
@@ -4449,6 +4604,13 @@ LONG	MainGameMenu()
 			// la palette normale sous le menu, comme LBA2
 			if( FlagPalettePcx )	Palette( PtrPal ) ;
 
+			/*
+			 * FIXED: TLBA1C.exe's main menu takes the pad's keys of the
+			 * context it opens in, play's after the introduction's movie,
+			 * which PlayAnimFla leaves there: the cross presses J and M on
+			 * it, A W and B Return. The menu takes the menus' keys.
+			 */
+			SetInputContext( 1 ) ;
 			select = DoGameMenu( GameMainMenu ) ;
 			switch( select )	// num mess
 			{
@@ -4585,6 +4747,13 @@ LONG	MainGameMenu()
 
 		GetMultiText( 49, PleaseWait ) ;
 
+		/*
+		 * FIXED: TLBA1C.exe's main menu takes the pad's keys of the
+		 * context it opens in, play's after the introduction's movie,
+		 * which PlayAnimFla leaves there: the cross presses J and M on
+		 * it, A W and B Return. The menu takes the menus' keys.
+		 */
+		SetInputContext( 1 ) ;
 		select = DoGameMenu( GameMainMenu ) ;
 		switch( select )	// num mess
 		{
@@ -4620,6 +4789,7 @@ LONG	MainGameMenu()
 				}
 				while( FileSize( GamePathname ) != 0 ) ;
 
+				SetInputContext( 0 ) ;	// FEATURE: the pad's keys play's, as the Classic's MainGameMenu sets them. Taken from the Classic 3.2.3.
 				InitGame( 1, 0 ) ;
 				Introduction() ;
 				if( MainLoop() )
@@ -4636,6 +4806,7 @@ LONG	MainGameMenu()
 					Palette( PtrPal ) ;
 #endif
 				}
+				SetInputContext( 1 ) ;
 
 				CopyScreen( Log, Screen ) ;
 				while( Key OR Fire ) idle() ; // provisoire
@@ -4649,6 +4820,7 @@ LONG	MainGameMenu()
 				if( !ChoosePlayerName( 21, FALSE, FALSE ) ) break ;
 #endif
 
+				SetInputContext( 0 ) ;	// FEATURE: the pad's keys play's, as the Classic's MainGameMenu sets them. Taken from the Classic 3.2.3.
 				InitGame( -1, 0 ) ;
 				Introduction() ;
 				if( MainLoop() )
@@ -4665,6 +4837,7 @@ LONG	MainGameMenu()
 					Palette( PtrPal ) ;
 #endif
 				}
+				SetInputContext( 1 ) ;
 				CopyScreen( Log, Screen ) ;
 				while( Key OR Fire ) idle() ; // provisoire
 				break ;
@@ -4690,6 +4863,15 @@ LONG	QuitMenu()
 	LONG memoflagspeak ;
 
 	CopyScreen( Log, Screen ) ;
+#ifndef	DOS
+	/*
+	 * FEATURE: the pad's inputs let go and its keys the menus'
+	 * (SetInputContext), as the Classic's QuitMenu sets them (TLBA1C.exe
+	 * 0x414172). Taken from the Classic 3.2.3.
+	 */
+	ClearInputs() ;
+#endif
+	SetInputContext( 1 ) ;
 #ifdef	FIXES
 	HQ_SaveSamples() ;	// les boucles mises de côté
 #else
@@ -4721,9 +4903,26 @@ LONG	QuitMenu()
 				while( Key OR Fire ) idle() ;
 				HQ_RestoreSamples() ;	// et reprises
 #endif
+#ifndef	DOS
+				/*
+				 * FEATURE: with GamePad the frame's keys and inputs taken
+				 * back before play's keys, as the Classic's QuitMenu takes
+				 * them (TLBA1C.exe 0x4141ee), so that an input held with
+				 * the menu's acts in no later part of the frame. Taken from
+				 * the Classic 3.2.3.
+				 */
+				if( FlagGamePad )
+				{
+					MyKey = 0 ;
+					KeyVk = 0 ;
+					MyActions = 0 ;
+				}
+#endif
+				SetInputContext( 0 ) ;
 				return FALSE ;
 
 			case 27: // abandonner
+				SetInputContext( 0 ) ;
 				return TRUE ;
 		}
 	}
@@ -4826,14 +5025,26 @@ void	GameAskChoice( WORD nummess )
 		GameChoiceMenu[4+n*2+1] = GameListChoice[n] ;	// mess
 	}
 
+#ifndef	DOS
+	/*
+	 * FEATURE: the pad's inputs let go and its keys the menus'
+	 * (SetInputContext) for the question, play's for its answer's voice,
+	 * as the Classic's GameAskChoice sets them (TLBA1C.exe 0x414322 and
+	 * 0x414359). Taken from the Classic 3.2.3.
+	 */
+	ClearInputs() ;
+#endif
+	SetInputContext( 1 ) ;
 	MyDial( nummess ) ;
 	DoGameMenu( GameChoiceMenu ) ;
 	GameChoice = GameListChoice[GameChoiceMenu[0]] ; // ret num mess
+	SetInputContext( 0 ) ;
 
 #ifdef	CDROM
 	NumObjSpeak = NUM_PERSO ;
 	Speak( GameChoice ) ;
-	while( TestSpeak() AND (Key!=K_ESC) )	idle() ;// Wait until silence
+	/* FEATURE: TestKeyEsc, Escape or with GamePad the Classic's Menus input. Taken from the Classic 3.2.3. */
+	while( TestSpeak() AND NotKeyEsc() )	idle() ;// Wait until silence
 	StopSpeak() ;//	Security
 #endif
 }
@@ -4881,7 +5092,8 @@ void	GameOver()
 	chrono= TimerRef ;
 
 	SetClip(  x0, y0, x1, y1 ) ;
-	while( (Key != K_ESC) AND (TimerRef-chrono<=10*50) )
+	/* FEATURE: TestKeyEsc, Escape or with GamePad the Classic's Menus input. Taken from the Classic 3.2.3. */
+	while( NotKeyEsc() AND (TimerRef-chrono<=10*50) )
 	{
 		zoom = BoundRegleTrois( 40000, 3200, 10*50, TimerRef-chrono ) ;
 		beta = RegleTrois32( 1, 1024, 2*50, (TimerRef-chrono)%(2*50) ) ;
@@ -4900,7 +5112,7 @@ void	GameOver()
 	CopyBlockPhys( x0,y0, x1,y1 ) ;
 
 	chrono = TimerRef + 50 * 3 ;
-	while( (TimerRef < chrono) AND (Key!=K_ESC) ) idle() ;
+	while( (TimerRef < chrono) AND NotKeyEsc() ) idle() ;
 
 	UnSetClip() ;
 	Free( ptr3do ) ;

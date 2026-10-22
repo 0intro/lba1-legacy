@@ -8,15 +8,17 @@
 # fills, or the folder CI's Windows runner downloads. Each test of the
 # table below runs from the tree's root with its arguments, DIR among
 # them standing for dir/run/NAME, made empty first: the EMU8000 against
-# its documents (emu8ktest), Alt+F4 and the Windows keys refused
-# (syskeystest), the wide screen's width (widetest), the clock's
-# retraces, pace and ticks (clocktest), the preferences' files and their
-# writer (filestest) and a CD's image read on images of the test's own
-# (cdimagetest). cfgtest runs in test/nodata. A Windows build's tests
-# (NAME.exe) run natively under Git Bash or MSYS2, and on Linux under
-# tools/winerun, which starts this script again in its Wine prefix on
-# the project's Xephyr. The paths given to a test are relative to the
-# root, which a Windows test reads as they are, natively and under Wine.
+# its documents (emu8ktest), the Classic's input and its bindings
+# (inputtest), Alt+F4 and the Windows keys refused (syskeystest), the
+# wide screen's width (widetest), the clock's retraces, pace and ticks
+# (clocktest), the preferences' files and their writer (filestest), a
+# CD's image read on images of the test's own (cdimagetest), and for a
+# Linux build sys/sdl.c's gamepad on SDL's virtual gamepad (padtest).
+# cfgtest runs in test/nodata. A Windows build's tests (NAME.exe) run
+# natively under Git Bash or MSYS2, and on Linux under tools/winerun,
+# which starts this script again in its Wine prefix on the project's
+# Xephyr. The paths given to a test are relative to the root, which a
+# Windows test reads as they are, natively and under Wine.
 
 set -Eeuo pipefail
 
@@ -26,11 +28,16 @@ REPO=$(cd -- "$TEST/.." && pwd)
 # a test a line, its name and its arguments
 tests=(
 	'emu8ktest'
+	'inputtest DIR'
 	'syskeystest'
 	'widetest'
 	'clocktest'
 	'filestest DIR'
 	'cdimagetest DIR'
+)
+# the tests of a Linux build alone
+linuxtests=(
+	'padtest -p DIR'
 )
 
 usage() {
@@ -52,6 +59,9 @@ done
 if [[ -n $exe && $(uname -s) == Linux && -z ${WINERUN_CLEAN:-} ]]; then
 	exec tools/winerun -q -e test/unit "$dir"
 fi
+if [[ -z $exe ]]; then
+	tests+=("${linuxtests[@]}")
+fi
 
 for t in "${tests[@]}"; do
 	read -r -a args <<<"$t"
@@ -64,5 +74,9 @@ for t in "${tests[@]}"; do
 	for i in "${!args[@]}"; do
 		[[ ${args[i]} == DIR ]] && args[i]=$run
 	done
-	"./$prog" "${args[@]:1}" || { echo "unit: $name failed" >&2; exit 1; }
+	if [[ $name == padtest ]]; then
+		SDL_VIDEO_DRIVER=dummy SDL_AUDIO_DRIVER=dummy "./$prog" "${args[@]:1}"
+	else
+		"./$prog" "${args[@]:1}"
+	fi || { echo "unit: $name failed" >&2; exit 1; }
 done

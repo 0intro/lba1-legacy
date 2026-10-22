@@ -30,6 +30,10 @@ extern int32_t	Wide_X;	/* the screen's width with WideScreen ON, set at the star
 extern int32_t	FlagWideScreen;	/* WideScreen ON: the screen Wide_X wide */
 extern int32_t	FlagIntegerScaling;	/* IntegerScaling ON: the screen scaled by whole multiples */
 extern int32_t	DesiredDisplayNum;	/* lba.cfg's DesiredDisplayNum: the display the window opens on, from 0 */
+extern int32_t	FlagGamePad;	/* lba.cfg's GamePad: 1 with ON (input.c) */
+extern volatile uint16_t	Joy;	/* keyboard.asm's: the arrows down, a bit each (keyb.c) */
+extern volatile uint16_t	Fire;	/* the fire keys down, a bit each */
+extern volatile uint32_t	InputActions;	/* the Classic's inputs held, a bit each (keyb.c, input.c) */
 
 extern uint16_t	AsciiMode;	/* the keys passed to the BIOS's buffer too, for GetAscii (keyb.c) */
 extern char	PathConfigFile[];	/* lba.cfg's name, InitAdelineSystem's (sys.c) */

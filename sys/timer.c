@@ -150,6 +150,9 @@ pump(void)
 	}
 	sdlpoll();
 	replay(npump);
+	/* FEATURE: the Classic's inputs read from the keys, as its ManageSystem reads them (TLBA1C.exe 0x426960). Taken from the Classic 3.2.3. */
+	if (FlagGamePad)
+		ReadInputs(0);
 	wavetick(now);
 	cdtick(now);
 	miditick(now);

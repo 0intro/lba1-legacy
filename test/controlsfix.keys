@@ -1,0 +1,51 @@
+# The controls pages and the fixes of their faults (fixtures/controls:
+# options' lba.cfg with GamePad: ON): the keys' page as controls.keys
+# opens it. Behavior menu's first binding is cleared and its second
+# refused, the pad's left shoulder holding Behavior menu, the help
+# saying so. Page Down from line 17 goes ten lines on, to Default
+# Configuration, where the Classic's stayed on line 17. End and Accept
+# Configuration write the bindings into lba.cfg, and the menus give
+# the main menu back.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Down Return
+sleep 3
+shot options
+key Down Down Down Down Down Return
+sleep 3
+shot controls
+key Down Return
+sleep 3
+shot keys
+key Down Down Down Down Down Down
+sleep 1
+key Delete
+sleep 1
+shot cleared
+key Right Delete
+sleep 1
+shot refused
+key Down Down Down Down Down Down Down Down Down Down Down
+sleep 1
+shot line17
+key Next
+sleep 1
+shot pagedown
+key End
+sleep 1
+shot accept
+key Return
+sleep 3
+shot leftkeys
+key Up
+sleep 1
+key Return
+sleep 3
+shot options2
+key Up Up Up Up Up
+sleep 1
+key Return
+sleep 3
+shot main

@@ -1,0 +1,23 @@
+# The shortcuts on a French keyboard, with GamePad (fixtures/shortcuts,
+# as shortcuts.keys makes it): recorded with our Xephyr's layout French
+# (setxkbmap -layout fr inside one xrun command, us given back after
+# it). M, which lies where a US keyboard has its semicolon, puts the
+# Meca-Pinguin down through its virtual key, which the record's k lines
+# hold, and J puts the protopack on and away.
+
+hold 0.15
+sleep 40
+key Down Return
+sleep 3
+key Return
+sleep 12
+shot scene
+key m
+sleep 4
+shot pingouin
+key j
+sleep 3
+shot protopack
+key j
+sleep 3
+shot away

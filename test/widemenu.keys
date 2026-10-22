@@ -2,7 +2,7 @@
 # the main menu on a display of 1920x1080 (fixtures/widemenu: holomap's
 # save outside the prison, fixtures/outside, and the CD's LBA.CFG with
 # WideScreen: OFF, recorded with -D 1920x1080). The option menu's
-# seventh entry says Widescreen display: OFF. Return turns it ON: the
+# eighth entry says Widescreen display: OFF. Return turns it ON: the
 # screen 852x480, the menu in the window and the main menu's picture in
 # its middle, black beside it, and WideScreen: ON written to lba.cfg.
 # Return turns it OFF, the screen 640x480 again, and Return again ON.
@@ -16,7 +16,7 @@ shot menu
 key Down Down Return
 sleep 3
 shot off
-key Down Down Down Down Down Down
+key Down Down Down Down Down Down Down
 sleep 1
 key Return
 sleep 2
@@ -27,7 +27,7 @@ shot offagain
 key Return
 sleep 2
 shot onagain
-key Up Up Up Up Up Up
+key Up Up Up Up Up Up Up
 sleep 1
 key Return
 sleep 3

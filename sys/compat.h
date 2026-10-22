@@ -43,6 +43,8 @@
 #define strcmpi		watcomstricmp
 #define strnicmp	watcomstrnicmp
 #define itoa		watcomitoa
+#define ltoa		watcomltoa
+#define ultoa		watcomultoa
 #define _splitpath	watcomsplitpath
 #define getcwd		watcomgetcwd
 #define chdir		watcomchdir
@@ -54,6 +56,8 @@ int	watcomatoi(const char*);
 int	watcomstricmp(const char*, const char*);
 int	watcomstrnicmp(const char*, const char*, size_t);
 char*	watcomitoa(int, char*, int);
+char*	watcomltoa(long, char*, int);
+char*	watcomultoa(unsigned long, char*, int);
 void	watcomsplitpath(const char*, char*, char*, char*, char*);
 char*	watcomgetcwd(char*, int);
 int	watcomchdir(const char*);

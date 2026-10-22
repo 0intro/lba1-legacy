@@ -286,4 +286,49 @@ typedef	struct
 #define	CURRENTSAVE_FILENAME	PATH_RESSOURCE"current.lba"
 #endif
 
+/*
+ * FEATURE: the Classic's 27 inputs, their bits in InputActions and
+ * MyActions with GamePad, as SetInputBits gives them, under LBA2's
+ * names where it has the input (SOURCES/INPUT.H). Taken from the
+ * Classic 3.2.3.
+ */
+#define	I_UP		(1<<0)	// Forward
+#define	I_DOWN		(1<<1)	// Backwards
+#define	I_LEFT		(1<<2)	// Turn left
+#define	I_RIGHT		(1<<3)	// Turn right
+#define	I_ACTION_M	(1<<4)	// Behavior action
+#define	I_RETURN	(1<<5)	// Center camera/Select
+#define	I_COMPORTEMENT	(1<<6)	// Behavior menu
+#define	I_THROW		(1<<7)	// Use weapon
+#define	I_INVENTORY	(1<<8)	// Inventory
+#define	I_ACTION_ALWAYS	(1<<9)	// Talk/Search
+#define	I_MENUS		(1<<10)	// Menus
+#define	I_HOLOMAP	(1<<11)	// Holomap
+#define	I_PAUSE		(1<<12)	// Pause
+#define	I_NORMAL	(1<<13)	// Normal Behavior
+#define	I_SPORTIF	(1<<14)	// Sporty Behavior
+#define	I_AGRESSIF	(1<<15)	// Aggressive Behavior
+#define	I_DISCRET	(1<<16)	// Discreet Behavior
+#define	I_ZOOM		(1<<17)	// Zoom On/Off
+#define	I_OPTIONS	(1<<18)	// Options Menu
+#define	I_WEAPON_1	(1<<19)	// Weapon 1
+#define	I_WEAPON_2	(1<<20)	// Weapon 2
+#define	I_PINGOUIN	(1<<21)	// Meca-Pinguin
+#define	I_JETPACK	(1<<22)	// Proto-Pack On/Off
+#define	I_HORN		(1<<23)	// Gawley's Horn
+#define	I_CLOVER	(1<<24)	// Use a Clover
+#define	I_PREVIOUS	(1<<25)	// Previous behavior
+#define	I_NEXT		(1<<26)	// Next behavior
+
+#define	I_COMPORTEMENTS	(I_NORMAL|I_SPORTIF|I_AGRESSIF|I_DISCRET)
+
+#ifndef	DOS
+/* FEATURE: Windows' virtual keys LBA2's list of saves reads with GamePad. Taken from LBA2. */
+#define	VK_PRIOR	0x21	// Page Up
+#define	VK_NEXT		0x22	// Page Down
+#define	VK_END		0x23
+#define	VK_HOME		0x24
+#define	VK_DELETE	0x2E
+#endif
+
 #pragma pack(pop)

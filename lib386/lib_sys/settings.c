@@ -52,3 +52,14 @@ WriteLbaWinSettings(void)
 {
 	Def_WriteValue((UBYTE*)PathConfigFile, (UBYTE*)"LbaWinSettings", LbaWinSettings);
 }
+
+/* ReadConfigValue is TLBA1C.exe 0x4234c0: the value of key in lba.cfg, or dflt where the key is missing. */
+int32_t
+ReadConfigValue(char *key, int32_t dflt)
+{
+	int32_t v;
+
+	if (Def_ReadValue2((UBYTE*)PathConfigFile, (UBYTE*)key, &v))
+		return v;
+	return dflt;
+}

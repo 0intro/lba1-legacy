@@ -18,6 +18,8 @@
 #include	"holomap.def"
 #include	"incrust.def"
 #ifndef	DOS
+#include	"controls.def"
+#include	"input.def"
 #include	"lba2text.def"
 #endif
 #include	"message.def"

@@ -1,4 +1,7 @@
 extern void InitObject(int16_t );
+#ifndef	DOS
+extern void InitComportementNames(void);
+#endif
 extern void StartInitObj(int16_t );
 extern void StartInitAllObjs(void);
 extern void LoadFicPerso(void);

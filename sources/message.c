@@ -1678,6 +1678,10 @@ void    Dial( LONG text )
 	LONG    ret = 0	;
 	LONG flagabort=0;
 
+#ifndef	DOS
+	/* FEATURE: the behaviour's name taken off, as the Classic's Dial takes it off. Taken from the Classic 3.2.3. */
+	ClearIncrustComportement() ;
+#endif
 
 	MemoClip()      ;
 	UnSetClip()     ;
@@ -1690,7 +1694,8 @@ void    Dial( LONG text )
 	if (( !FlagDisplayText )	// Pas de texte et Voix OK
 	AND ( ret ))
 	{
-		while((TestSpeak()) AND ( Key != K_ESC )) idle() ;
+		/* FEATURE: TestKeyEsc, Escape or with GamePad the Classic's Menus input. Taken from the Classic 3.2.3. */
+		while((TestSpeak()) AND NotKeyEsc() ) idle() ;
 		StopSpeak()	;
 		RestoreClip()	;
 		return		;
@@ -1702,6 +1707,14 @@ void    Dial( LONG text )
 	{
 		ret = NextDialCar()     ;
 		TestSpeak()        ;
+#ifndef	DOS
+		/*
+		 * FEATURE: the pad's keys the menus' (SetInputContext) once
+		 * the keys, Fire and Joy are let go, as the Classic's Dial sets
+		 * them (TLBA1C.exe 0x41b471). Taken from the Classic 3.2.3.
+		 */
+		if( (KeyVk == 0) AND (Fire == 0) AND (Joy == 0) )	SetInputContext( 1 ) ;
+#endif
 		if ( ret == 2 ) /*      Attente de Touche       */
 		{
 			while(( Key )
@@ -1713,7 +1726,7 @@ void    Dial( LONG text )
 			AND   ( !Joy ))	{ TestSpeak()	; idle() ; }// Tu appuies ?
 		}
 
-		if ( Key == K_ESC )//	Player Abort...
+		if ( TestKeyEsc() )//	Player Abort...
 		{
 			flagabort = 1	;
 			break		;
@@ -1741,12 +1754,17 @@ void    Dial( LONG text )
 	// essai: ET que si il y a un cadre (ouf ouf)
 */
 	RestoreClip()   ;
+	SetInputContext( 0 ) ;
 }
 /*──────────────────────────────────────────────────────────────────────────*/
 void	MyDial( WORD nummess )	// attends une touche si autre page sinon continue
 {
 	WORD	dialstat = 1 ;
 
+#ifndef	DOS
+	/* FEATURE: the behaviour's name taken off, as the Classic's MyDial takes it off (TLBA1C.exe 0x41b581). Taken from the Classic 3.2.3. */
+	ClearIncrustComportement() ;
+#endif
 	if ( FlagSpeak )	Speak(nummess)	;
 
 	OpenDial( nummess ) ;

@@ -1,0 +1,78 @@
+# The controls pages from the option menu (fixtures/controls: options'
+# lba.cfg with GamePad: ON). On the keys' page Talk/Search takes K, Up
+# is refused as bound already, Talk/Search's second binding is
+# cleared, Page Down and Page Up move, Zoom On/Off's second binding
+# takes Delete, which it keeps, where the Classic's page cleared it at
+# once, and End and Accept Configuration write the bindings into
+# lba.cfg. On the pad's page Menus' first binding is refused, Escape
+# goes to Accept Configuration and Escape again leaves with the
+# bindings as they were. The pages keep their line and their column
+# from one to the next.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Down Return
+sleep 3
+shot options
+key Down Down Down Down Down Return
+sleep 3
+shot controls
+key Down Return
+sleep 3
+shot keys
+key Down Down Down Down Down Down Down Down Down
+sleep 1
+key Return
+sleep 2
+shot capture
+key k
+sleep 2
+shot bound
+key Return
+sleep 2
+key Up
+sleep 2
+shot refused
+key Right Delete
+sleep 1
+shot cleared
+key Next
+sleep 1
+shot next
+key Prior
+sleep 1
+key Down Down Down Down Down Down Down Down
+sleep 1
+key Return
+sleep 2
+key Delete
+sleep 2
+shot delete
+key End
+sleep 1
+shot accept
+key Return
+sleep 3
+shot leftkeys
+key Down Return
+sleep 3
+shot pad
+key Home
+sleep 1
+key Down Down Down Down Down Down Down Down Down Down Left
+sleep 1
+key Return
+sleep 2
+shot menus
+key Escape
+sleep 1
+shot escape
+key Escape
+sleep 3
+shot leftpad
+key Up Up Return
+sleep 3
+key Up Up Up Up Up Return
+sleep 3
+shot main

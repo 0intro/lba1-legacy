@@ -260,7 +260,8 @@ void	Introduction()
 		TestCoulDial( 15 ) ;
 
 		Dial( 150 ) ;
-		if( Key == K_ESC )	goto fin_intro ;
+		/* FEATURE: TestKeyEsc, Escape or with GamePad the Classic's Menus input. Taken from the Classic 3.2.3. */
+		if( TestKeyEsc() )	goto fin_intro ;
 
 		SetBlackPal() ;
 		Load_HQR( PATH_RESSOURCE"ress.hqr", Screen, RESS_INTRO_2_PCR ) ;
@@ -271,7 +272,7 @@ void	Introduction()
 		Palette( PalettePcx ) ;
 
 		Dial( 151 ) ;
-		if( Key == K_ESC )	goto fin_intro ;
+		if( TestKeyEsc() )	goto fin_intro ;
 
 		SetBlackPal() ;
 		Load_HQR( PATH_RESSOURCE"ress.hqr", Screen, RESS_INTRO_3_PCR ) ;
@@ -306,6 +307,184 @@ fin_intro:
 #endif
 	}
 }
+
+#ifndef	DOS
+/*
+ * FEATURE: the inventory's objects as LbaWin's shortcuts use them, the
+ * Classic's functions of the inventory's cases (TLBA1C.exe 0x420980 to
+ * 0x420b6f). Taken from the Classic 3.2.3.
+ */
+
+/* ProtopackOnOff is TLBA1C.exe 0x420980: the protopack put on or away, its hum stopped. */
+void	ProtopackOnOff()
+{
+	ListObjet[NUM_PERSO].GenBody = ListFlagGame[FLAG_MEDAILLON] ? GEN_BODY_NORMAL : GEN_BODY_TUNIQUE ;
+	if( Comportement == C_PROTOPACK )
+	{
+		SetComportement( C_NORMAL ) ;
+		HQ_StopOneSample( 156 ) ;
+	}
+	else
+	{
+		SetComportement( C_PROTOPACK ) ;
+	}
+	Weapon = 0 ;
+}
+
+/* LaunchMecaPingouin is TLBA1C.exe 0x4209d0: the Meca-Pinguin put down before Twinsen. */
+void	LaunchMecaPingouin()
+{
+	T_OBJET	*ptrobj ;
+
+	ptrobj = &ListObjet[NumPingouin] ;
+	Rotate( 0,800, ListObjet[NUM_PERSO].Beta ) ;
+	ptrobj->PosObjX = ListObjet[NUM_PERSO].PosObjX + X0 ;
+	ptrobj->PosObjY = ListObjet[NUM_PERSO].PosObjY ;
+	ptrobj->PosObjZ = ListObjet[NUM_PERSO].PosObjZ + Y0 ;
+	ptrobj->Beta = ListObjet[NUM_PERSO].Beta ;
+	if( CheckValidObjPos( NumPingouin ) )
+	{
+		ptrobj->GenBody = NO_BODY ;
+		ptrobj->LifePoint = 50 ;
+		InitBody( GEN_BODY_NORMAL, NumPingouin ) ;
+		ptrobj->WorkFlags &= ~OBJ_DEAD ;
+		ptrobj->Col = 0 ;
+		InitRealAngleConst(	ptrobj->Beta,
+					ptrobj->Beta,
+					ptrobj->SRot,
+					&ptrobj->RealAngle ) ;
+		ListFlagGame[FLAG_MECA_PINGOUIN] = 0 ;
+		PokeULong( &ptrobj->Info, TimerRef + 30 * 50 ) ;
+	}
+}
+
+/*
+ * UseClover is TLBA1C.exe 0x420a90: a clover's life and magic, but for
+ * the magic of level 4 it gives in New Game+, a mode the port leaves to
+ * the Classic.
+ */
+void	UseClover()
+{
+	if( (ListObjet[NUM_PERSO].LifePoint < 50)
+	AND (NbFourLeafClover != 0) )
+	{
+		NbFourLeafClover-- ;
+		MagicPoint = MagicLevel * 20 ;
+		ListObjet[NUM_PERSO].LifePoint = 50 ;
+		InitIncrustDisp( INCRUST_OBJ,
+				 FLAG_CLOVER,
+				 0, 0,
+				 0, 0, 3 ) ;
+	}
+}
+
+/* UseMagicBall is TLBA1C.exe 0x420b00: the magic ball in the saber's place. */
+void	UseMagicBall()
+{
+	if( Weapon == 1 )
+	{
+		InitBody( GEN_BODY_NORMAL, NUM_PERSO ) ;
+	}
+	Weapon = 0 ;
+}
+
+/* UseMagicSaber is TLBA1C.exe 0x420b20: the saber drawn. */
+void	UseMagicSaber()
+{
+	if( ListObjet[NUM_PERSO].GenBody != GEN_BODY_SABRE )
+	{
+		if( Comportement == C_PROTOPACK )
+		{
+			SetComportement( C_NORMAL ) ;
+		}
+		InitBody( GEN_BODY_SABRE, NUM_PERSO ) ;
+		InitAnim( GEN_ANIM_DEGAINE, ANIM_THEN, GEN_ANIM_RIEN, NUM_PERSO ) ;
+	}
+	Weapon = 1 ;
+}
+
+/*
+ * FEATURE: LbaWin's shortcuts, the Classic's inputs 19 to 24, each as
+ * the inventory's object chosen, in the Classic's order: its MainLoop
+ * (TLBA1C.exe 0x420f5b) tries the protopack, the Meca-Pinguin, a
+ * clover, the magic ball, the saber and the horn, the first held
+ * ending the try, and takes the frame's keys back. Taken from LbaWin
+ * 0.7.8 and the Classic 3.2.3.
+ */
+void	UseShortcuts()
+{
+	ULONG	input = 0 ;
+
+	if( MyActions & I_JETPACK )
+	{
+		if( ListFlagGame[12] AND !ListFlagGame[FLAG_CONSIGNE] )
+		{
+			ProtopackOnOff() ;
+			InventoryAction = 12 ;
+			input = I_JETPACK ;
+		}
+	}
+	else if( MyActions & I_PINGOUIN )
+	{
+		if( ListFlagGame[FLAG_MECA_PINGOUIN] AND !ListFlagGame[FLAG_CONSIGNE] )
+		{
+			LaunchMecaPingouin() ;
+			InventoryAction = FLAG_MECA_PINGOUIN ;
+			input = I_PINGOUIN ;
+		}
+	}
+	else if( MyActions & I_CLOVER )
+	{
+		if( ListFlagGame[FLAG_CLOVER] )
+		{
+			UseClover() ;
+			InventoryAction = FLAG_CLOVER ;
+			input = I_CLOVER ;
+		}
+	}
+	else if( MyActions & I_WEAPON_1 )
+	{
+		if( ListFlagGame[FLAG_BALLE_MAGIQUE] AND !ListFlagGame[FLAG_CONSIGNE] )
+		{
+			UseMagicBall() ;
+			InventoryAction = FLAG_BALLE_MAGIQUE ;
+			input = I_WEAPON_1 ;
+		}
+	}
+	else if( MyActions & I_WEAPON_2 )
+	{
+		if( ListFlagGame[FLAG_SABRE_MAGIQUE] AND !ListFlagGame[FLAG_CONSIGNE] )
+		{
+			UseMagicSaber() ;
+			InventoryAction = FLAG_SABRE_MAGIQUE ;
+			input = I_WEAPON_2 ;
+		}
+	}
+	else if( MyActions & I_HORN )
+	{
+		if( ListFlagGame[FLAG_TROMPE] AND !ListFlagGame[FLAG_CONSIGNE] )
+		{
+			InventoryAction = FLAG_TROMPE ;
+			input = I_HORN ;
+		}
+	}
+	if( input )
+	{
+		MyKey = 0 ;
+		Key = 0 ;
+		KeyVk = 0 ;
+		MyActions = 0 ;
+		/*
+		 * FIXED: TLBA1C.exe releases the shortcut's keys there
+		 * (ReleaseInputs), which their repeats press again, so that a
+		 * shortcut held fires at each repeat: the protopack goes on and
+		 * off while J is held. This keeps the input out until its
+		 * release.
+		 */
+		ReadInputs( input ) ;
+	}
+}
+#endif
 
 /*══════════════════════════════════════════════════════════════════════════*
 	     █▄ ▄█ █▀▀▀█  █    ██▄ █       █     █▀▀▀█ █▀▀▀█ █▀▀▀█
@@ -474,7 +653,7 @@ startloop:
 		 * is alive and seen, outside the end (SavingEnable). Taken from
 		 * LBA2.
 		 */
-		if( (MyKey == K_ESC) AND FlagSaveAnywhere )
+		if( ((MyKey == K_ESC) OR MyMenus()) AND FlagSaveAnywhere )
 		{
 			TestRestoreModeSVGA( TRUE ) ;
 			PauseMusic() ;
@@ -494,7 +673,15 @@ startloop:
 			break ;
 		}
 #endif
-		if( (MyKey == K_ESC)
+		/*
+		 * FEATURE: with GamePad Escape or the Menus input asks to quit,
+		 * the behaviours', the holomap's, the pause's, the zoom's and the
+		 * options' inputs in their keys' place, as the Classic's MainLoop
+		 * tests them (TLBA1C.exe 0x420b70), the behaviours' showing the
+		 * 1994 behaviour menu, where the Classic's show the behaviour's
+		 * name alone. Taken from the Classic 3.2.3.
+		 */
+		if( ((MyKey == K_ESC) OR MyMenus())
 		AND (ListObjet[NUM_PERSO].LifePoint > 0)
 		AND (ListObjet[NUM_PERSO].Body != -1)
 		AND (!(ListObjet[NUM_PERSO].Flags&INVISIBLE))
@@ -549,10 +736,12 @@ startloop:
 				HQ_SaveSamples() ;	// les boucles mises de côté
 
 				FlagSpeak = FALSE ;
+				SetInputContext( 1 ) ;	// FEATURE: the pad's keys the menus' (SetInputContext) in LBA2's list, as in the Classic's menus. The port's own.
 				if( ChoosePlayerName( 42|0x4000, FALSE, TRUE ) == 2 )
 				{
 					if( !WriteSaveGame( TRUE ) )	SaveGame() ;
 				}
+				SetInputContext( 0 ) ;
 				FlagSpeak = memoflagspeak ;
 
 				InitDial( START_FILE_ISLAND+Island ) ;
@@ -575,7 +764,9 @@ startloop:
 			HQ_SaveSamples() ;	// les boucles mises de côté
 
 			FlagSpeak = FALSE ;
+			SetInputContext( 1 ) ;	// FEATURE: the pad's keys the menus' (SetInputContext) in LBA2's list, as in the Classic's menus. The port's own.
 			choice = ChoosePlayerName( 41|0x4000, FALSE, FALSE ) ;
+			SetInputContext( 0 ) ;
 			FlagSpeak = memoflagspeak ;
 
 			if( !choice )	HQ_RestoreSamples() ;	// et reprises
@@ -603,7 +794,7 @@ startloop:
 		}
 
 #endif
-		if( MyKey == K_F6 )		// options menu
+		if( MyInput( K_F6, I_OPTIONS ) )		// options menu
 		{
 			LONG	memoflagspeak = FlagSpeak ;
 
@@ -619,7 +810,9 @@ startloop:
 			FlagSpeak = FALSE ;
 			InitDial( 0 )	;	//	SYS
 
+			SetInputContext( 1 ) ;	// FEATURE: the pad's keys the menus' (SetInputContext), as the Classic's InGameOptions sets them. Taken from the Classic 3.2.3.
 			OptionsMenu() ;
+			SetInputContext( 0 ) ;
 
 			FlagSpeak = memoflagspeak ;
 #ifndef	DOS
@@ -846,6 +1039,19 @@ startloop:
 			RestoreTimer() ;
 			AffScene( TRUE ) ;
 		}
+#ifndef	DOS
+		/*
+		 * FEATURE: with GamePad the shortcuts where the inventory is not
+		 * asked, as the Classic's MainLoop chains them after its Shift
+		 * (TLBA1C.exe 0x420f5b). Taken from the Classic 3.2.3.
+		 */
+		else if( FlagGamePad
+		AND (ListObjet[NUM_PERSO].Body != -1)
+		AND (ListObjet[NUM_PERSO].Move == MOVE_MANUAL) )
+		{
+			UseShortcuts() ;
+		}
+#endif
 
 		if( (MyFire & F_CTRL)
 		AND (ListObjet[NUM_PERSO].Body != -1)
@@ -863,6 +1069,9 @@ startloop:
 		}
 
 		if( (MyKey >= K_F1) AND (MyKey <= K_F4)
+#ifndef	DOS
+		AND !FlagGamePad
+#endif
 		AND (ListObjet[NUM_PERSO].Body != -1)
 		AND (ListObjet[NUM_PERSO].Move == MOVE_MANUAL) )
 		{
@@ -877,6 +1086,43 @@ startloop:
 			RestoreTimer() ;
 			AffScene(TRUE) ;
 		}
+#ifndef	DOS
+		/*
+		 * FEATURE: with GamePad the previous and the next behaviour, the
+		 * protopack's next the normal one, its name shown a second, and
+		 * the six behaviours' inputs kept out until their release, as
+		 * the Classic's MainLoop takes them (TLBA1C.exe 0x4210f7), the
+		 * four behaviours' showing the 1994 behaviour menu, where the
+		 * Classic's show the behaviour's name alone. Taken from the
+		 * Classic 3.2.3.
+		 */
+		if( FlagGamePad
+		AND (MyActions & (I_COMPORTEMENTS|I_PREVIOUS|I_NEXT))
+		AND (ListObjet[NUM_PERSO].Body != -1)
+		AND (ListObjet[NUM_PERSO].Move == MOVE_MANUAL) )
+		{
+			SaveTimer() ;
+			TestRestoreModeSVGA( TRUE ) ;
+			if( MyActions & I_COMPORTEMENTS )
+			{
+				SetComportement( ComportementInput( MyActions ) ) ;
+				MenuComportement( FALSE ) ;
+				RestoreTimer() ;
+				AffScene(TRUE) ;
+			}
+			else
+			{
+				WORD	comportement ;
+
+				comportement = StepComportement( MyActions ) ;
+				SetComportement( comportement ) ;
+				RestoreTimer() ;
+				InitIncrustComportement( comportement ) ;
+				AffScene(TRUE) ;
+			}
+			ReadInputs( I_COMPORTEMENTS|I_PREVIOUS|I_NEXT ) ;
+		}
+#endif
 
 		/*
 		 * FIXED: LBA.EXE recentres the camera and redraws the whole
@@ -915,7 +1161,7 @@ startloop:
 		}
 #endif
 
-		if( (MyKey == K_H)
+		if( MyInput( K_H, I_HOLOMAP )
 		AND (ListFlagGame[FLAG_HOLOMAP] == 1)
 		AND (ListFlagGame[FLAG_CONSIGNE] == 0) )
 		{
@@ -927,7 +1173,7 @@ startloop:
 			AffScene(TRUE) ;
 		}
 
-		if( MyKey == K_P )
+		if( MyInput( K_P, I_PAUSE ) )
 		{
 			WavePause() ;
 			SaveTimer() ;
@@ -937,15 +1183,27 @@ startloop:
 				Font( 5,446, "Pause" ) ;
 				CopyBlockPhys( 5,446,100,479 ) ;
 			}
-			while( Key ) idle() ;
-			while( !Key AND !Joy AND !Fire ) idle() ;
+			/*
+			 * FEATURE: KeyHeld and PauseWait, with GamePad the Classic's
+			 * Key and the Pause input, which ends its pause, then the
+			 * frame's keys taken back. Taken from the Classic 3.2.3.
+			 */
+			while( KeyHeld() ) idle() ;
+			while( PauseWait() ) idle() ;
+#ifndef	DOS
+			if( FlagGamePad )
+			{
+				MyKey = 0 ;
+				KeyVk = 0 ;
+			}
+#endif
 			/*
 			 * FIXED: LBA.EXE leaves the pause with the P that ends it
 			 * still down, which the next frame takes for a pause
 			 * again. This waits for P's release, the game held.
 			 */
 #ifdef	FIXES
-			while( Key == K_P ) idle() ;
+			while( KeyInput( K_P, I_PAUSE ) ) idle() ;
 #endif
 			if( !FlagMCGA )
 			{
@@ -956,18 +1214,19 @@ startloop:
 			WaveContinue() ;
 		}
 
-		if( MyKey == K_F5 )		// zoom on/off
+		if( MyInput( K_F5, I_ZOOM ) )		// zoom on/off
 		{
+			/* FEATURE: KeyHeld, with GamePad the Classic's Key. Taken from the Classic 3.2.3. */
 			if( FlagMCGA ^= 1 )
 			{
 				ExtInitMcga() ;
-				while( Key ) idle() ;
+				while( KeyHeld() ) idle() ;
 			}
 			else
 			{
 				ExtInitSvga() ;
 				FirstTime = TRUE ;
-				while( Key ) idle() ;
+				while( KeyHeld() ) idle() ;
 			}
 		}
 /*
@@ -1473,6 +1732,26 @@ void	InitProgram()
 			}
 		}
 	}
+
+	/*
+	 * FEATURE: Controls leaves the option menu with GamePad OFF, its
+	 * pages those of the Classic's input. The port's own.
+	 */
+	if( !FlagGamePad )
+	{
+		for( n=4; n<4+2*GameOptionMenu[1]; n+=2 )
+		{
+			if( GameOptionMenu[n+1] == 0x1005 )	// controls
+			{
+				for( ; n<4+2*GameOptionMenu[1]-2; n++ )
+				{
+					GameOptionMenu[n] = GameOptionMenu[n+2] ;
+				}
+				GameOptionMenu[1]-- ;
+				break ;
+			}
+		}
+	}
 #endif
 }
 
@@ -1599,6 +1878,15 @@ int	main( int argc, char *argv[] )
 	GetDiskEnv( argv[0] ) ;		/* org path program path... */
 
 	InitProgram() ;			/* init graphmode timer ... */
+
+#ifndef	DOS
+	/*
+	 * FEATURE: GamePad: the Classic's bindings read from lba.cfg, as its
+	 * lba_main (TLBA1C.exe 0x422170) reads them after its InitProgram.
+	 * Taken from the Classic 3.2.3.
+	 */
+	if( FlagGamePad )	InitInput() ;
+#endif
 
 // infos from lba.cfg
 
@@ -1762,6 +2050,15 @@ int	main( int argc, char *argv[] )
 	SetFont( LbaFont, 2, 8 )	;
 	CoulFont( 14 )			;
 	CoulDial( 136, 143, 2 )		;
+
+#ifndef	DOS
+	/*
+	 * FEATURE: with GamePad the behaviours' names read, as the Classic's
+	 * lba_main reads them once its font is set (TLBA1C.exe 0x4223d8).
+	 * Taken from the Classic 3.2.3.
+	 */
+	if( FlagGamePad )	InitComportementNames() ;
+#endif
 
 // buffers variables en fonctions de la mémoire dispo
 

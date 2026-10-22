@@ -5,8 +5,8 @@
 
 # Each tool's version, the URL of its archive and the archive's SHA-256:
 # JWasm, which assembles OpenWatcom's build's assembly and the oracles'
-# copies of LBA2's, OpenWatcom 2 by the date of its snapshot, Watcom C
-# 9.01 and 9.5b, MASM 6.11 and Turbo Assembler 3.1,
+# copies of LBA2's and the text's, OpenWatcom 2 by the date of its
+# snapshot, Watcom C 9.01 and 9.5b, MASM 6.11 and Turbo Assembler 3.1,
 # which built LBA.EXE, the last from the floppies of Borland C++ 3.1,
 # which shipped it, Watcom C/C++ 10.0a, whose qsort both DOS builds link
 # first and whose wlink links Watcom C 9's wave drivers, and SDL3 for

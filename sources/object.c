@@ -129,6 +129,35 @@ void	InitObject( WORD numobj )
 	ptrobj->OffsetLife = 0	;
 }
 
+#ifndef	DOS
+/*──────────────────────────────────────────────────────────────────────────*/
+/*
+ * FEATURE: the behaviours' names the previous and the next behaviour
+ * show, the first four texts of the game's language, the aggressive
+ * one's ended where its ( opens. ComportementNames is TLBA1C.exe
+ * 0x8199f0, InitComportementNames 0x41b790. Taken from the Classic
+ * 3.2.3.
+ */
+char	ComportementNames[4][32] ;
+
+void	InitComportementNames()
+{
+	LONG	n ;
+
+	InitDial( 0 ) ;
+	for( n=0; n<4; n++ )
+	{
+		GetMultiText( n, ComportementNames[n] ) ;
+	}
+	for( n=0; n<31; n++ )
+	{
+		if( ComportementNames[C_AGRESSIF][n] == 0 )	return ;
+		if( ComportementNames[C_AGRESSIF][n] == '(' )	break ;
+	}
+	if( n < 31 )	ComportementNames[C_AGRESSIF][n] = 0 ;
+}
+#endif
+
 /*──────────────────────────────────────────────────────────────────────────*/
 
 void	StartInitObj( WORD numobj )
@@ -3491,6 +3520,37 @@ void	AffScene( LONG flagflip )
 			AddPhysBox( ClipXmin, ClipYmin, ClipXmax, ClipYmax ) ;
 		}
 		break ;
+
+#ifndef	DOS
+	/*
+	 * FEATURE: the behaviour's name, shadowed, from its place, as the
+	 * Classic's AffScene draws it (TLBA1C.exe 0x41fb7e). Taken from the
+	 * Classic 3.2.3.
+	 */
+	case INCRUST_COMPORTEMENT:
+
+		strcpy( string, ComportementNames[ptrdisp->Num] ) ;
+		dx = SizeFont( string ) + 1 ;
+		dy = 48 ;
+
+		ScreenXmin = ptrdisp->X ;
+		ScreenYmin = ptrdisp->Y ;
+		ScreenXmax = ScreenXmin + dx ;
+		ScreenYmax = ScreenYmin + dy ;
+
+		SetClip( ScreenXmin, ScreenYmin, ScreenXmax, ScreenYmax ) ;
+
+		if( ClipXmin <= ClipXmax
+		AND ClipYmin <= ClipYmax )
+		{
+			CoulFont( 0 ) ;
+			Font( ptrdisp->X+2, ptrdisp->Y+4, string ) ;
+			CoulFont( ptrdisp->Info ) ;
+			Font( ptrdisp->X, ptrdisp->Y, string ) ;
+			AddPhysBox( ClipXmin, ClipYmin, ClipXmax, ClipYmax ) ;
+		}
+		break ;
+#endif
 
 	case INCRUST_SPRITE:
 
