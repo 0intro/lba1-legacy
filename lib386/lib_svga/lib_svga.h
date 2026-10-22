@@ -111,6 +111,10 @@ void    RestoreClip( void )                             ;
 void    InitMcgaMode( void )                            ;
 void    SimpleInitSvga( void )                          ;
 #endif
+#ifndef	DOS
+extern  LONG    FlagFullScreen                          ;
+void    WriteFullScreen( void )                         ;
+#endif
 /*-----------------------------------------------------------------------------*/
 /*                      Box.asm                                                 */
 void    Box( LONG x0, LONG y0, LONG x1, LONG y1, LONG couleur ) ;

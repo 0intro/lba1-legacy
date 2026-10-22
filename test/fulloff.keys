@@ -1,0 +1,21 @@
+# Fullscreen display turned off and kept, from the main menu, with
+# LbaWinFullScreen: 2 in lba.cfg (fixtures/fullscreen). Return turns the
+# option menu's sixth entry OFF and writes 0 to lba.cfg, which the first
+# entry leaves as it is. Keys are short, as in options.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Down Return
+sleep 3
+shot on
+key Down Down Down Down Down
+sleep 1
+key Return
+sleep 2
+shot off
+key Up Up Up Up Up
+sleep 1
+key Return
+sleep 3
+shot main

@@ -39,6 +39,7 @@ void	readplatform(char*);
 
 
 char	PathConfigFile[260];	/* sys/sys.c's, which cfgtest leaves out */
+int32_t	FlagFullScreen = 1;	/* sys/video.c's, TLBA1C.exe 0x818854's value */
 
 static char *pref;
 static int fails;
@@ -163,7 +164,7 @@ longcase(void)
 
 /* The port's keys, in readplatform's order */
 static char *names[] = {
-	"LbaWinSettings",
+	"LbaWinSettings", "LbaWinFullScreen",
 };
 
 /* readplatform's values for the configuration file name into v, in names' order */
@@ -173,6 +174,7 @@ platform(char *name, int32_t *v)
 	strcpy(PathConfigFile, name);
 	readplatform(name);
 	v[0] = LbaWinSettings;
+	v[1] = FlagFullScreen;
 }
 
 /* key named in sys/lba.cfg, and its value a where the CD's LBA.CFG leaves it out the same as b, sys/lba.cfg's */

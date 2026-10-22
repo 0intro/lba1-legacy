@@ -39,6 +39,19 @@ int32_t	ClipXmax = Width - 1;
 int32_t	ClipYmax = Height - 1;
 uint32_t	TabOffLine[Height];
 
+/*
+ * FEATURE: the screen on the whole display or in a window, as lba.cfg's
+ * LbaWinFullScreen says, which the option menu's Fullscreen display
+ * switches. Taken from the Classic 3.2.3, as LbaWin 0.7.4 made it.
+ */
+
+/*
+ * FlagFullScreen is TLBA1C.exe 0x818854 (LbaWin.exe 0x43d50c): the
+ * screen on the whole display, the Classic's default, as LBA.EXE
+ * filled the monitor.
+ */
+int32_t	FlagFullScreen = 1;
+
 static int32_t memoclip[4] = {0, 0, Width-1, Height-1};
 static Rect copied[Nrect];
 static int ncopied;
@@ -57,6 +70,12 @@ videoinit(void)
 	for (y = 0; y < Height; y++)
 		TabOffLine[y] = y * Screen_X;
 	Log = Malloc(Width*Height);
+	/*
+	 * FEATURE: the window shown, switched to the whole display first
+	 * when FlagFullScreen says so, as the Classic 3.2.3's InitSvga
+	 * makes its window.
+	 */
+	sdlfullscreen(FlagFullScreen);
 }
 
 /* SetClip is initsvga.asm's SetClip: no bound is checked against the other. */
@@ -116,6 +135,47 @@ InitMcgaMode(void)
 	setmode(Mcga);
 }
 
+/*
+ * FEATURE: SetFullScreen is TLBA1C.exe 0x405000: the window on the whole
+ * display or in a window (sdlfullscreen), as FlagFullScreen says, the
+ * screen shown again whole, the flag given back as it came. Taken from
+ * the Classic 3.2.3.
+ */
+int32_t
+SetFullScreen(int32_t flag)
+{
+	sdlfullscreen(flag != 0);
+	return flag;
+}
+
+/*
+ * FEATURE: Fullscreen display's choice, the screen switched between the
+ * whole display and a window, and the switch written to lba.cfg at
+ * once. Taken from the Classic 3.2.3.
+ */
+
+/*
+ * WriteFullScreen is TLBA1C.exe 0x404500 (LbaWin.exe 0x404d50,
+ * ToggleCooperativeLevel): FlagFullScreen turned over, the screen
+ * switched, and the flag written to lba.cfg as a number, TimerRef kept
+ * across the switch.
+ */
+void
+WriteFullScreen(void)
+{
+	uint32_t t;
+
+	t = TimerRef;
+	/*
+	 * FIXED: the Classic turns the flag over by XOR 1, as LbaWin does,
+	 * so that a value written by hand other than 0 and 1, 2 say, gives
+	 * 3 and 2 again at each choice: the menu says ON and the screen
+	 * stays on the whole display. The flag takes its opposite.
+	 */
+	FlagFullScreen = SetFullScreen(!FlagFullScreen);
+	Def_WriteValue((unsigned char*)PathConfigFile, (unsigned char*)"LbaWinFullScreen", FlagFullScreen);
+	TimerRef = t;
+}
 
 /*
  * The game drew as fast as the machine let it, and the screen showed

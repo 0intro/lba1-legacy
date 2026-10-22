@@ -198,6 +198,8 @@ void	sdlcdgain(float);
 void	sdlmidi(int16_t*, int, int);
 void	sdlmidigain(float);
 void	sdllate(void);
+void	sdlfullscreen(int);
+int32_t	SetFullScreen(int32_t);
 
 /* the game's */
 int	lbamain(int, char**);

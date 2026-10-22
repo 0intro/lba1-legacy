@@ -308,6 +308,7 @@ sys/video.c CopyBoxVESAM lba2	game: lib_svga's own routines and mode 13h, agains
 sys/video.c DetectInitVESAMode lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
 sys/video.c DetectVESAMode lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
 sys/video.c EndVESA lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c FlagFullScreen lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
 sys/video.c Flip lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
 sys/video.c GetLastVESAMode lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
 sys/video.c InitMcgaMode lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
@@ -345,6 +346,7 @@ sys/video.c VESAMode lba2	game: lib_svga's own routines and mode 13h, against th
 sys/video.c VblVESA lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
 sys/video.c Vsync lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
 sys/video.c WideScreen lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c WriteFullScreen lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
 sys/video.c boxscreen lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
 sys/video.c bufspeak lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
 sys/video.c compact lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS

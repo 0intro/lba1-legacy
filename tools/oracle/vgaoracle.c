@@ -180,7 +180,9 @@ static uint8_t *alog;	/* the assembly's Log */
 uint32_t drveax;	/* EAX a driver's InitMode was given, which drvmode's assembly stores */
 static int failvesa;	/* 4F01h fails */
 
-/* sys/sdl.c's, sys/mem.c's and sys/replay.c's, for sys/video.c and sys/timer.c */
+/* sys/sdl.c's, sys/mem.c's, sys/sys.c's, sys/replay.c's and lib_sys's, for sys/video.c and sys/timer.c */
+char	PathConfigFile[1];
+
 void*
 Malloc(int32_t n)
 {
@@ -190,6 +192,20 @@ Malloc(int32_t n)
 	if (p == NULL)
 		fatal("out of memory");
 	return p;
+}
+
+void
+sdlfullscreen(int on)
+{
+	USED(on);
+}
+
+int32_t
+Def_WriteValue(unsigned char *path, unsigned char *key, int32_t v)
+{
+	USED(path);
+	USED(key);
+	return v;
 }
 
 void

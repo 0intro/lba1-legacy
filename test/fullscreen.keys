@@ -1,0 +1,29 @@
+# Fullscreen display, the option menu's switch of the screen between
+# the whole display and a window, from the main menu, with
+# LbaWinFullScreen: 2 in lba.cfg (fixtures/fullscreen: the CD's LBA.CFG
+# and that line), a value written by hand, which the port starts on the
+# whole display. The option menu's fifth entry says Fullscreen display:
+# ON. Return turns it OFF and writes 0 to lba.cfg, and Return again
+# turns it ON and writes 1, where the Classic's XOR 1 gives 3 and 2,
+# ON both times. The first entry goes back to the main menu. Keys are
+# short, as in options.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Down Return
+sleep 3
+shot on
+key Down Down Down Down
+sleep 1
+key Return
+sleep 2
+shot off
+key Return
+sleep 2
+shot onagain
+key Up Up Up Up
+sleep 1
+key Return
+sleep 3
+shot main

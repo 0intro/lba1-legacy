@@ -316,8 +316,14 @@ sdlinit(void)
 		fatal("SDL_Init: %s", SDL_GetError());
 	dummy = SDL_GetCurrentVideoDriver() != NULL && strcmp(SDL_GetCurrentVideoDriver(), "dummy") == 0;
 	atexit(sdlclose);
+	/*
+	 * FEATURE: the window made hidden, before lba.cfg is read, for
+	 * sdlfullscreen to show it, on the whole display from the first frame
+	 * when FlagFullScreen says so, as the Classic 3.2.3 makes its
+	 * window hidden for the whole display.
+	 */
 	if (!SDL_CreateWindowAndRenderer("Little Big Adventure", 2*Width, 2*Height,
-	    SDL_WINDOW_RESIZABLE, &window, &renderer))
+	    SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN, &window, &renderer))
 		fatal("SDL_CreateWindowAndRenderer: %s", SDL_GetError());
 	SDL_SetRenderLogicalPresentation(renderer, Width, Height, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XRGB8888,
@@ -335,6 +341,44 @@ sdlclose(void)
 {
 	endwriter();
 	SDL_Quit();
+}
+
+/*
+ * FEATURE: the screen on the whole display or in a window, as the
+ * option menu's Fullscreen display switches it. Taken from the Classic
+ * 3.2.3.
+ */
+
+/*
+ * FEATURE: sdlfullscreen is TLBA1C.exe 0x407420, SDLViewer::SetFullScreen,
+ * in SDL3's calls, as FlagFullScreen says: the window on the whole
+ * display at the desktop's mode, or back in a window at its first size,
+ * then shown, as the end of CreateSdlWindow (0x405020) shows it, and the
+ * screen shown again whole at the next pump. A call that fails is said,
+ * and the game goes on, as with the Classic's SdlError. Taken from the
+ * Classic 3.2.3.
+ *
+ * FIXED: the Classic hides the pointer as it makes its window and shows
+ * it after a switch back to a window, so that a window lacks it at the
+ * start and has it after a switch. The pointer is hidden on the whole
+ * display alone, from the start.
+ */
+void
+sdlfullscreen(int on)
+{
+	if (!SDL_SetWindowFullscreen(window, on))
+		fprintf(stderr, "lba: SDL_SetWindowFullscreen: %s\n", SDL_GetError());
+	if (on) {
+		if (!SDL_HideCursor())
+			fprintf(stderr, "lba: SDL_HideCursor: %s\n", SDL_GetError());
+	} else {
+		if (!SDL_SetWindowSize(window, 2*Width, 2*Height))
+			fprintf(stderr, "lba: SDL_SetWindowSize: %s\n", SDL_GetError());
+		if (!SDL_ShowCursor())
+			fprintf(stderr, "lba: SDL_ShowCursor: %s\n", SDL_GetError());
+	}
+	SDL_ShowWindow(window);
+	stale = 1;
 }
 
 /*

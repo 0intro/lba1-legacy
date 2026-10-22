@@ -1,0 +1,23 @@
+# Fullscreen display from the main menu with LbaWinFullScreen: 0 in
+# lba.cfg (fixtures/fullwin: the CD's LBA.CFG and that line), which the
+# port starts in a window. The option menu's fifth entry says
+# Fullscreen display: OFF, and Return turns it ON and writes 1 to
+# lba.cfg. The first entry goes back to the main menu. Keys are short,
+# as in options.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Down Return
+sleep 3
+shot off
+key Down Down Down Down
+sleep 1
+key Return
+sleep 2
+shot on
+key Up Up Up Up
+sleep 1
+key Return
+sleep 3
+shot main

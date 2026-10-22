@@ -45,7 +45,7 @@ UWORD	GameOptionMenu[] = {
 #ifdef	DOS
 			4,	// nb entries
 #else
-			5,	// nb entries
+			6,	// nb entries
 #endif
 			0,	// y from top.
 			0,	// .dia num
@@ -57,6 +57,7 @@ UWORD	GameOptionMenu[] = {
 			0, 47	// advanced options
 #else
 			0, 47,	// advanced options
+			0, 0x1008,	// FEATURE: Fullscreen display, before Hit walls. Taken from the Classic 3.2.3.
 			0, 0x100A	// FEATURE: Hit walls, the option menu's last entry. Taken from the Classic 3.2.3.
 #endif
 				} ;
@@ -2024,7 +2025,8 @@ void	DrawOneChoice( WORD x, WORD y, WORD type, WORD num, WORD select )
 #ifndef	DOS
 	/*
 	 * FEATURE: a text numbered from 0x1000 is one of the Classic's own,
-	 * Hit walls' among them. Taken from the Classic 3.2.3.
+	 * Fullscreen display's and Hit walls' among them. Taken from the
+	 * Classic 3.2.3.
 	 */
 	if( num & 0x1000 )	strcpy( string, GetExtText( num ) ) ;
 	else
@@ -2328,7 +2330,23 @@ LONG	OptionsMenu()
 	WORD select ;
 	WORD flag = 0 ;
 #ifndef	DOS
+	UWORD *ptrfullscreen ;
 	UWORD *ptrhitwalls ;
+
+	/*
+	 * FEATURE: Fullscreen display, the option menu's switch of the
+	 * screen between the whole display and a window. Its entry says ON
+	 * while FlagFullScreen is set and OFF without, and its choice
+	 * switches the screen and writes the flag to lba.cfg at once. Taken
+	 * from the Classic 3.2.3. The entry is found by its text, as Hit
+	 * walls' is below.
+	 */
+	ptrfullscreen = GameOptionMenu+4 ;
+	while( (ptrfullscreen[1] != 0x1008) AND (ptrfullscreen[1] != 0x1009) )
+	{
+		ptrfullscreen += 2 ;
+	}
+	ptrfullscreen[1] = FlagFullScreen ? 0x1008 : 0x1009 ;
 
 	/*
 	 * FEATURE: Hit walls, the option menu's switch of the bump into
@@ -2391,6 +2409,12 @@ LONG	OptionsMenu()
 				SavedGameManagement() ;
 				break ;
 #ifndef	DOS
+
+			case 0x1008:	// Fullscreen display: ON
+			case 0x1009:	// Fullscreen display: OFF
+				WriteFullScreen() ;
+				ptrfullscreen[1] = FlagFullScreen ? 0x1008 : 0x1009 ;
+				break ;
 
 			case 0x100A:	// Hit walls: ON
 			case 0x100B:	// Hit walls: OFF
