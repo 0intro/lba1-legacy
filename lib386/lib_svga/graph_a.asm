@@ -321,6 +321,15 @@ NextLine2:		mov	ebp, esi		; SAVE ESI
 			lea	esi, [BufferClip+ecx]	; ESI = BUFFERCLIP
 			lea	edi, [edx+ecx]		; EDI = SCREEN
 			mov	ecx, NbPix
+			; FIXED: LBA.EXE runs 2^32 pixels on a clipped width of
+			; 0 or less. Run none, and leave ECX at 0 for the next
+			; line, as the loop does.
+IFDEF	FIXES
+			or	ecx, ecx
+			jg	Again
+			xor	ecx, ecx
+			jmp	NoPix
+ENDIF
 Again:			mov	al, [esi]
 			inc	esi
 			or	al, al

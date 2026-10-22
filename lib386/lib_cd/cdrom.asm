@@ -145,9 +145,25 @@ endif
 			mov	edi, offset RMI
 			mov	ax, 300h
 			mov	bx, 2fh
+			; FIXED: LBA.EXE leaves CX, the count of stack words
+			; DPMI copies, as its caller had it. Copy none.
+ifdef	FIXES
+			xor	ecx, ecx
+endif
 			int	31h
 
 			mov	ebx, [PtDosCD]
+			; FIXED: LBA.EXE reads back the status it cleared when DPMI
+			; or MSCDEX fails the call, so that a request the driver
+			; never saw reads as done. Give it a general failure.
+ifdef	FIXES
+			jc	Failed
+			test	RMI_flags, 1
+			jz	Called
+Failed:
+			mov	word ptr [ebx+I_STATUS], 800Ch
+Called:
+endif
 			mov	eax, [ebx+I_STATUS]
 
 			ret
@@ -204,6 +220,12 @@ Again:
 			je	OkDisk
 			dec	[timeout]
 			jne	Again
+			; FIXED: LBA.EXE falls into OkDisk when no disc comes, with
+			; ZF set, which InitCDR takes for a disc. Clear it.
+ifdef	FIXES
+			or	ax, -1
+			ret
+endif
 OkDisk:
 			xor	ax, ax
 			ret
@@ -235,6 +257,12 @@ InitCDR			proc	uses es esi edi ebx,\
 			mov	eax, 0100h		;' Dmpi Alloc Mem Dos
 			mov	ebx, 128		;' 2048 ( 128*16 )
 			int	31h
+			; FIXED: LBA.EXE takes DPMI's error code for the block's
+			; segment when DOS has no 2048 bytes to give. Go on
+			; without the CD.
+ifdef	FIXES
+			jc	NoCDRom
+endif
 
 			mov	[OffDosCD], ax
 			shl	eax, 4			;' Con real->Prot
@@ -264,7 +292,17 @@ InitCDR			proc	uses es esi edi ebx,\
 			mov	edi, offset RMI
 			mov	ax, 300h
 			mov	bx, 2fh
+			; FIXED: LBA.EXE leaves CX, the count of stack words
+			; DPMI copies, at nameid's length. Copy none.
+ifdef	FIXES
+			xor	ecx, ecx
 			int	31h			;' ES:BX List Letter
+			; FIXED: LBA.EXE copies the drives' letters from the block
+			; as it was when DPMI fails the call. Go on without the CD.
+			jc	NoCDRom
+else
+			int	31h			;' ES:BX List Letter
+endif
 
 			mov	cx, [nbcddrive]
 			mov	esi, [PtDosCD]
@@ -293,13 +331,26 @@ NextCDDrive:
 			call	StopCDR			;' STOPCDR
 
 			call	StatusCDR       	;' STATUSCDR 1ere
+			; FIXED: LBA.EXE tests bit 15 of the drive's status for the
+			; request's error, a bit MSCDEX keeps clear, so that it
+			; never resets the drive. Test the request's status word.
+ifdef	FIXES
+			mov	eax, [PtDosCD]
+			test	word ptr [eax+I_STATUS], 8000h	;' Error
+else
 			test	ax, 8000h		;' Error
+endif
 			je	NoError
 
 			call	ResetCDR                ;' RESETCDR
 
 			call	StatusCDR		;' STATUSCDR 2eme
+ifdef	FIXES
+			mov	eax, [PtDosCD]
+			test	word ptr [eax+I_STATUS], 8000h
+else
 			test	ax, 8000h
+endif
 			jne	NotGoodOne
 
 NoError:
@@ -330,10 +381,17 @@ TheGoodOne:
 			call	StatusCDR
 			test	ax, 2048		;' Pas de CD
 			jne	NoCDRom
+			; FIXED: LBA.EXE asks MSCDEX for the disc's audio until it
+			; answers, for ever while it fails. AudioInfoCDR tries
+			; TIME_OUT times itself: ask once, and go on without it.
+ifdef	FIXES
+			call	AudioInfoCDR
+else
 GetAudio:
 			call	AudioInfoCDR
 			or	ax, ax
 			je	GetAudio		;' Ca doit passer!
+endif
 
 			mov	eax, 1
 			ret
@@ -342,22 +400,57 @@ NoCDRom:
 			je	ContError
 			mov	[DriveCDR], -1          ;' No Adeline CD
 ContError:
+			; FIXED: LBA.EXE, finding no CD drive, allocates no DOS
+			; block and unlocks the door through a request it builds
+			; at linear address 0, in the real-mode interrupt table.
+			; A request goes only through an allocated block.
+ifdef	FIXES
+			cmp	[PtDosCD], 0
+			je	NoBlock
 			call	UnLockCDR		;' UNLOCKCDR
+NoBlock:
+else
+			call	UnLockCDR		;' UNLOCKCDR
+endif
 			xor	eax, eax		;' No CDRom
 			ret
 InitCDR			endp
 
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ClearCDR		proc
+			; FIXED: LBA.EXE, called at the game's end after InitCDR
+			; found no CD drive, builds its three requests at linear
+			; address 0, in the real-mode interrupt table. A request
+			; goes only through an allocated block.
+ifdef	FIXES
+			cmp	[PtDosCD], 0
+			je	NoBlock
+endif
 			call	StopCDR
 			call	UnLockCDR
 			call	ResetCDR
+ifdef	FIXES
+NoBlock:
+endif
 			ret
 ClearCDR		endp
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; FIXED: LBA.EXE's GetCopyrightName returns with EDI changed, which Watcom's
+; convention has a callee keep. The uses list saves it.
+ifdef	FIXES
+GetCopyrightName	proc	uses ebx edi
+
+			mov	RMI_EAX, 1502h		;' Get List CD Drive
+			; FIXED: LBA.EXE gives MSCDEX the drive in the CX that the
+			; call before left, which InitCDR's order makes the drive's.
+			; Give it DriveCDR.
+			movzx	eax, DriveCDR
+			mov	RMI_ECX, eax
+else
 GetCopyrightName	proc	uses ebx
 
 			mov	RMI_EAX, 1502h		;' Get List CD Drive
+endif
 			mov	bx, [OffDosCD]
 			mov	RMI_ES, bx
 			mov	RMI_EBX, 0
@@ -367,9 +460,24 @@ GetCopyrightName	proc	uses ebx
 			mov	edi, offset RMI
 			mov	ax, 300h
 			mov	bx, 2fh
+			; FIXED: LBA.EXE leaves CX, the count of stack words
+			; DPMI copies, as its caller had it. Copy none.
+ifdef	FIXES
+			xor	ecx, ecx
+endif
 			int	31h          		;' ES:BX List Letter
 
 			mov	eax, [PtDosCD]
+			; FIXED: LBA.EXE answers a call that DPMI or MSCDEX fails
+			; with what the block last held. Give an empty name.
+ifdef	FIXES
+			jc	NoName
+			test	RMI_flags, 1
+			jz	Named
+NoName:
+			mov	byte ptr [eax], 0
+Named:
+endif
 			ret
 
 GetCopyrightName	endp
@@ -411,11 +519,27 @@ GetLengthTrackCDR	proc	uses ebx,\
 
 			local	begin:DWORD
 
+			; FIXED: LBA.EXE takes a track at or past HigTrack for
+			; the disc's last, the lead-out its end, so that where
+			; InitCDR went on without the disc's audio, HigTrack and
+			; LeadOut left 0, each track's length is the address 0
+			; less its start. Give it 0.
+ifdef	FIXES
+			cmp	[HigTrack], 0
+			je	NoTrack
+endif
+
 			mov	ecx, [track]
 
 			push	ecx
 			call	StartTrackCDR		;' b = Debut Track
 			pop	ecx
+			; FIXED: LBA.EXE gives a track the CD lacks the lead-out
+			; less a stale address for its length. Give it 0.
+ifdef	FIXES
+			cmp	eax, -1
+			je	NoTrack
+endif
 
 			mov	[begin], eax
 
@@ -428,6 +552,13 @@ GetLengthTrackCDR	proc	uses ebx,\
 			push	ecx
 			call	StartTrackCDR		;' e = Debut Track+1
 			add	esp, 4
+			; FIXED: LBA.EXE takes the next track's start from what
+			; its buffer last held when MSCDEX keeps failing it.
+			; Give the track 0.
+ifdef	FIXES
+			cmp	eax, -1
+			je	NoTrack
+endif
 
 			mov	ebx, eax
 OkLastOne:
@@ -442,6 +573,10 @@ OkLastOne:
 			sub	ebx, eax		;' R2H(b)-R2H(e)
 			mov	eax, ebx
 
+ifdef	FIXES
+			ret
+NoTrack:		xor	eax, eax
+endif
 			ret
 GetLengthTrackCDR	endp
 
@@ -472,6 +607,13 @@ Retry:
 			jz	NoError
 			dec	[CptTimeOut]
 			jne	Retry
+			; FIXED: LBA.EXE falls out of its retries into the code
+			; for success when MSCDEX keeps failing, and returns
+			; what its buffer last held. Return -1.
+ifdef	FIXES
+			mov	eax, -1
+			ret
+endif
 NoError:
 			mov	ebx, [PtDosCD]
 			mov	eax, dword ptr [ebx+I_BUFFERDATA+2]
@@ -553,7 +695,11 @@ Retry:
 			jz	NoError
 			dec	[CptTimeOut]
 			jne	Retry
+ifdef	FIXES
+			jmp	Open
+else
 			ret
+endif
 NoError:
 ;-------------------------------------------------------
 			mov	[timeout], 512
@@ -564,13 +710,27 @@ Again_0:
 			dec	[timeout]
 			jne	Again_0
 ;-------------------------------------------------------
+			; FIXED: LBA.EXE returns here, and when the drive keeps
+			; refusing to close, with ZF set, which InitCDR takes for
+			; a tray closed. Clear it.
+ifdef	FIXES
+Open:
+			or	eax, -1
+endif
 			ret
 OkRoule:
 			xor	eax, eax
 			ret
 CloseTrayCDR		endp
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; FIXED: LBA.EXE's LockCDR returns with EBX changed, which Watcom's convention
+; has a callee keep, so that InitCDR reads the letter of each CD drive after
+; the first from the DOS block. The uses list saves it.
+ifdef	FIXES
+LockCDR			proc	uses ebx
+else
 LockCDR			proc
+endif
 
 			mov	[CptTimeOut], TIME_OUT
 
@@ -873,6 +1033,13 @@ PlayTrackCDR		proc	uses ebx,\
 			mov	byte ptr [ebx+I_BUFFERDATA], 11 ;' Audio Info
 			mov	eax, Track
 			mov	byte ptr [ebx+I_BUFFERDATA+1], al
+			; FIXED: LBA.EXE retries here on the count its call of
+			; GetLengthTrackCDR left, 0 for a track the CD lacks, so
+			; that dec wraps and it asks MSCDEX 65536 times. Start
+			; at TIME_OUT, as the other procedures do.
+ifdef	FIXES
+			mov	[CptTimeOut], TIME_OUT
+endif
 Retry:
 			call	TalkCDR_O
 			test	ax, 8000h
@@ -954,8 +1121,25 @@ Error:
 			mov	edi, offset RMI
 			mov	ax, 300h
 			mov	bx, 2fh
+			; FIXED: LBA.EXE leaves CX, the count of stack words
+			; DPMI copies, as its caller had it. Copy none.
+ifdef	FIXES
+			xor	ecx, ecx
 			int	31h
 			mov	ebx, [PtDosCD]
+			; FIXED: LBA.EXE reads back the status it cleared when DPMI
+			; or MSCDEX fails the call, so that a request the driver
+			; never saw reads as done. Give it a general failure.
+			jc	Failed
+			test	RMI_flags, 1
+			jz	Called
+Failed:
+			mov	word ptr [ebx+I_STATUS], 800Ch
+Called:
+else
+			int	31h
+			mov	ebx, [PtDosCD]
+endif
 			mov	ax, word ptr [ebx+I_STATUS]
 
 			test	ax, 8000h
@@ -1000,9 +1184,20 @@ GetFileCDR		proc	uses esi edi ebx,\
 			int	31h
 ;--------------------------------------------------------
 
+			; FIXED: LBA.EXE tests AX's bit 15, which MSCDEX leaves
+			; clear on a failure, and takes a file the CD lacks for
+			; the last one found. MSCDEX sets the carry, which DPMI
+			; copies into the register block. Test DPMI's own carry,
+			; then the block's: a call DPMI fails leaves the block
+			; as the call before had it.
+ifdef	FIXES
+			jc	Error
+			test	RMI_flags, 1
+else
 			mov	eax, RMI_EAX
 
 			test	ax, 8000h
+endif
 			jnz	Error
 
 

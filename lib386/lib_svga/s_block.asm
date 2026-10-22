@@ -44,6 +44,12 @@ CopyBlock		proc	uses esi edi ebx ebp,\
 
 			sub	eax, ecx
 			inc	eax                     ; AX Delta X
+			; FIXED: LBA.EXE copies 2^32 lines on a height of 0 or
+			; less. Copy none.
+IFDEF	FIXES
+			or	eax, eax
+			jle	CopyBlock_End
+ENDIF
 
 			mov	edx, Screen_X
 			sub	edx, ebx		; DX Delta Screen

@@ -564,6 +564,20 @@ void	HoloMap()
 
 	UBYTE	savepalette[768] ;
 
+#ifdef	FIXES
+	/*
+	 * FIXED: The holomap stops the samples and leaves Twinsen flying in
+	 * the protopack, whose hum his flight plays at its first frame alone,
+	 * so that he flies on in silence. He is set idle there, the idle
+	 * animation stopping the hum, his flight starting again with its hum.
+	 * LbaWin 0.7.8 sets him idle in every behaviour.
+	 */
+	if( Comportement == C_PROTOPACK )
+	{
+		InitAnim( GEN_ANIM_RIEN, ANIM_REPEAT, NO_ANIM, NUM_PERSO ) ;
+	}
+#endif
+
 	SaveTimer() ;
 
 	for(n=0; n<768; n++)	savepalette[n] = PalettePcx[n] ;
@@ -572,7 +586,11 @@ void	HoloMap()
 	betalight = BetaLight ;
 
 	FadeToBlack( PtrPal ) ;
+#ifdef	FIXES
+	HQ_SaveSamples() ;	// les boucles mises de côté
+#else
 	HQ_StopSample() ;
+#endif
 
 	UnSetClip() ;
 	Cls() ;
@@ -832,6 +850,10 @@ Text( 0,30, "%Fcurrent:%d mess:%d ", current, ListHoloPos[current].Mess ) ;
 	InitDial( START_FILE_ISLAND+Island ) ;
 
 	for(n=0; n<768; n++)	PalettePcx[n] = savepalette[n] ;
+
+#ifdef	FIXES
+	HQ_RestoreSamples() ;	// et reprises
+#endif
 
 	RestoreTimer() ;
 }

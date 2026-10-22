@@ -9,6 +9,7 @@
 		.data
 
 		include	svga.ash
+		include	../lib_sys/idiv.ash
 
 		public	 NoLanguage	TabPoly
 		public	 NoLanguage	TabVerticD
@@ -42,9 +43,19 @@ TypePoly	dw	00
 
 NbPolyPoints	dw	00		; 32 max ?
 
+		; FIXED: LBA.EXE gives TabPoly 97 words and TabPolyClip 96,
+		; back to back, so that a polygon of 32 points puts the copy
+		; of its first point that closes it past TabPoly, where its
+		; clipping writes before reading it. Each has 104, room for
+		; 33 points and that copy.
 TabPoly         dw	1234h
+IFDEF	FIXES
+		dw	32*3+7	dup(00)
+TabPolyClip	dw	32*3+8	dup(00)
+ELSE
 		dw	32*3	dup(00)
 TabPolyClip	dw	32*3	dup(00)
+ENDIF
 
 	; ne pas changer l'ordre de ce qui suit
 
@@ -219,9 +230,22 @@ cs0:		cmp	edx, edi			; while( edx <= edi )
 		jg	finclip
 
 		lea	ebx, [esi+edx]
+		; FIXED: LBA.EXE tests the line against Ymin and Ymax in 16
+		; bits and writes it at its 32-bit index, so that a radius from
+		; 32768 with a centre far below, or near 65535 with any, writes
+		; about 128 KB on either side of the tables. Test it in 32 bits,
+		; here and below.
+IFDEF	FIXES
+		movsx	eax, word ptr[Ymax]
+		cmp	ebx, eax
+		jg	cs1
+		movsx	eax, word ptr[Ymin]
+		cmp	ebx, eax
+ELSE
 		cmp	bx, [Ymax]
 		jg	cs1
 		cmp	bx, [Ymin]
+ENDIF
 		jl	cs1
 
 		; gauche
@@ -253,9 +277,17 @@ nocxa2:		mov	word ptr[ TabVerticD + ebx*2 ], ax
 
 cs1:		mov	ebx, esi
 		sub	ebx, edx
+IFDEF	FIXES
+		movsx	eax, word ptr[Ymax]
+		cmp	ebx, eax
+		jg	cs2
+		movsx	eax, word ptr[Ymin]
+		cmp	ebx, eax
+ELSE
 		cmp	bx, [Ymax]
 		jg	cs2
 		cmp	bx, [Ymin]
+ENDIF
 		jl	cs2
 		; gauche
 		mov	eax, ecx
@@ -285,9 +317,17 @@ cs2:		add	ebp, edx
 		jnc	noovf
 
 		lea	ebx, [esi+edi]
+IFDEF	FIXES
+		movsx	eax, word ptr[Ymax]
+		cmp	ebx, eax
+		jg	cs3
+		movsx	eax, word ptr[Ymin]
+		cmp	ebx, eax
+ELSE
 		cmp	bx, [Ymax]
 		jg	cs3
 		cmp	bx, [Ymin]
+ENDIF
 		jl	cs3
 		; gauche
 		mov	eax, ecx
@@ -318,9 +358,17 @@ nocxab2:	mov	word ptr[ TabVerticD + ebx*2 ], ax
 
 cs3:		mov	ebx, esi
 		sub	ebx, edi
+IFDEF	FIXES
+		movsx	eax, word ptr[Ymax]
+		cmp	ebx, eax
+		jg	cs4
+		movsx	eax, word ptr[Ymin]
+		cmp	ebx, eax
+ELSE
 		cmp	bx, [Ymax]
 		jg	cs4
 		cmp	bx, [Ymin]
+ENDIF
 		jl	cs4
 		; gauche
 		mov	eax, ecx
@@ -357,7 +405,13 @@ finclip:	mov	ax, word ptr[Ymin]
 
 ; modif pas de sphere d'une ligne ???
 
+		; FIXED: LBA.EXE gives up a clipped circle that its clipping
+		; leaves one line high (jge nosphere). Draw that line.
+IFDEF	FIXES
+		jg	nosphere
+ELSE
 		jge	nosphere
+ENDIF
 
 		mov	eax, 1			; ok sphere
 		ret
@@ -642,7 +696,15 @@ lt01:		stosw
 		mov	ax, word ptr[intensite_1];
 		mov	bx, ax
 		sub	ah, al			; delta intensite
+		; FIXED: LBA.EXE steps the shade up when the end's byte is the
+		; start's or above (jc), so that from FEh to 3 it runs down
+		; through every shade. Step the short way round the 256, as the
+		; difference of the bytes signed says, here and on the right.
+IFDEF	FIXES
+		js	ftg0
+ELSE
 		jc	ftg0
+ENDIF
 		xor	dx, dx
 		mov	al, dl
 		div	cx
@@ -824,7 +886,11 @@ lt01m:		stosw				; stock X
 		mov	ax, word ptr[intensite_1];
 		mov	bx, ax
 		sub	ah, al			; delta intensite
+IFDEF	FIXES
+		js	ftd0
+ELSE
 		jc	ftd0
+ENDIF
 
 		xor	dx, dx
 		mov	al, dl
@@ -988,7 +1054,10 @@ cfg4:
 		mov	ecx, eax		; CX = DeltaX
 		mov	eax, ebp		; AX = deltaClipX
 		imul	dx              	; AX = AX * deltaY
-		idiv	cx			; AX = AX / deltaX
+		; FIXED: LBA.EXE's idiv faults on a quotient past 16 bits.
+		; IDIV16, here and below, divides in 32 bits and keeps the low
+		; 16.
+		IDIV16	cx			; AX = AX / deltaX
 		add	ebx, eax		; Y0 = Y0 + AX
 
 		mov	ax, word ptr[ClipXmin]	; X0
@@ -1000,7 +1069,7 @@ cfg4:
 
 		mov	ax, [coul1]		; AX = DeltaCoul
 		imul	bp			; AX = AX * DeltaClipX
-		idiv    cx			; AX = AX / deltaX
+		IDIV16    cx			; AX = AX / deltaX
 		shr	ebp, 16			; BP = Coul0
 		add	eax, ebp		; AX = AX + coul0
 
@@ -1104,7 +1173,10 @@ cfg4:
 		mov	ecx, eax		; CX = DeltaX
 		mov	eax, ebp		; AX = deltaClipX
 		imul	dx              	; AX = AX * deltaY
-		idiv	cx			; AX = AX / deltaX
+		; FIXED: LBA.EXE's idiv faults on a quotient past 16 bits.
+		; IDIV16, here and below, divides in 32 bits and keeps the low
+		; 16.
+		IDIV16	cx			; AX = AX / deltaX
 		add	ebx, eax		; Y0 = Y0 + AX
 
 		mov	ax, word ptr[ClipXmax]	; X0
@@ -1117,7 +1189,7 @@ cfg4:
 
 		mov	ax, [coul1]		; AX = DeltaCoul
 		imul	bp			; AX = AX * DeltaClipX
-		idiv    cx			; AX = AX / deltaX
+		IDIV16    cx			; AX = AX / deltaX
 		shr	ebp, 16			; BP = Coul0
 		add	eax, ebp		; AX = AX + coul0
 
@@ -1221,7 +1293,10 @@ cfg4:
 		mov	ecx, eax		; CX = DeltaY
 		mov	eax, ebp		; AX = deltaClipY
 		imul	dx              	; AX = AX * deltaX
-		idiv	cx			; AX = AX / deltaY
+		; FIXED: LBA.EXE's idiv faults on a quotient past 16 bits.
+		; IDIV16, here and below, divides in 32 bits and keeps the low
+		; 16.
+		IDIV16	cx			; AX = AX / deltaY
 		add	ebx, eax		; X0 = X0 + AX
 
 		mov	[edi+2], bx		; X0
@@ -1233,7 +1308,7 @@ cfg4:
 
 		mov	ax, [coul1]		; AX = DeltaCoul
 		imul	bp			; AX = AX * DeltaClipY
-		idiv    cx			; AX = AX / deltaY
+		IDIV16    cx			; AX = AX / deltaY
 		shr	ebp, 16			; BP = Coul0
 		add	eax, ebp		; AX = AX + coul0
 
@@ -1336,7 +1411,10 @@ cfg4:
 		mov	ecx, eax		; CX = DeltaY
 		mov	eax, ebp		; AX = deltaClipY
 		imul	dx              	; AX = AX * deltaX
-		idiv	cx			; AX = AX / deltaY
+		; FIXED: LBA.EXE's idiv faults on a quotient past 16 bits.
+		; IDIV16, here and below, divides in 32 bits and keeps the low
+		; 16.
+		IDIV16	cx			; AX = AX / deltaY
 		add	ebx, eax		; X0 = X0 + AX
 
 		mov	[edi+2], bx		; X0
@@ -1348,7 +1426,7 @@ cfg4:
 
 		mov	ax, [coul1]		; AX = DeltaCoul
 		imul	bp			; AX = AX * DeltaClipY
-		idiv    cx			; AX = AX / deltaY
+		IDIV16    cx			; AX = AX / deltaY
 		shr	ebp, 16			; BP = Coul0
 		add	eax, ebp		; AX = AX + coul0
 

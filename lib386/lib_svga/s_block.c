@@ -15,19 +15,20 @@ void
 CopyBlock(int32_t x0, int32_t y0, int32_t x1, int32_t y1, void *src, int32_t xd, int32_t yd, void *dst)
 {
 	uint8_t *s, *d;
-	int32_t w;
-	uint32_t h;
+	int32_t w, h;
 
 	s = (uint8_t*)src + TabOffLine[y0] + x0;
 	d = (uint8_t*)dst + TabOffLine[yd] + xd;
 	w = x1 - x0 + 1;
-	/* a height of 0 or less runs past the screen, as the assembly's count */
-	h = y1 - y0 + 1;
-	do {
+	/*
+	 * FIXED: LBA.EXE copies 2^32 lines on a height of 0 or less. This loop
+	 * ends at once on such a height.
+	 */
+	for (h = y1 - y0 + 1; h > 0; h--) {
 		MovMem(s, d, w);
 		s += Screen_X;
 		d += Screen_X;
-	} while (--h != 0);
+	}
 }
 
 /* SaveBlock is s_block.asm's SaveBlock: x0,y0 to x1,y1 of screen into buffer, its lines one after another. */

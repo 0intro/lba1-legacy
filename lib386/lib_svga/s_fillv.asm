@@ -8,6 +8,7 @@
 				.data
 
 			include	svga.ash
+			include	../lib_sys/idiv.ash
 
 			extrn	NoLanguage	TabVerticG	:WORD
 			extrn	NoLanguage	TabCoulG	:WORD
@@ -236,6 +237,12 @@ blig:		xor	eax, eax
 		sub	cx, ax			; cx = DeltaX
 		jc	sensdown
 		inc	cx
+		; FIXED: LBA.EXE counts a line from x 0 to 65535 as 0 pixels,
+		; which it draws, stepping its colour, or runs on from an odd
+		; address. Skip it as a line turned over, here and below.
+IFDEF	FIXES
+		jz	sensdown
+ENDIF
 
 		lea	edi, [ebp+eax]		; Debut Ligne ecran + Debut Line
 
@@ -253,7 +260,15 @@ aligne:         mov	bh, cl
 		shr	ecx, 2			; By Word
 		rep	stosd
 		mov	cl, bh
+		; FIXED: LBA.EXE fills, of the rest past the dwords, only the
+		; pair the 2 bit gives (and cl, 2), so that a line whose last
+		; pixel lies at an even x loses it. Fill the rest whole, here and
+		; on the way up, as Bopper does.
+IFDEF	FIXES
+		and	cl, 3
+ELSE
 		and	cl, 2
+ENDIF
 		rep	stosb
 
 		inc	bl
@@ -276,6 +291,9 @@ blig2:		xor	eax, eax
 		sub	cx, ax			; cx = DeltaX
 		jc	sensup
 		inc	cx
+IFDEF	FIXES
+		jz	sensup
+ENDIF
 
 		lea	edi, [ebp+eax]		; Debut Ligne ecran + Debut Line
 
@@ -293,7 +311,11 @@ aligne1:        mov	bh, cl
 		shr	ecx, 2			; By Word
 		rep	stosd
 		mov	cl, bh
+IFDEF	FIXES
+		and	cl, 3
+ELSE
 		and	cl, 2
+ENDIF
 		rep	stosb
 
 sensup:		dec	bl
@@ -329,6 +351,13 @@ blig:		xor	ecx, ecx
 		sub	ecx, eax		; cx = DeltaX
 		jc	sensdown
 		inc	ecx
+		; FIXED: LBA.EXE draws a line from x 0 to 65535 whole, 64 KB.
+		; Skip it, its width 0 in 16 bits, as a line turned over, here
+		; and below.
+IFDEF	FIXES
+		or	cx, cx
+		jz	sensdown
+ENDIF
 
 		mov	edi, ebp		; Debut Ligne ecran
 		add	edi, eax		; Debut Line
@@ -370,6 +399,10 @@ blig2:		xor	ecx, ecx
 		sub	ecx, eax		; cx = DeltaX
 		jc	sensup
 		inc	ecx
+IFDEF	FIXES
+		or	cx, cx
+		jz	sensup
+ENDIF
 
 		mov	edi, ebp		; Debut Ligne ecran
 		add	edi, eax		; Debut Line
@@ -430,6 +463,13 @@ blig0:
 		jz	justone
 		jc	nextlig
 		inc	ecx			; CX deltax
+		; FIXED: LBA.EXE divides by the width of a line from x 0 to
+		; 65535, 0 in 16 bits, and faults. Skip it as a line turned
+		; over.
+IFDEF	FIXES
+		or	cx, cx
+		jz	nextlig
+ENDIF
 
 		shld	edi, ebx, 16
 		mov	bx, di
@@ -571,6 +611,11 @@ blig:		mov	cx, word ptr[esi+960]	; xD
 		sub	cx, ax			; cx = DeltaX
 		jc	boul			; neg => next line
 		inc	cx
+		; FIXED: LBA.EXE takes a line from x 0 to 65535 for 65536 pairs
+		; and changes 128 KB. Skip it as a line turned over.
+IFDEF	FIXES
+		jz	boul
+ENDIF
 
 		lea	edi, [ebp+eax]		; Debut Ligne ecran + Debut Line
 
@@ -676,16 +721,33 @@ blig:		mov	cx, [esi+960]		; xD
 
 		sub	cx, ax			; cx = DeltaX
 		jc	nextlig
+		; FIXED: LBA.EXE fills a line from x 0 to 65535 whole, 64 KB.
+		; Count in 16 bits, and skip it as a line turned over.
+IFDEF	FIXES
+		inc	cx
+		jz	nextlig
+ELSE
 		inc	ecx
+ENDIF
 
 		lea	edi, [ebp+eax]		; Debut Ligne ecran + Debut Line
 
 		mov	al, [ebx+1]		; intensite 1 *256: F.f
+IFNDEF	FIXES
 		add	ebx, 2
+ENDIF
 
 		rep	stosb
 
+		; FIXED: LBA.EXE moves on in TabCoulG only past a line it draws,
+		; so that after a line it skips each takes the intensity of the
+		; line above. Move on past every line.
+IFDEF	FIXES
+nextlig:	add	ebx, 2
+		add	ebp, 640
+ELSE
 nextlig:	add	ebp, 640
+ENDIF
 		dec	dx
 		jnz	blig
 
@@ -846,10 +908,22 @@ blig0:		mov	cx, [esi+960]		; xD
 		mov	ax, [ebx+960]		; intensite 2 *256: F.f
 		mov	dx, [ebx]		; intensite 1 *256: F.f
 		jz	l0
+IFDEF	FIXES
+		jc	skiplig
+
+		sub	ax, dx
+		; FIXED: LBA.EXE steps the shade up when the right end's is the
+		; left's or above, unsigned (jc), so that from FExxh to 3xxh it
+		; runs down through every shade. Take the short way round, as
+		; the difference signed says, here and on the lines after a
+		; line that goes down.
+		js      GouraudInverse		; delta intensite
+ELSE
 		jc	nextlig
 
 		sub	ax, dx
 		jc      GouraudInverse		; delta intensite
+ENDIF
 
 		cmp	cx, 2
 		jbe	opt
@@ -860,8 +934,16 @@ gouraud:	xor	dx, dx
 		mov	dx, [ebx]		; intensite 1 start
 		add	ebx, 2
 
+		; FIXED: LBA.EXE counts the pairs of a line from x 0 to 65535
+		; in 16 bits, 65536 of them. Count them in 32 bits, here and
+		; below.
+IFDEF	FIXES
+		inc	ecx
+		shr	ecx, 1			; divise par 2
+ELSE
 		inc	cx
 		shr	cx, 1			; divise par 2
+ENDIF
 		jnc	start			; impair ?
 		mov	byte ptr[edi], dh
 		jz	nextlig
@@ -882,6 +964,15 @@ nextlig:	add	ebp, 640
 
 		ret
 
+		; FIXED: LBA.EXE moves on in TabCoulG and TabCoulD only past a
+		; line it draws, so that after a line it skips each takes the
+		; intensities of the line above. Move on past a skipped line,
+		; here and in the loop below.
+IFDEF	FIXES
+skiplig:	add	ebx, 2
+		jmp	nextlig
+ENDIF
+
 GouraudNormal:  cmp	cx, 2
 		jbe	opt0
 		neg	ax
@@ -893,8 +984,18 @@ opt:		mov	ax, [ebx+960]
 		mov	[edi+ecx], ah
 		dec	cx
 		jz	opt2
+		; FIXED: LBA.EXE takes the mean of a line's two ends unsigned,
+		; so that halfway from FExxh to 3xxh is 81h. Go from the left
+		; end by half the difference signed, the short way round, here
+		; and below.
+IFDEF	FIXES
+		sub	ax, dx
+		sar	ax, 1
+		add	ax, dx
+ELSE
 		add	eax, edx
 		shr	eax, 1
+ENDIF
 		mov	[edi+1], ah
 opt2:		mov	[edi], dh
 		add	ebp, 640
@@ -903,9 +1004,16 @@ opt2:		mov	[edi], dh
 
 		ret
 
+IFDEF	FIXES
+l0:		sub	ax, dx
+		add	ebx, 2
+		sar	ax, 1
+		add	ax, dx
+ELSE
 l0:		add	eax, edx
 		add	ebx, 2
 		shr	eax, 1
+ENDIF
 		add	ebp, 640
 		mov	[edi], ah
 		dec	dword ptr[newloop]
@@ -916,7 +1024,11 @@ l0:		add	eax, edx
 GouraudInverse: cmp	cx, 2
 		jbe	iopt0
 		neg	ax
+IFDEF	FIXES
+		jmp	igouraud
+ELSE
 		jmp	short igouraud
+ENDIF
 
 iopt0:		mov	dx, [ebx+960]
 iopt:		mov	ax, [ebx]
@@ -924,8 +1036,14 @@ iopt:		mov	ax, [ebx]
 		mov	[edi+ecx], dh
 		dec	cx
 		jz	iopt2
+IFDEF	FIXES
+		sub	dx, ax
+		sar	dx, 1
+		add	dx, ax
+ELSE
 		add	edx, eax
 		shr	edx, 1
+ENDIF
 		mov	[edi+1], dh
 iopt2:		mov	[edi], ah
 		add	ebp, 640
@@ -934,11 +1052,20 @@ iopt2:		mov	[edi], ah
 
 		ret
 
+IFDEF	FIXES
+il0:		sub	dx, ax
+		add	ebx, 2
+		sar	dx, 1
+		add	dx, ax
+		add	ebp, 640
+		mov	[edi], dh
+ELSE
 il0:		add	eax, edx
 		add	ebx, 2
 		shr	eax, 1
 		add	ebp, 640
 		mov	[edi], ah
+ENDIF
 		dec	dword ptr[newloop]
 		jnz	iblig0
 
@@ -956,10 +1083,18 @@ iblig0:
 		mov	ax, [ebx]		; intensite 1 *256: F.f
 		mov	dx, [ebx+960]		; intensite 2 *256: F.f
 		jz      il0
+IFDEF	FIXES
+		jc	iskiplig
+
+		sub	ax, dx
+		cmp	dx, word ptr[ebx]	; the difference signed
+		jns     GouraudNormal		; delta intensite
+ELSE
 		jc	inextlig
 
 		sub	ax, dx
 		jc      GouraudNormal		; delta intensite
+ENDIF
 
 		cmp	cx, 2
 		jbe	iopt
@@ -970,8 +1105,13 @@ igouraud:	xor	dx, dx
 		mov	dx, [ebx]		; intensite 1 start
 		add	ebx, 2
 
+IFDEF	FIXES
+		inc	ecx
+		shr	ecx, 1			; divise par 2
+ELSE
 		inc	cx
 		shr	cx, 1			; divise par 2
+ENDIF
 		jnc    	istart			; impair ?
 		mov	byte ptr[edi], dh
 		jz	nextlig
@@ -991,6 +1131,11 @@ inextlig:	add	ebp, 640
 		jnz	iblig0
 
 		ret
+
+IFDEF	FIXES
+iskiplig:	add	ebx, 2
+		jmp	inextlig
+ENDIF
 
 SVGAPolyGouraud	endp
 
@@ -1012,7 +1157,11 @@ blig0:          mov	cx, word ptr [esi+960]	; xD
 
 
 		sub	cx, ax			; cx = delta X
+IFDEF	FIXES
+		jc	skipdith
+ELSE
 		jc	nextlig
+ENDIF
 
 		lea	edi, [ebp + eax]	; offset lig + x min + col start
 		mov	[Save1], esi
@@ -1028,12 +1177,21 @@ blig0:          mov	cx, word ptr [esi+960]	; xD
 		jbe	opt
 
 		cwd
-		idiv	cx			; AX step intensite
+		; FIXED: LBA.EXE's idiv faults on a quotient past 16 bits,
+		; -32768 by -1. IDIV16 divides in 32 bits and keeps the low 16.
+		IDIV16	cx			; AX step intensite
 
 		mov	dx, si
 
+		; FIXED: LBA.EXE counts the pairs of a line from x 0 to 65535
+		; in 16 bits, 65536 of them. Count them in 32 bits.
+IFDEF	FIXES
+		inc	ecx
+		shr	ecx, 1
+ELSE
 		inc	cx
 		shr	cx, 1
+ENDIF
 		jnc	start
 
 		xor	dh, dh
@@ -1067,9 +1225,16 @@ nextlig:
 
 		ret
 
+IFDEF	FIXES
+cx0:		sub	ax, si			; the mean as Gouraud's
+		sar	ax, 1
+		add	ax, si
+		mov	esi, [Save1]
+ELSE
 cx0:		add	ax, si
 		mov	esi, [Save1]
 		rcr	ax, 1
+ENDIF
 		add	ebx, 2
 		mov	[edi], ah
 		add	ebp, 640
@@ -1105,6 +1270,14 @@ two:
 		jnz	blig0
 
 		ret
+
+		; FIXED: LBA.EXE moves on in TabCoulG and TabCoulD only past a
+		; line it draws, so that after a line it skips each takes the
+		; intensities of the line above. Move on past a skipped line.
+IFDEF	FIXES
+skipdith:	add	ebx, 2
+		jmp	nextlig
+ENDIF
 
 SVGAPolyDith	endp
 

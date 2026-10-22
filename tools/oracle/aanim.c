@@ -529,8 +529,6 @@ testanim(void)
 			a[1] = arg(aarena, body[b]);
 			abicall(s[op], 2, a);
 			GetAngleGroupe(a[0], carena + body[b]);
-			/* the assembly's returns with EDI changed, which the C keeps (p_anim.c) */
-			abibroke &= ~4;
 			break;
 		}
 		if (!abiok(what))
@@ -551,6 +549,33 @@ out:
 	free(carena);
 }
 
+/*
+ * GetAngleGroupe on a body with groups (the animation's flag, no more
+ * information, no points, 5 groups), whose assembly returned with EDI
+ * changed: the build's must keep it.
+ */
+static int
+fixgroup(void)
+{
+	static uint8_t body[64];
+	uintptr_t gg;
+	int r;
+
+	gg = lookup("GetAngleGroupe");
+	for (r = 0; r < 1000; r++) {
+		fill(body, sizeof body);
+		put16(body, 2);	/* INFO_ANIM */
+		put16(body + 14, 0);
+		put16(body + 16, 0);
+		put16(body + 18, 5);
+		acall(gg, 2, rndn(6), (int32_t)(uintptr_t)body);
+		if (!abiok("fixes: GetAngleGroupe"))
+			return 0;
+	}
+	printf("fixes: group, %d calls of GetAngleGroupe on a body with groups, EDI kept\n", r);
+	return 1;
+}
+
 /* a body for CopyInterAnim: animated, 8 bytes of information, np points, ng groups */
 static void
 copybody(uint8_t *b, uint32_t len, uint32_t np, uint32_t ng)
@@ -566,6 +591,39 @@ copybody(uint8_t *b, uint32_t len, uint32_t np, uint32_t ng)
 	put16(p, ng);
 }
 
+/*
+ * CopyInterAnim from a body of 21846 to 32767 points, three times which
+ * passes 16 bits, to a small one: LBA.EXE's assembly walked the second
+ * body with that product's high half left in EAX. The build's must copy
+ * as ours.
+ */
+static int
+fixcopy(void)
+{
+	enum {
+		Big = 24 + 2 + 6*32767 + 10 + 38*5 + 64,
+		Small = 24 + 2 + 6*100 + 10 + 38*5 + 64,
+	};
+	static uint8_t sa[Big], sc[Big], da[Small], dc[Small];
+	uintptr_t ci;
+	int r;
+
+	ci = lookup("CopyInterAnim");
+	for (r = 0; r < 100; r++) {
+		copybody(sa, Big, rndr(21846, 32767), rndr(1, 5));
+		memcpy(sc, sa, Big);
+		copybody(da, Small, rndr(1, 100), rndr(1, 5));
+		memcpy(dc, da, Small);
+		acall(ci, 2, (int32_t)(uintptr_t)sa, (int32_t)(uintptr_t)da);
+		CopyInterAnim(sc, dc);
+		if (memcmp(da, dc, Small) != 0 || memcmp(sa, sc, Big) != 0) {
+			fail("fixes: CopyInterAnim from a body of %u points: the bodies differ", get16(sc + 24));
+			return 0;
+		}
+	}
+	printf("fixes: copy, %d copies from bodies of 21846 to 32767 points, the same\n", r);
+	return 1;
+}
 
 enum
 {
@@ -719,5 +777,5 @@ fixcount(void)
 int
 fixanim(void)
 {
-	return fixcount();
+	return fixgroup() && fixcopy() && fixcount();
 }

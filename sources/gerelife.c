@@ -1216,8 +1216,21 @@ void	DoLife( WORD numobj )
 #ifdef	CDROM
 				FlagDisplayText = memoflagdisplaytext ;
 #endif
+				/*
+				 * FIXED: LBA.EXE waits here for Space and
+				 * Escape alone, so that Sendell's message
+				 * closed by another key goes on with it down,
+				 * which the game takes for its own once the
+				 * movie after has played. WaitReleaseSpace
+				 * waits for every key's release but the
+				 * arrows', as after the other dialogues.
+				 */
+#ifdef	FIXES
+				WaitReleaseSpace() ;
+#else
 				while( (Fire & F_SPACE)
 				OR (Key == K_ESC) ) ;
+#endif
 				RestoreTimer() ;
 #endif
 				break ;

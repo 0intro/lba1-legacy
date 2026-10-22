@@ -82,7 +82,14 @@ InitModeVesa		proc
 
 			push	es			; save es
 			mov	RMI_ES, ax		; buffer segment
+			; FIXED: LBA.EXE xors RMI_EDI with 0, which leaves the
+			; buffer's offset as the BIOS returned EDI the call
+			; before. Clear it, with an and as long as the xor.
+IFDEF	FIXES
+			and	RMI_EDI, 0		; buffer offset 0
+ELSE
 			xor	RMI_EDI, 0		; buffer offset 0
+ENDIF
 			mov	RMI_EAX, 4F01h		; Vesa information
 			mov	RMI_ECX, 0101h		; mode 101h
 			mov	ax, ds

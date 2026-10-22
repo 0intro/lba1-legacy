@@ -5,6 +5,7 @@
 		.model  SMALL, SYSCALL
 
 		include p_define.ash
+		include ../lib_sys/idiv.ash
 
 		.data
 
@@ -56,6 +57,10 @@ EY0		dd	0000
 
 ;*══════════════════════════════════════════════════════════════════════════*
 		.code
+
+IFDEF	FIXES
+		public	NoLanguage	LongIDiv
+ENDIF
 
 		public	NoLanguage	Rot2D
 		public  NoLanguage      Distance2D
@@ -283,7 +288,9 @@ GetRealValue	proc uses ebx,\
 
 		sub	ax, word ptr[ebx+0]	; start value
 		imul	dx			; resul DX:AX
-		idiv	cx			; /NbStep
+		; FIXED: LBA.EXE's idiv faults on a quotient past 16 bits.
+		; IDIV16 divides in 32 bits and keeps the low 16.
+		IDIV16	cx			; /NbStep
 		add	ax, word ptr[ebx+0]	; Valeur1
 		movsx	eax, ax
 
@@ -368,7 +375,9 @@ art0:		sub	ax, 2048
 art1:		add	ax, 1024
 ok:
 		imul	dx			; resul DX:AX
-		idiv	cx			; / NbStep
+		; FIXED: LBA.EXE's idiv faults on a quotient past 16 bits.
+		; IDIV16 divides in 32 bits and keeps the low 16.
+		IDIV16	cx			; / NbStep
 		add	ax, word ptr[ebx+0]	; start value
 		ret
 
@@ -552,12 +561,65 @@ RegleTrois32	proc	\
 
 		sub	eax, Valeur1
 		imul	Step			; resul DX:AX
+		; FIXED: LBA.EXE's idiv faults on a quotient past 32 bits.
+		; LongIDiv divides in 64 bits and keeps the low 32.
+IFDEF	FIXES
+		push	ecx
+		call	LongIDiv			; /NbStep
+ELSE
 		idiv	ecx			; /NbStep
+ENDIF
 		add	eax, Valeur1		; cx = Valeur1
 
 erreur:		ret
 
 RegleTrois32	endp
+
+IFDEF	FIXES
+;*--------------------------------------------------------------------------*
+; LongIDiv: idiv of EDX:EAX by the dword pushed before the call, but in 64
+; bits. EAX takes the quotient's low dword and EDX the remainder, where idiv
+; faults on a quotient past 32 bits. Every other register stays, and the
+; dword is popped.
+
+LongIDiv	proc	near
+
+		push	ebx
+		push	ecx
+		push	esi
+		push	edi
+		mov	ecx, [esp+20]		; divisor
+		mov	edi, edx		; the remainder's sign, the dividend's
+		mov	esi, edx
+		xor	esi, ecx		; the quotient's sign
+		or	edx, edx
+		jns	short dividend
+		neg	edx
+		neg	eax
+		sbb	edx, 0			; |EDX:EAX|
+dividend:	or	ecx, ecx
+		jns	short divisor
+		neg	ecx			; |divisor|
+divisor:	mov	ebx, eax
+		mov	eax, edx
+		xor	edx, edx
+		div	ecx			; the high dword's quotient, dropped
+		mov	eax, ebx
+		div	ecx			; the low dword's, and the remainder
+		or	esi, esi
+		jns	short quotient
+		neg	eax
+quotient:	or	edi, edi
+		jns	short remainder
+		neg	edx
+remainder:	pop	edi
+		pop	esi
+		pop	ecx
+		pop	ebx
+		ret	4
+
+LongIDiv	endp
+ENDIF
 
 comment	@
 

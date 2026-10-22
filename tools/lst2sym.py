@@ -8,8 +8,8 @@ A procedure's size is the listing's. A datum's runs to the next name,
 procedure or datum, or to the end of the last procedure, 0 past it, so
 that each has the size tools/lecmp.py reads.
 re/w_sb16.dll.sym is W_SB16.DLL's: the listing of lib386/lib_samp's
-wave_a.asm and wave.inc as the tree holds them (SNAP_SIZE 8, as the CD's
-drivers have it), assembled
+wave_a.asm and wave.inc as the tree holds them before the fixes of the
+drivers' faults (SNAP_SIZE 8, as the CD's drivers have it), assembled
 for the Sound Blaster 16 as the DOS build assembles it (jwasm with the
 Makefile's DOSASFLAGS, -DSB16 -DSTEREO -DSAMPLE16BIT and -Fl), its
 header added by hand.

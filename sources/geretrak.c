@@ -54,7 +54,11 @@ void	DoTrack( WORD	numobj )
 			break ;
 
 		case TM_SAMPLE_ALWAYS:
+#ifdef	FIXES
+			HQ_3D_MixSampleObj( numobj, PeekWord( ptrtrack ), 0x1000, 0,
+#else
 			HQ_3D_MixSample( PeekWord( ptrtrack ), 0x1000, 0,
+#endif
 			ptrobj->PosObjX, ptrobj->PosObjY, ptrobj->PosObjZ ) ;
 			ptrobj->OffsetTrack += 2 ;
 			break ;

@@ -145,8 +145,15 @@ BlackFrame		proc	uses	edi
 			mov	edx, 200
 NextLine:
 			mov	ecx, 320/4
+			; FIXED: LBA.EXE steps 640 a line where the picture is
+			; 320 wide, as DrawFrame and UpdateFrame are given it, so
+			; that a black pass would clear every other line of the
+			; picture and as many below it. Step 320: rep stosd
+			; leaves EDI past the line.
 			rep	stosd
+IFNDEF	FIXES
 			add	edi, 320
+ENDIF
 			dec	edx
 			jne	NextLine
 			ret
@@ -160,8 +167,14 @@ CopyFrame		proc	uses esi edi,\
 			mov	edx, 200
 NextLine:
 			mov	ecx, 320/4
+			; FIXED: LBA.EXE steps 640 a line where the picture is
+			; 320 wide, so that a copy pass would put its lines on
+			; every other line of the picture and below it. Step 320:
+			; rep movsd leaves EDI past the line.
 			rep	movsd
+IFNDEF	FIXES
 			add	edi, 320
+ENDIF
 			dec	edx
 			jne	NextLine
 

@@ -13,6 +13,7 @@
 		.data
 
 		include p_define.ash
+		include ../lib_sys/idiv.ash
 
 
 		extrn	NoLanguage P_SinTab:WORD
@@ -200,6 +201,10 @@ Save1		dd	0000
 
 ;*══════════════════════════════════════════════════════════════════════════*
 		.code
+
+ifdef	FIXES
+		extrn	NoLanguage	LongIDiv:near
+endif
 
 		public	NoLanguage	Rotate
 		public	NoLanguage	RotatePoint
@@ -1363,7 +1368,14 @@ SetFollowCamera	proc	uses esi edi ebx ebp,\
 		push	cambeta
 		push	camalpha
 		call	SetAngleCamera
+		; FIXED: LBA.EXE takes back the call's arguments with a 16-bit
+		; add to SP, which leaves ESP 64 KB short near a 64 KB boundary.
+		; Take them back in 32 bits.
+ifdef	FIXES
+		add	esp,12
+else
 		add	sp,12
+endif
 
 		mov	eax, [CameraXr]
 		mov	ebx, [CameraYr]
@@ -1472,12 +1484,15 @@ Proj_3D		proc		; ax:X bx:Y bp:Z
 		add	bp, word ptr[KFactor]
 		js	overflow
 fixed:		imul	word ptr[LFactorX]		; X
-		idiv	bp
+		; FIXED: LBA.EXE's idiv faults on a quotient past 16 bits.
+		; IDIV16, here and below, divides in 32 bits and keeps the low
+		; 16.
+		IDIV16	bp
 		add	ax, word ptr[XCentre]
 		xchg	ax, bx
 		neg	ax
 		imul	word ptr[LFactorY]		; -Y
-		idiv	bp
+		IDIV16	bp
 		add	ax, word ptr[YCentre]
 		xchg	ax, bx
 		ret					; AX:Xp BX:Yp
@@ -1596,12 +1611,25 @@ LongProjettePoint	proc	uses ebx,\
 	;		js	overflow
 		js	error
 fixed:		imul	[LFactorX]		; X
+		; FIXED: LBA.EXE's idiv faults on a quotient past 32 bits.
+		; LongIDiv, here and below, divides in 64 bits and keeps the low
+		; 32.
+ifdef	FIXES
+		push	ecx
+		call	LongIDiv
+else
 		idiv	ecx
+endif
 		add	eax, [XCentre]
 		xchg	eax, ebx
 		neg	eax
 		imul	[LFactorY]              ; -Y
+ifdef	FIXES
+		push	ecx
+		call	LongIDiv
+else
 		idiv	ecx
+endif
 		add	eax, [YCentre]
 		xchg	eax, ebx
 

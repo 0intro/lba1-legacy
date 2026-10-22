@@ -8,9 +8,8 @@
  * The fillers of s_fillv.asm: the lines of a polygon that ComputePoly
  * or ComputeSphere left in TabVerticG and TabVerticD, from Ymin to Ymax,
  * filled in Log in one of nine ways, 640 bytes a line. A line whose
- * right end is left of its left is skipped, the Gouraud fillers staying
- * where they are in TabCoulG and TabCoulD, so that the lines after it
- * take the intensities of the line before, as in the assembly.
+ * right end is left of its left is skipped, the Gouraud fillers moving
+ * on past it in TabCoulG and TabCoulD.
  */
 
 enum
@@ -113,11 +112,7 @@ triste(Fill *f)
 	} while (--f->n != 0);
 }
 
-/*
- * A line of Copper: a first byte to an even address, then dwords, then
- * the rest of what makes 4 with the 2 bit only (and cl, 2): a line of 3
- * left over after its dwords lacks its last pixel, of 1 does too.
- */
+/* A line of Copper: a first byte to an even address, then the rest. */
 static void
 copperline(uint8_t *p, uint32_t w, uint8_t c)
 {
@@ -125,7 +120,14 @@ copperline(uint8_t *p, uint32_t w, uint8_t c)
 		*p++ = c;
 		w--;
 	}
-	memset(p, c, (w & ~3u) + (w & 2));
+	/*
+	 * FIXED: LBA.EXE fills, of the rest past the dwords, only the pair
+	 * the 2 bit gives (and cl, 2), so that a line whose last pixel lies
+	 * at an even x loses it. This fills the line whole, as Bopper does.
+	 * DotEmu and the Classic fill it whole too, but move the colour on
+	 * the lines they skip, which LBA.EXE's steps keep here.
+	 */
+	memset(p, c, w);
 }
 
 /* SVGAPolyCopper: the colour up a line at a time through its ramp of 16, then down again. */
@@ -237,9 +239,15 @@ marbre(Fill *f)
 		l = *f->l++;
 		r = *f->r++;
 		p = f->line + l;
+		/*
+		 * FIXED: LBA.EXE divides by the width of a line from x 0 to
+		 * 65535, 0 in 16 bits, and faults. Skip it as a line turned
+		 * over. DotEmu's Android 1.06, which compares a line's ends
+		 * signed, skips it too.
+		 */
 		if (r == l)
 			*p = c1;
-		else if (r > l) {
+		else if (r > l && (uint16_t)(r - l + 1) != 0) {
 			w = r - l + 1;
 			q = (int16_t)(uint16_t)((c1<<8) - (c0<<8) + 1) / (int16_t)w;
 			step = (uint16_t)q<<8 | (uint16_t)q>>8;
@@ -341,18 +349,37 @@ triche(Fill *f)
 
 	do {
 		w = ends(f, &p);
-		if (w != 0) {
+		if (w != 0)
 			memset(p, *f->cl >> 8, w);
-			f->cl++;
-		}
+		/*
+		 * FIXED: LBA.EXE moves on in TabCoulG only past a line it
+		 * draws, so that after a line it skips each takes the
+		 * intensity of the line above. This moves on past every line.
+		 */
+		f->cl++;
 		f->line += 640;
 	} while ((uint16_t)--f->n != 0);
 }
 
 /*
+ * The shade halfway between a line's intensities b on the left and a on
+ * the right, as the Gouraud fillers take it.
+ */
+static uint8_t
+mean(uint16_t a, uint16_t b)
+{
+	/*
+	 * FIXED: LBA.EXE takes the mean of the two unsigned, so that
+	 * halfway from FExxh to 3xxh is 81h. This goes from b by half the
+	 * difference signed, the short way round.
+	 */
+	return (uint16_t)(b + ((int16_t)(a - b) >> 1)) >> 8;
+}
+
+/*
  * SVGAPolyGouraud: the intensity from the left's to the right's, the
- * step the difference over the width less one, unsigned. A line of 2 or
- * 3 pixels takes the ends and their mean, one of 1 the mean.
+ * step the difference over the width less one. A line of 2 or 3 pixels
+ * takes the ends and their mean, one of 1 the mean.
  */
 static void
 gouraud(Fill *f)
@@ -365,18 +392,31 @@ gouraud(Fill *f)
 		l = *f->l++;
 		r = *f->r++;
 		p = f->line + l;
+		/*
+		 * FIXED: LBA.EXE moves on in TabCoulG and TabCoulD only past a
+		 * line it draws, so that after a line it skips each takes the
+		 * intensities of the line above. This moves on past every line.
+		 */
+		b = *f->cl++;
+		a = *f->cr++;
 		if (r >= l) {
-			b = *f->cl++;
-			a = *f->cr++;
 			n = (uint16_t)(r - l);
 			if (n == 0)
-				*p = ((uint32_t)a + b) >> 9;
+				*p = mean(a, b);
 			else if (n <= 2) {
 				p[n] = a >> 8;
 				if (n == 2)
-					p[1] = ((uint32_t)a + b) >> 9;
+					p[1] = mean(a, b);
 				*p = b >> 8;
-			} else if (a >= b) {
+			} else if ((int16_t)(a - b) >= 0) {
+				/*
+				 * FIXED: LBA.EXE steps the shade up when the
+				 * right end's is the left's or above, unsigned
+				 * (jc), so that from FExxh to 3xxh it runs down
+				 * through every shade. This and the branch below
+				 * take the short way round, as the difference
+				 * signed says.
+				 */
 				/*
 				 * FIXED: LBA.EXE counts the pairs of a line
 				 * from x 0 to 65535 in 16 bits, 65536 of them.
@@ -419,14 +459,17 @@ dith(Fill *f)
 		l = *f->l++;
 		r = *f->r++;
 		p = f->line + l;
+		/*
+		 * FIXED: LBA.EXE moves on in TabCoulG and TabCoulD only past a
+		 * line it draws, so that after a line it skips each takes the
+		 * intensities of the line above. This moves on past every line.
+		 */
+		d = *f->cr++;
+		si = *f->cl++;
 		if (r < l)
 			goto next;
-		d = *f->cr;
-		si = *f->cl;
-		f->cl++;
-		f->cr++;
 		if (r == l) {
-			*p = ((uint32_t)d + si) >> 9;
+			*p = mean(d, si);
 			goto next;
 		}
 		d -= si;

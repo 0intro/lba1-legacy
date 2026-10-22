@@ -566,17 +566,26 @@ affsphere(uint8_t *e)
 {
 	uint32_t r;
 	uint16_t x, y, rr;
-	int16_t d;
+	int32_t d;
 
 	r = get16(e + 4);
 	x = get16(e + 6);
 	y = get16(e + 8);
 	if (TypeProj == Persp) {
-		d = get16(e + 10) + (uint16_t)KFactor;
 		/*
-		 * FIXED: LBA.EXE's 16-bit idiv faults on a quotient past 16
-		 * bits. This divides in 32 bits and keeps the low 16.
+		 * FIXED: LBA.EXE divides the radius by the depth word plus
+		 * KFactor in 16 bits, though the word already holds z plus
+		 * KFactor: a sphere comes out smaller than its points'
+		 * projection makes it, a quotient past 16 bits faults, from a
+		 * depth of 32768 less KFactor the divisor is negative and the
+		 * radius, taken unsigned, can come out near 65535, and at 65536
+		 * less KFactor the divisor is 0. This divides by the word alone
+		 * in 32 bits, a word of 0, which RotateNuage's depth can leave,
+		 * counting as 1, and keeps the quotient's low 16 bits.
 		 */
+		d = get16(e + 10);
+		if (d == 0)
+			d = 1;
 		r = (uint16_t)((int32_t)(int16_t)r * (int16_t)LFactorX / d);
 	} else
 		r = r*34 >> 9;

@@ -82,7 +82,8 @@ $(ORACLE)/asmoracle: $(ASMOBJ)
 
 # asmoracle under AddressSanitizer, its objects apart: a read or write
 # of a translation past an array, which no test reads back, fails it
-# (tools/mutate.py's second test).
+# (tools/mutate.py's second test). The fixes case reads beside
+# TabVerticG on purpose, which it reports.
 ASANFLAGS=-fsanitize=address -fno-omit-frame-pointer
 ASANOBJ=$(ASMSRC:%.c=$(ORACLE)/asan/%.o)
 

@@ -5,6 +5,7 @@
 		.model	SMALL, SYSCALL
 
 		include p_define.ash
+		include ../lib_sys/idiv.ash
 
 ;*══════════════════════════════════════════════════════════════════════════*
 ;                    P_     █▀▀▀█ ██▄ █  █    █▄ ▄█
@@ -194,9 +195,17 @@ SetAngleGroupe  endp
 
 ;*══════════════════════════════════════════════════════════════════════════*
 
+; FIXED: LBA.EXE computes into EDI an address it never uses, and returns with
+; EDI changed. The uses list saves it.
+IFDEF	FIXES
+GetAngleGroupe  proc    uses esi edi,\
+		numgroupe:DWORD,\
+		ptrobj:DWORD
+ELSE
 GetAngleGroupe  proc    uses esi,\
 		numgroupe:DWORD,\
 		ptrobj:DWORD
+ENDIF
 
 		mov	esi, ptrobj
 
@@ -422,7 +431,9 @@ art0:		sub     ax, 2048
 art1:		add     ax, 1024
 ok:
 		imul    bp                      ; resul DX:AX
-		idiv    bx                      ; bx ; /NbStep
+		; FIXED: LBA.EXE's idiv faults on a quotient past 16 bits.
+		; IDIV16 divides in 32 bits and keeps the low 16.
+		IDIV16    bx                      ; bx ; /NbStep
 		add     cx, ax                  ; cx = Valeur1
 optequal:	and	cx, 1023
 		mov	word ptr[edi], cx
@@ -485,7 +496,9 @@ PatchInterStep  proc    near
 
 
 		imul    bp                      ; resul DX:AX
-		idiv    bx                      ; bx ; /NbStep
+		; FIXED: LBA.EXE's idiv faults on a quotient past 16 bits.
+		; IDIV16 divides in 32 bits and keeps the low 16.
+		IDIV16    bx                      ; bx ; /NbStep
 		add     cx, ax                  ; cx = Valeur1
 
 optequal:       mov	word ptr[edi], cx
@@ -587,17 +600,20 @@ ok:
 
 		mov	ax, [esi + 2]		; StepAlpha
 		imul    bp			; resul DX:AX
-		idiv    bx			; /NbStep
+		; FIXED: LBA.EXE's idiv faults on a quotient past 16 bits.
+		; IDIV16, here and below, divides in 32 bits and keeps the low
+		; 16.
+		IDIV16    bx			; /NbStep
 		mov	[AnimStepAlpha], ax
 
 		mov	ax, [esi + 4]		; StepBeta
 		imul    bp			; resul DX:AX
-		idiv    bx			; /NbStep
+		IDIV16    bx			; /NbStep
 		mov	[AnimStepBeta], ax
 
 		mov	ax, [esi + 6]		; StepGamma
 		imul    bp			; resul DX:AX
-		idiv    bx			; /NbStep
+		IDIV16    bx			; /NbStep
 		mov	[AnimStepGamma], ax
 
 		add	[Offset_Dest], 8
@@ -669,17 +685,17 @@ sao4:
 
 		mov	ax, [esi + 2]		; StepX
 		imul    bp			; resul DX:AX
-		idiv    bx			; /NbStep
+		IDIV16    bx			; /NbStep
 		mov	word ptr[edi], ax
 
 		mov	ax, [esi + 4]		; StepY
 		imul    bp			; resul DX:AX
-		idiv    bx			; /NbStep
+		IDIV16    bx			; /NbStep
 		mov	word ptr[edi+2], ax
 
 		mov	ax, [esi + 6]		; StepZ
 		imul    bp			; resul DX:AX
-		idiv    bx			; /NbStep
+		IDIV16    bx			; /NbStep
 		mov	word ptr[edi+4], ax
 
 ;               mov     word ptr[TimeFrame],bx
@@ -979,17 +995,20 @@ sao3:
 
 		mov	ax, [esi+2]		; StepAlpha
 		imul    bp                      ; resul DX:AX
-		idiv    bx                      ; /NbStep
+		; FIXED: LBA.EXE's idiv faults on a quotient past 16 bits.
+		; IDIV16, here and below, divides in 32 bits and keeps the low
+		; 16.
+		IDIV16    bx                      ; /NbStep
 		mov	[AnimStepAlpha], ax
 
 		mov	ax, [esi+4]		; StepBeta
 		imul    bp                      ; resul DX:AX
-		idiv    bx                      ; /NbStep
+		IDIV16    bx                      ; /NbStep
 		mov	[AnimStepBeta], ax
 
 		mov	ax, [esi+6]		; StepGamma
 		imul    bp                      ; resul DX:AX
-		idiv    bx                      ; /NbStep
+		IDIV16    bx                      ; /NbStep
 		mov	[AnimStepGamma], ax
 
 		add	[Offset_Dest], 8
@@ -1001,17 +1020,17 @@ sao4:		; calcul StepXYZ
 
 		mov	ax, [ecx+2]		; StepX
 		imul    bp			; resul DX:AX
-		idiv    bx			; /NbStep
+		IDIV16    bx			; /NbStep
 		mov	word ptr[edi], ax
 
 		mov	ax, [ecx+4]		; StepY
 		imul    bp			; resul DX:AX
-		idiv    bx			; /NbStep
+		IDIV16    bx			; /NbStep
 		mov	word ptr[edi+2], ax
 
 		mov	ax, [ecx+6]		; StepZ
 		imul    bp			; resul DX:AX
-		idiv    bx			; /NbStep
+		IDIV16    bx			; /NbStep
 		mov	word ptr[edi+4], ax
 
 serr:		xor     eax, eax		; anim pas finie
@@ -1146,7 +1165,15 @@ CopyInterAnim   proc	uses esi edi,\
 		lea	esi, [esi+eax*2+2]
 		mov	cx, word ptr[esi]	; nb groupes
 
+		; FIXED: LBA.EXE walks this body with EAX's high half left
+		; from three times the other's points, which from 21846
+		; points on puts the walk 64 KB or more past the body. Clear
+		; it, with a movzx as long as the mov.
+IFDEF	FIXES
+		movzx	eax, word ptr[edi-2]	; skip param infos
+ELSE
 		mov	ax, word ptr[edi-2]	; skip param infos
+ENDIF
 		lea	edi, [edi+eax]		; skip param infos
 		mov	ax, word ptr[edi]	; nb points
 		lea     eax, [eax+eax*2]	; *3

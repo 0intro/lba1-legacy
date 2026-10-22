@@ -1,15 +1,15 @@
-300a1e95c2b89f1e349248351b427706f3b320284a67aaa85742a48aa36948d3  lba0.exe
-5663de75f2fdd753b8bede14e29e7c986ef9dd960269ac6f182e0846330d8fb4  w_sb.dll
-06e110218ddc6c51a61a7a204c2d87ccac8117b3b50f19ede8579ac94e7a157c  w_sb2.dll
-33883e60e5bfc0305fb5739f9344b22945ea2a7322d07e680c07fc8bbeccbe92  w_sbpro.dll
-26ede2c49e99f5dbfde409a6d5cfe84ca1f5394eb1603fb1e42e7c7975313359  w_sb16.dll
-3abf038cb733cdbec25406c2f94aeed249f86a83bdb89dd674285a79811eece3  w_sb16_8.dll
-4e661f7073f1b22461be856fc9cddac4f6e23ee20d223f7083b474aab117af38  w_sb16_m.dll
-2dc420e27a18014d40795133b08bd0befc81878e4847c14fb9b93ddb3d36fdc7  w_sb16_s.dll
-1a636491698e2121544a358a8de28c76017acfb8e22d984ed8feb4356759f56d  w_pas.dll
-1675a602e5ad9aaeb3139d852dc3c1b818dbfcf6473db93308a4fbebdf5d79b3  w_pas16.dll
-fc0889694409f51f90daa3a785398c6e2efb1f5b9685f5961e4a264c0403d352  w_mwss.dll
-c42010b9115e5f92923799d321836470f4afee8abeb4590981df920f826a0da6  w_gold.dll
+9d41b22bb686b7298321a713daffcf5949e056e2bfcbd6330a6ca3311d3f33ea  lba0.exe
+d687dc52c4eb5fb6db389a356131d00dea9f1b7fd787d693ca46a3151b48c4ea  w_sb.dll
+7e971d9d01b88be8005d1f5af0dce2892aeeca6d33202b95f995b668d1dd4a25  w_sb2.dll
+eabd5680de7c54461a6c7036f71fd68e54b056f9f775b2d559c4a43d6fddcb4e  w_sbpro.dll
+db628428af399ce7ded89ab866aa73a07d5258cbcaed0c4e07d7a76c627678c7  w_sb16.dll
+50d1397e4f15863c5faf038068f544facfa1414823639839a7be3d337bcc4d7f  w_sb16_8.dll
+122bbb18c0452d14fef81fc4b7bd3030702f1ff5881b9b9fde28b8b9e7322df7  w_sb16_m.dll
+6065aa1631bf5b86eb6c4d812b65f50d54f34f6faebca58c0ca76492de234107  w_sb16_s.dll
+36abd24602cef4428172a05f291dd59368c4c125523682f255e082413c05a1dc  w_pas.dll
+5f5fd493750e1f724d3f171fb8078ec8713f32292d56d569a3d2665a1865f7b7  w_pas16.dll
+b8bd587c27caa159cb6443c96dc322cce4faaca566d53e685d67eb86c8b1069a  w_mwss.dll
+f044b278db705062fc0d8028c1d722578fc9be293df490424a92873257b79929  w_gold.dll
 APtObj	4	c622f71d
 A_FillPropNoClip	99	b979f640
 ActionNormal	2	ff41d912
@@ -25,11 +25,11 @@ Aff2DShape	576	3ba0adf0
 AffAllCar	136	53007c57
 AffBrickBlock	311	8238f65e
 AffFleche	218	d8a9e8df
-AffGraph	619	353668b7
+AffGraph	627	9d2c2126
 AffGrille	203	189051b6
 AffMask	30	bd42187a
-AffMask_Asm	479	f825626d
-AffObjetIso	1515	cace1dbe
+AffMask_Asm	487	d22557bd
+AffObjetIso	1516	b139a3fd
 AffOneCar	152	dccfcacf
 AffScene	6252	989c9976
 AffSpecial	131	beda0757
@@ -37,7 +37,7 @@ Alpha	4	c622f71d
 AlphaLight	4	c622f71d
 AnimMasterRot	2	ff41d912
 AnimMem	4	c622f71d
-AnimNuage	1139	83508250
+AnimNuage	1173	7874313b
 AnimNumObj	2	ff41d912
 AnimRienAgressif	2	ff41d912
 AnimRienDiscret	2	ff41d912
@@ -51,8 +51,8 @@ AnimStepX	2	ff41d912
 AnimStepY	2	ff41d912
 AnimStepZ	2	ff41d912
 AsciiMode	93	5385dc1c
-AskMidiVars	21	87d5dc69
-AsmFillProp	261	23d8dd23
+AskMidiVars	21	b56198b1
+AsmFillProp	269	099c729a
 AsmFillPropNoClip	132	cb51883b
 AsmGouraudTriangleNoClip	695	0d825e17
 AsmTexturedTriangleNoClip	899	8a50e3c8
@@ -70,7 +70,7 @@ BetaUsedObj	2	ff41d912
 BigSampleRepeat	4	fb42dead
 BigStar	42	7eb82f41
 BigWinDial	63	62e18afe
-BlackFrame	32	c4d0978e
+BlackFrame	26	c7ea9d6a
 BounceExtra	147	61a5349a
 BoundRegleTrois	36	a925a232
 Box	265	1117c295
@@ -113,7 +113,7 @@ CheckZvOnZv	260	68c39405
 ChoosePlayerName	776	42abd1c9
 ClearAdelineSystem	40	db15bc8a
 ClearAsciiBuffer	13	7ada21bc
-ClearCDR	16	443ec7f9
+ClearCDR	25	564b6686
 ClearDial	3	5c285922
 ClearExtra	36	d25653e4
 ClearFla	44	d712f1ca
@@ -127,14 +127,14 @@ ClearScene	84	4c035c5c
 ClearScreenMinMax	39	f57629f5
 ClearSvga	11	8ca97cf7
 ClearSystem	0	d202ef8d
-ClearTimer	73	53d84626
+ClearTimer	73	b38cd39c
 ClearVideo	11	8ca97cf7
 ClearVoiceFile	75	233e0175
 ClearWave	14	f49010b1
-ClipBas	312	014c301c
-ClipDroit	312	a33c51e7
-ClipGauche	309	0469afa5
-ClipHaut	312	6cf320dd
+ClipBas	368	7202ed17
+ClipDroit	368	24f5760c
+ClipGauche	365	09f131fc
+ClipHaut	368	64cbf33e
 ClipXmax	4	17a94888
 ClipXmin	4	c622f71d
 ClipYmax	20	3be637c9
@@ -142,7 +142,7 @@ ClipYmin	4	c622f71d
 Close	16	e0615517
 CloseDial	11	6f06521a
 CloseFdNar	34	fe9f7fcd
-CloseTrayCDR	123	b184ae5f
+CloseTrayCDR	125	ad1fa07d
 ClrHoloPos	24	704a147d
 Cls	18	d925ff07
 ClsBoxes	77	4a9fccaf
@@ -160,21 +160,21 @@ ComputeCoorMapping	178	caf9624b
 ComputeFire	220	e72971fe
 ComputeGlobeProj	348	314c2ac5
 ComputePoly	20	0f55c125
-ComputePoly_A	1125	030e4635
+ComputePoly_A	1125	adcb49c6
 ComputeSphere	27	0e3deb6c
-ComputeSphere_A	764	98983363
+ComputeSphere_A	780	118766a5
 ComputeTime	77	bf0f0789
 ControlCDR	121	48436bd1
 Copy	288	b0aa699f
 CopyBak	69	888c713f
-CopyBlock	107	c5d48f44
-CopyBlockMCGA	81	cdaa5d3f
+CopyBlock	111	1f7b8858
+CopyBlockMCGA	85	a0288dbd
 CopyBlockPhys	691	7aa0f247
 CopyBlockPhysClip	395	9fa93363
 CopyBlockPhysMCGA	100	e46d1f8d
 CopyFileCD_HD	484	97d3dc76
-CopyFrame	39	a1cfde92
-CopyInterAnim	122	4cc22b61
+CopyFrame	33	b6c861e6
+CopyInterAnim	122	24a5226c
 CopyMapToCube	266	97fe30ff
 CopyMask	651	d52168ea
 CopyMatrice	22	8785f8e7
@@ -214,15 +214,15 @@ Distance3D	41	bd8e4ed7
 DoAnim	3071	095dbfd8
 DoCornerReajust	343	da04b24a
 DoCornerReajustTwinkel	379	388ca594
-DoDir	1496	2fc4c1d6
+DoDir	1452	8f144f59
 DoFire	105	d6cec618
-DoFoundObj	1396	f30bf2b2
+DoFoundObj	1416	46b5e819
 DoFuncLife	1532	85938483
 DoGameMenu	1227	2394140f
-DoLife	5505	3a971091
+DoLife	5489	35563cac
 DoLoopMidi	58	41039587
 DoTest	796	6eccf3a5
-DoTrack	2420	af71d83b
+DoTrack	2412	1eb9653a
 DosFree	43	3ae491d2
 DosMalloc	115	83d0a2cd
 Draw3dObject	112	1188508f
@@ -253,6 +253,7 @@ DrawTitle	363	cfc7f768
 DriveCDR	2	d33f7aba
 Driver	144	2bcb3ae7
 DriverError	4	a1d3ad6a
+DropLoopObj	54	5701470c
 DxBlock	4	c622f71d
 DyBlock	4	c622f71d
 DzBlock	4	c622f71d
@@ -306,6 +307,7 @@ FlagDisplayText	8	f17200ed
 FlagFade	2	ff41d912
 FlagFirst	4	fb42dead
 FlagLight	80	bd0afc16
+FlagLoopsKept	4	c622f71d
 FlagMCGA	4	c622f71d
 FlagMessageShade	4	fb42dead
 FlagPalettePcx	2	ff41d912
@@ -342,32 +344,32 @@ GameVolumeMenu	36	7b2d8b81
 Gamma	4	c622f71d
 GammaLight	4	c622f71d
 GereAmbiance	272	85a2c7c8
-GereAnimAction	2179	d58bcf0d
+GereAnimAction	2190	afe29476
 GereExtras	2458	46b9ceca
 GestionPalette	118	de11eadf
 GetAdrBlock	16	2c31af32
 GetAdrColonneCube	32	37d7ca1a
 GetAdrColonneMap	26	1b340374
 GetAngle	171	b7115173
-GetAngleGroupe	87	7e9995c1
+GetAngleGroupe	89	bcb523c2
 GetAscii	15	6b05088f
 GetBitCDR	62	78657016
 GetBouclageAnim	16	3599e792
-GetCopyrightName	62	bb5e85aa
+GetCopyrightName	94	f61092c3
 GetDiskEnv	67	8498135e
 GetDxDyGraph	37	2082f475
 GetDxDyMask	37	2082f475
-GetFileCDR	183	ea358042
+GetFileCDR	185	9236c90a
 GetHDFreeSize	19	956fed85
-GetLengthTrackCDR	70	018d8a06
-GetMultiText	175	8600aaa3
+GetLengthTrackCDR	94	9808ed12
+GetMultiText	171	e6e5517b
 GetMusicCD	31	9de0e983
 GetMusicCDR	81	fa3fcd2d
 GetNbFramesAnim	13	e5a27ccf
 GetNextLine	479	b93a60f7
 GetNextWord	70	1e1033e7
-GetRealAngle	80	e687ef7f
-GetRealValue	61	77ccb8b3
+GetRealAngle	108	537bfea4
+GetRealValue	89	34e4bd25
 GetShadow	287	98cb67bc
 GetText	131	eabf342f
 GiveBalance	347	f7da835c
@@ -396,23 +398,27 @@ HQR_Init_Ressource	131	eee9a72f
 HQR_Midi	4	c622f71d
 HQR_Reset_Ressource	31	73d16bbc
 HQR_Samples	4	c622f71d
-HQ_3D_MixSample	175	5d211a52
+HQ_3D_MixSample	192	50a3127c
+HQ_3D_MixSampleObj	67	6b05020b
 HQ_ChangeBalanceSamples	7	9e0c8a9f
-HQ_MixSample	95	e9169e1e
-HQ_StopOneSample	20	c446b369
-HQ_StopSample	7	c2f6adb6
+HQ_MixSample	172	64fb46c5
+HQ_RestoreSamples	27	9d26daf2
+HQ_SaveSamples	295	ee7c5358
+HQ_StopOneSample	107	018acd26
+HQ_StopSample	19	d4ff62bc
+HQ_StopSamplesObj	127	7ae9a3bd
 HandleFla	4	c622f71d
 HandleTimer	4	c622f71d
 HeaderBalanceFlaNew	8	e60914ae
 HeaderFla	16	c9eff1bd
 HeaderInfo	2	ff41d912
 HeaderPasseFla	6	9d6cdf7e
-HeaderSampleFlaNew	14	d7d303e7
+HeaderSampleFlaNew	10	6b87b1ec
 HeaderSampleListFla	4	c622f71d
 HeaderSampleStopFlaNew	2	ff41d912
 HigTrack	1	41d912ff
 HitObj	256	905d492c
-HoloMap	1528	820cfc3a
+HoloMap	1562	6196f3f3
 HoloTraj	1079	c4bb2c96
 ImageCadence	4	03d21a1c
 Imagen	12	0f744682
@@ -423,7 +429,7 @@ InitAdelineSystem	1563	dc4eaeb7
 InitAnim	476	cc99fa1f
 InitBody	456	9673f749
 InitBufferCube	75	7fb8dbdd
-InitCDR	341	ad9b3c8a
+InitCDR	373	cde1922e
 InitDial	672	dac1598b
 InitDialWindow	243	914217b5
 InitEndPage	119	4d6fcab6
@@ -441,9 +447,9 @@ InitKeyboard	123	a500784c
 InitLanguage	275	c4d571f5
 InitMcga	17	4db43ca3
 InitMcgaMode	11	fc6ad375
-InitMidi	511	5e75402c
+InitMidi	501	f0e5e99c
 InitMidiDLL	335	c831f7bd
-InitModeVesa	177	305a43aa
+InitModeVesa	177	3e637d62
 InitObject	255	313030df
 InitPathMidiSampleFile	47	03aeed9d
 InitPerso	108	4a997831
@@ -475,6 +481,7 @@ Itoa	23	dd8145ae
 ItoaTempoString	40	6e8d80aa
 Joy	2	ff41d912
 KFactor	4	77c4478f
+KeepLoopObj	75	e9e99215
 Key	2	ff41d912
 LFactorX	4	4940604a
 LFactorY	4	bc144b7b
@@ -515,7 +522,7 @@ LbaFont	4	c622f71d
 LeadOut	4	c622f71d
 Line	33	d85d2827
 LineVolume	4	c622f71d
-Line_A	517	e1b4493f
+Line_A	579	b320acdd
 ListBetaGame	510	1814209f
 ListBrickColon	42080	b55202f8
 ListBrickTrack	4	c622f71d
@@ -528,6 +535,7 @@ ListHoloPos	4	c622f71d
 ListIdentifier	16	d951a569
 ListIncrustDisp	160	0613d83c
 ListLanguage	20	fad22762
+ListLoopObj	400	dbf281ab
 ListObjet	12400	74d4f797
 ListTraj	4	c622f71d
 ListTri	1800	dadc8b8a
@@ -547,11 +555,12 @@ LoadScene	1069	530fc7ba
 LoadUsedBrick	780	aeee43aa
 Load_HQR	256	da60ad39
 LocateHeadCDR	99	3176d344
-LockCDR	81	2e483c05
+LockCDR	83	a8db1754
 Log	4	c622f71d
+LongIDiv	61	ae64e301
 LongInverseRot	132	abcd8f03
 LongInverseRotatePoint	27	1262b64f
-LongProjettePoint	167	fb1591ad
+LongProjettePoint	175	91d82cee
 LongWorldRot	132	a4db36fe
 LongWorldRotatePoint	27	6765ea0b
 LowTrack	1	41d912ff
@@ -568,7 +577,7 @@ MagicHitForce	6	529f145d
 MagicLevel	2	ff41d912
 MagicPoint	2	ff41d912
 MainGameMenu	890	1c05a0fc
-MainLoop	3611	10c58848
+MainLoop	3716	62c34902
 Malloc	87	51f4886a
 ManualRealAngle	67	890f9043
 Map2Screen	67	c7512433
@@ -584,16 +593,14 @@ MemInfo	48	529500f5
 MemoClip	41	4e59ca64
 MemoLog	4	c622f71d
 MemoTimerRef	4	c622f71d
-MenuComportement	650	fc2e6f0e
+MenuComportement	655	ca449ed7
 MenuDemo	988	6e395d08
 Message	7	9e0c8a9f
 MidiFM	4	fb42dead
 MidiLoop	4	7ed73d29
 MidiPath	144	2bcb3ae7
-Midi_Base	4	c622f71d
-Midi_DMA	4	c622f71d
 Midi_Driver_Enable	4	17b388c0
-Midi_IRQ	4	c622f71d
+Midi_Vars	12	0f744682
 MixMusic	4	fb42dead
 MixerAskVars	7	ff941bd2
 MixerCallFuncs	21	671e2d4b
@@ -627,6 +634,7 @@ NbFourLeafClover	2	fcc50d7c
 NbFramePerSecond	2	ff41d912
 NbGoldPieces	2	ff41d912
 NbLittleKeys	2	ff41d912
+NbLoopObj	4	c622f71d
 NbObjets	4	c622f71d
 NbOptPhysBox	2	ff41d912
 NbPhysBox	2	ff41d912
@@ -675,7 +683,7 @@ OpenRead	43	ec9008eb
 OpenReadWrite	43	70cd5e32
 OpenWrite	43	5a3fc815
 OptListBox	2400	09246de8
-OptionsMenu	244	73691e43
+OptionsMenu	275	3e7b1fb2
 OrgDir	130	3cd4d09e
 OrgDrive	4	c622f71d
 OrgPtrDef	4	c622f71d
@@ -685,8 +693,8 @@ PalOne	46	ca4c7c0c
 Palette	84	a76e2287
 PaletteOrg	768	bf2aab92
 PalettePcx	1268	361feff6
-PatchInterAngle	87	174f7054
-PatchInterStep	53	7c91e544
+PatchInterAngle	113	d604b472
+PatchInterStep	79	3b4444b0
 PatchObjet	85	e8efad27
 PatchType	28	6d3c313a
 PathConfigFile	144	2bcb3ae7
@@ -701,14 +709,14 @@ PlayMidi	303	99d3ef13
 PlayMidiFile	119	7f35d7a1
 PlayMusic	91	43cef3ed
 PlaySpeakVoc	271	89a387a6
-PlayTrackCDR	116	7e28d67a
+PlayTrackCDR	125	422e9faa
 PlayerGameList	280	0341d88b
 PlayerName	30	6909acb0
 PleaseWait	60	dcdd7536
 Poff	74	70145a8d
 ProgDir	130	3cd4d09e
 ProgDrive	3	2144df1c
-Proj_3D	57	b58f3251
+Proj_3D	109	ab02e727
 Proj_ISO	62	cdad5029
 ProjettePoint	130	713b0f70
 Ptr3do	4	c622f71d
@@ -718,10 +726,10 @@ PtrBufferAnim	4	c622f71d
 PtrCone	4	c622f71d
 PtrCoorGlobe	4	c622f71d
 PtrDef	4	c622f71d
-PtrDefReadIdent	87	41a298e8
-PtrDefReadString	84	3d2c76f5
-PtrDefReadThisString	80	f8cbdb48
-PtrDefReadWord	75	12d6a35f
+PtrDefReadIdent	92	26e51c5d
+PtrDefReadString	91	e9e1970c
+PtrDefReadThisString	118	1127ec2b
+PtrDefReadWord	80	0d6f0c78
 PtrDefSearchIdentificator	42	5b918cec
 PtrFile3dAgressif	4	c622f71d
 PtrFile3dDiscret	4	c622f71d
@@ -743,10 +751,10 @@ PtrZvExtra	4	c622f71d
 Ptr_HQM_Memory	4	c622f71d
 Ptr_HQM_Next	4	c622f71d
 PushCar	160	83038bdf
-QuitMenu	118	4c1aad6e
+QuitMenu	143	fb9ef947
 RazMem	29	e2700a72
 Read	51	a0a9d3e7
-ReadLongCDR	192	25e7ffbb
+ReadLongCDR	213	8cefabcc
 ReadVolumeSettings	472	b6210978
 ReajustPos	551	1bd0589f
 RealFalling	10	6b87b1ec
@@ -754,7 +762,7 @@ RealRot	12	0f744682
 ReceptionObj	287	def60eaa
 Rect	88	1822652e
 Red2Hsg	56	f0a99dc6
-RegleTrois32	26	8f0b9ec3
+RegleTrois32	30	f138539f
 ResetCDR	76	5c7805d1
 RessPict	102	f43fea4e
 RestartPerso	111	0b2a4c1c
@@ -774,17 +782,17 @@ RotXY	78	1c151db9
 Rotate	38	32484afc
 RotateGroupe	168	0654cf2c
 RotateMatriceWorld	52	92faa5ac
-RotateNuage	417	39381766
+RotateNuage	447	2e71aae1
 RotatePoint	25	feebbd5c
-SVGAPolyBopper	152	bedca5e4
-SVGAPolyCopper	162	bb2fd0d7
-SVGAPolyDith	254	1a89145b
-SVGAPolyGouraud	406	48758b77
-SVGAPolyMarbre	135	c24e86af
+SVGAPolyBopper	162	ffc9813e
+SVGAPolyCopper	166	4e122ae9
+SVGAPolyDith	304	4b85b44a
+SVGAPolyGouraud	434	ffe873d4
+SVGAPolyMarbre	141	42e1186c
 SVGAPolyTele	97	f3143da6
 SVGAPolyTrame	82	b2266b8a
-SVGAPolyTrans	80	e791d830
-SVGAPolyTriche	45	1fa973ff
+SVGAPolyTrans	82	7fcd1198
+SVGAPolyTriche	48	fd713edd
 SVGAPolyTriste	62	5b6b5a60
 SampleAmbiance	8	e60914ae
 SampleMem	4	c622f71d
@@ -833,14 +841,14 @@ SetAngleGroupe	76	dc3dfce5
 SetAnimObjet	157	cb981fd1
 SetBlackPal	42	542df793
 SetClip	79	8063b1c6
-SetComportement	168	2f3e3b67
+SetComportement	203	a7727521
 SetFillDetails	44	209ebbb1
-SetFollowCamera	120	3796c805
+SetFollowCamera	119	017a5935
 SetFont	29	dc4ae101
 SetHoloPos	19	b80a8c2f
-SetInterAnimObjet	487	f0add215
+SetInterAnimObjet	643	6ee043f3
 SetInterAnimObjet2	329	ed4e11ab
-SetInterDepObjet	307	6d9d77f4
+SetInterDepObjet	463	a245e7b2
 SetInverseAngleCamera	118	dcec8da1
 SetIsoProjection	39	59b278a5
 SetLightVector	101	c0503015
@@ -848,20 +856,20 @@ SetPosCamera	29	e3ba80e1
 SetProjection	54	a1267c52
 SetTimer	22	7952fad4
 SetVolumes	80	53092833
-ShadeBox	208	2ea6869a
+ShadeBox	220	0797842c
 Shadow	2	fcc50d7c
 ShadowCol	2	ff41d912
 ShadowX	2	ff41d912
 ShadowY	2	ff41d912
 ShadowZ	2	ff41d912
 SimpleInitMcga	15	ae9136d2
-SimpleInitSvga	30	96eb628e
+SimpleInitSvga	35	ab44f63b
 SizeCar	6	ae839119
 SizeFont	87	e6f275f1
 Size_HQM_Free	4	c622f71d
 Size_HQM_Memory	4	c622f71d
 Size_HQR	160	1171a31b
-SmallSort	84	81e002ae
+SmallSort	87	f5a31f24
 SmartMalloc	79	000d49b3
 Speak	167	4dc4ed65
 SpeakFromCD	546	98b73a61
@@ -870,7 +878,7 @@ SpriteMem	4	c622f71d
 Sqr	82	2376405b
 StartInitAllObjs	31	8c62336c
 StartInitObj	215	5b83b5a1
-StartTrackCDR	102	9ed26382
+StartTrackCDR	110	ec4e5d0c
 StartXCube	4	c622f71d
 StartYCube	4	c622f71d
 StartYFalling	2	ff41d912
@@ -898,14 +906,14 @@ TabLanguage	20	fad22762
 TabLetter	72	6eb6c62a
 TabMat	1108	16f4e0d4
 TabOffLine	3840	011ec242
-TabPoly	386	24e9d344
+TabPoly	416	01d9a3b6
 TabText	220	30ebd37f
 TabVerticD	960	15eda539
 TabVerticG	960	15eda539
 TabX0	960	15eda539
 TabX1	960	15eda539
 TabY0	960	15eda539
-TabY1	1658	84ad9dfe
+TabY1	1656	68bb1af9
 TestCoulDial	46	966c8339
 TestRestoreModeSVGA	99	dcf14c44
 TestSpeak	15	3c401c2a
@@ -925,7 +933,7 @@ TimerRef	4	c622f71d
 TimerSample	4	c622f71d
 TimerSystem	16	c9eff1bd
 TotalSizeFileHD	4	c622f71d
-Touch	141	8d7b97e1
+Touch	143	83901d9b
 TransRotList	174	23f7d780
 TranslateGroupe	153	b27ef599
 TryCopyFileCD_HD	114	36eda599
@@ -937,15 +945,15 @@ UnSetClip	35	d0fd6b01
 UpdateFrame	106	49e00b4e
 VESA_Error	2	ff41d912
 Value	2	ff41d912
-Version	4	a1d3ad6a
+Version	8	cf1dbf47
 Version_US	4	c622f71d
 VolumeMidi	56	7f923b5f
 VolumeOptions	336	d88bd46e
 Vsync	19	48967690
-WaitDisk	32	9bd75151
+WaitDisk	38	f8832100
 WaitFadeMidi	47	fd5a438f
 WaitNbTicks	2	fe83b325
-WaitReleaseSpace	31	727e9c53
+WaitReleaseSpace	32	226296a6
 WaveAskVars	7	b74d3c08
 WaveCallFuncs	23	9bb9eccb
 WaveChangeVolume	10	c7b99ed4
@@ -1089,7 +1097,7 @@ _LpCmdLine	4	c622f71d
 _LpPgmName	4	c622f71d
 _STACKLOW	4	c622f71d
 _STACKTOP	4	c622f71d
-_TalkCDR_O	94	958054d9
+_TalkCDR_O	115	e6619e52
 __CHK	15	144cc0b5
 __CMain	47	c021ae82
 __D16Infoseg	4	07e3d819
@@ -1149,7 +1157,7 @@ __nheapblk	40	c98c973a
 __nmemneed	7	b74651a9
 __no87	2	ff41d912
 __null_int23_exit	1	a10e9672
-__nullarea	84028	f91a1566
+__nullarea	84024	76b8787d
 __prtf	2189	d1a27641
 __qwrite	117	921393d4
 __set_binary	96	a87d4326
@@ -1209,6 +1217,7 @@ ail_buffer	4	c622f71d
 atoi	72	40482aed
 chdir	36	b6865e42
 close	60	4adaaf6f
+cmpcross	40	eaf24974
 compteur	2	ff41d912
 desc	4	c622f71d
 dll	4	c622f71d
@@ -1240,7 +1249,7 @@ lGamma	4	c622f71d
 load_global_timbre	85	ad79b8cb
 lseek	65	93e15728
 ltoa	48	9899b7ff
-main	1354	d92e311f
+main	1353	7e29dbe2
 malloc	16	3e41e686
 memmove	86	6d297a5a
 open	31	0e476883

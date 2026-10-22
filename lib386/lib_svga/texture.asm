@@ -71,6 +71,10 @@ TAB_Y1		equ	960*5
 
 		public	 NoLanguage	AsmFillProp
 		public	 NoLanguage	AsmFillPropNoClip
+
+IFDEF	FIXES
+		extrn	NoLanguage	LongIDiv:near
+ENDIF
 ;		public	 NoLanguage	M_AsmFillProp
 
 ;*══════════════════════════════════════════════════════════════════════════*
@@ -147,7 +151,15 @@ clip_ymax:
 		sub	eax, [ClipYmax]		; ymax - y1
 		neg	eax
 		imul	edi			; * dx
+		; FIXED: LBA.EXE's idiv faults on a quotient past 32 bits.
+		; LongIDiv, here and below, divides in 64 bits and keeps the low
+		; 32.
+IFDEF	FIXES
+		push	esi
+		call	LongIDiv		; / dy
+ELSE
 		idiv	esi			; / dy
+ENDIF
 		add     eax, ebp		; += x1
 		mov	edx, eax
 		mov	ecx, [ClipYmax]		; y1 = ymax
@@ -174,7 +186,12 @@ clip_ymin:
 		sub	eax, [ClipYmin]		; ymin - y0
 		neg	eax
 		imul	edi			; * dx
+IFDEF	FIXES
+		push	esi
+		call	LongIDiv		; / dy
+ELSE
 		idiv	esi			; / dy
+ENDIF
 		add     eax, ebp		; += x0
 		mov	ebx, eax
 		mov	eax, [ClipYmin]		; y0 = ymin
@@ -187,7 +204,15 @@ clip_ymin:
 afp00:		sub	ecx, eax		; ecx deltay >= 0
 
 
+		; FIXED: a clip box whose ClipYmax lies above its ClipYmin
+		; brings the ends to its edges in reverse, and LBA.EXE steps the
+		; count of lines between, negative, as some 2^32 words past the
+		; table. Such a box returns at once.
+IFDEF	FIXES
+		jle	nofill		; GASP mettre cas 1 ligne
+ELSE
 		jz	nofill		; GASP mettre cas 1 ligne
+ENDIF
 
 
 		shl	eax, 1

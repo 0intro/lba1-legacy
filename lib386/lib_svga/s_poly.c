@@ -9,9 +9,7 @@
  * TabPoly, each a colour word (its low byte the intensity for Gouraud),
  * x and y. ComputePoly clips it and leaves, for each line from Ymin to
  * Ymax, its left x in TabVerticG and right in TabVerticD, and for
- * Gouraud the intensity at each end in TabCoulG and TabCoulD, 8.8. The
- * assembly kept these tables back to back, a polygon of more than 31
- * points spilling from one into the next. Here each has some slack.
+ * Gouraud the intensity at each end in TabCoulG and TabCoulD, 8.8.
  */
 
 enum
@@ -52,7 +50,13 @@ static WORD *offtabpoly[2];
 static void
 span(int32_t line, int32_t l, int32_t r, int below)
 {
-	if ((int16_t)line > Ymax || (int16_t)line < Ymin)
+	/*
+	 * FIXED: LBA.EXE tests the line against Ymin and Ymax in 16 bits and
+	 * writes it at its 32-bit index, so that a radius from 32768 with a
+	 * centre far below, or near 65535 with any, writes about 128 KB on
+	 * either side of the tables. This tests the line in 32 bits.
+	 */
+	if (line > Ymax || line < Ymin)
 		return;
 	if (l < ClipXmin)
 		l = ClipXmin;
@@ -142,7 +146,12 @@ ComputeSphere(int32_t xc, int32_t yc, int32_t r)
 	}
 	if (clip == 0)
 		return 1;
-	return Ymin < Ymax;
+	/*
+	 * FIXED: LBA.EXE gives up a clipped circle that its clipping leaves
+	 * one line high (jge nosphere). This draws that line. DotEmu and the
+	 * Classic draw it too, from a circle they frame otherwise.
+	 */
+	return Ymin <= Ymax;
 }
 
 /* a*b/c as the assembly's 16-bit imul and idiv made it */
@@ -304,7 +313,14 @@ edge(int left, WORD x0, WORD y0, WORD x1, WORD y1, uint8_t i0, uint8_t i1)
 	if ((uint16_t)TypePoly < Gouraud)
 		return;
 	coul = left ? TabCoulG : TabCoulD;
-	if (i1 >= i0) {
+	/*
+	 * FIXED: LBA.EXE steps the shade up when the end's byte is the
+	 * start's or above (jc), so that from FEh to 3 it runs down through
+	 * every shade. This steps the short way round the 256 shades, as
+	 * the difference of the bytes signed says. DotEmu steps by the
+	 * difference of the points' words, rounding its edges otherwise.
+	 */
+	if ((int8_t)(i1 - i0) >= 0) {
 		w = (uint16_t)((uint8_t)(i1 - i0) << 8);
 		step = w / dy;
 		v = (uint16_t)(i0 << 8 | (uint8_t)(((uint8_t)(w % dy) >> 1) + 0x7F));

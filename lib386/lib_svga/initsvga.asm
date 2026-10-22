@@ -154,8 +154,24 @@ InitSvga		endp
 
 ;----------------------------------------------------------------------------
 
-SimpleInitSvga		proc	uses ebx
+IFDEF	FIXES
+SimpleInitSvga		proc
 
+			; FIXED: LBA.EXE saves EBX alone, and InitModeVesa
+			; returns EDI changed, which Watcom's convention has a
+			; callee keep. Every register is saved, as InitSvga
+			; saves them.
+			pushad
+
+			; FIXED: LBA.EXE gives the driver's InitMode the EAX its
+			; caller left, where InitSvga gives it ScanLine's
+			; address, through which a driver sets the card's
+			; variables: COMPAQ.DLL's InitMode writes ScanLine and
+			; NonStdVESA there. It is given ScanLine's.
+			mov	eax, offset ScanLine
+ELSE
+SimpleInitSvga		proc	uses ebx
+ENDIF
 			call	[InitSvgaMode]
 
 			mov	eax, [Enable]
@@ -164,6 +180,10 @@ SimpleInitSvga		proc	uses ebx
 
 			call	eax
 skip:
+IFDEF	FIXES
+			popad
+ENDIF
+
 			mov	dword ptr[BankCurrent], -1
 
 			ret

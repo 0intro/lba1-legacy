@@ -232,6 +232,20 @@ void	SetComportement( WORD comportement )
 
 	ptrobj = &ListObjet[ NUM_PERSO ] ;
 
+	/*
+	 * FIXED: LBA.EXE leaves the protopack's hum (sample 156), which its
+	 * flight plays looping, when Twinsen leaves it in flight: the
+	 * inventory, F1 to F4, the saber, a script. Leaving the protopack
+	 * stops Twinsen's own, where DotEmu's Android 1.06 stops every 156,
+	 * another actor's flying protopack's too.
+	 */
+#ifdef	FIXES
+	if( (Comportement == C_PROTOPACK) AND (comportement != C_PROTOPACK) )
+	{
+		HQ_StopSamplesObj( NUM_PERSO, 156 ) ;
+	}
+#endif
+
 	switch( comportement )
 	{
 		case C_NORMAL:
@@ -2097,12 +2111,28 @@ void	DoDir( WORD numobj  )
 				}
 				else
 				{
+					/*
+					 * FIXED: LBA.EXE starts the blow of each arrow
+					 * held, so that with two arrows one blow starts
+					 * over the other every frame and Twinsen stands
+					 * still. This starts one, the blow LBA.EXE's last
+					 * call left: Up's over Left's over Right's.
+					 */
+#ifdef	FIXES
+					if( MyJoy & J_UP )
+						InitAnim( GEN_ANIM_COUP_1, ANIM_THEN, GEN_ANIM_RIEN, numobj ) ;
+					else if( MyJoy & J_LEFT )
+						InitAnim( GEN_ANIM_COUP_3, ANIM_THEN, GEN_ANIM_RIEN, numobj ) ;
+					else if( MyJoy & J_RIGHT )
+						InitAnim( GEN_ANIM_COUP_2, ANIM_THEN, GEN_ANIM_RIEN, numobj ) ;
+#else
 					if( MyJoy & J_RIGHT )
 						InitAnim( GEN_ANIM_COUP_2, ANIM_THEN, GEN_ANIM_RIEN, numobj ) ;
 					if( MyJoy & J_LEFT )
 						InitAnim( GEN_ANIM_COUP_3, ANIM_THEN, GEN_ANIM_RIEN, numobj ) ;
 					if( MyJoy & J_UP )
 						InitAnim( GEN_ANIM_COUP_1, ANIM_THEN, GEN_ANIM_RIEN, numobj ) ;
+#endif
 				}
 			}
 			break ;

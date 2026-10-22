@@ -51,7 +51,9 @@
  *		1000 calls
  *	line, box, block, screen, graph, mask, font
  *		the drawing modules, on a screen for each side: a million
- *		lines in and out of random clip boxes, then boxes, blocks copied
+ *		lines in and out of random clip boxes and a thousand from up
+ *		to 70000 out, half of them through the box, each in a child
+ *		that a fault or an alarm ends, then boxes, blocks copied
  *		between Log and Screen or within one, random graphs, masks
  *		made by both sides' CalcGraphMsk, strings in a random font,
  *		and the screen cleared and copied
@@ -227,6 +229,22 @@ readfile(char *path, long *np)
 	return b;
 }
 
+static uint32_t seglo[8], seghi[8];	/* the image's segments, as load mapped them */
+static int nseg;
+
+/* Copy up to n of the image's segments into lo and hi, and count them. */
+int
+segments(uint32_t *lo, uint32_t *hi, int n)
+{
+	int i;
+
+	for (i = 0; i < nseg && i < n; i++) {
+		lo[i] = seglo[i];
+		hi[i] = seghi[i];
+	}
+	return i;
+}
+
 /* Map the PT_LOAD segments of an ELF32 at their addresses. */
 static void
 load(char *path)
@@ -260,6 +278,11 @@ load(char *path)
 			MAP_PRIVATE|MAP_ANONYMOUS|MAP_FIXED_NOREPLACE, -1, 0);
 		if (m == MAP_FAILED || m != (void*)(uintptr_t)lo)
 			fatal("cannot map %s's segments where they belong", path);
+		if (nseg < (int)nelem(seglo)) {
+			seglo[nseg] = lo;
+			seghi[nseg] = hi;
+			nseg++;
+		}
 		memcpy((void*)(uintptr_t)va, b + off, filesz);
 	}
 	free(b);

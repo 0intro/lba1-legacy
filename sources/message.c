@@ -113,7 +113,11 @@ static  LONG    SizeWord        ;
 /*-------------------------------------------------------------------------*/
 
 static	UBYTE	BufferMultiText[256] ;
+#ifdef	FIXES
+static	LONG	FileMultiText = -1 ;
+#else
 static	LONG	IslandMultiText = -1 ;
+#endif
 static	LONG	NumMultiText = -1 ;
 
 LONG	FlecheForcee = FALSE ;
@@ -1625,7 +1629,17 @@ char    *GetMultiText( LONG text, char *dst )
 	char    *ptd    ;
 	LONG	smax ;
 
+	/*
+	 * FIXED: LBA.EXE keys the text it keeps on its number and the
+	 * island, so that once InitDial has loaded another bank, a text of
+	 * the same number from the bank before comes back. The key is the
+	 * bank, as in LBA2.
+	 */
+#ifdef	FIXES
+	if( (text == NumMultiText ) AND (LastFileInit == FileMultiText) )
+#else
 	if( (text == NumMultiText ) AND (Island == IslandMultiText) )
+#endif
 	{
 		strcpy( dst, BufferMultiText ) ;
 		return dst ;
@@ -1649,7 +1663,11 @@ char    *GetMultiText( LONG text, char *dst )
 
 	MovMem( dst, BufferMultiText, smax+1 ) ;
 	NumMultiText = text ;
+#ifdef	FIXES
+	FileMultiText = LastFileInit ;
+#else
 	IslandMultiText = Island ;
+#endif
 
 	return(dst)     ;
 }

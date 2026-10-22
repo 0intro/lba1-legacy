@@ -18,6 +18,7 @@ uint32_t	rnd(void);
 uint32_t	rndn(uint32_t);
 int32_t	rndr(int32_t, int32_t);
 uintptr_t	lookup(char*);
+int	segments(uint32_t*, uint32_t*, int);
 int32_t	acall(uintptr_t, int, ...);
 extern int	exhaustive;
 extern char	*gamedir;	/* the game's files, or NULL: the tests then take random data alone */

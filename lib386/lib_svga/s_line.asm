@@ -117,14 +117,47 @@ ncy2a:
 
 		test	bp, 100h
 		jz	c0
-
+IFDEF	FIXES
+		test	bp, 0C00h
+		jz	clipx0
+		; FIXED: LBA.EXE clips an end outside on both axes in x, then
+		; in y from the point the x clip rounded, so that the rounding
+		; compounds: a shallow line through a box one line high can be
+		; rejected though it crosses the box, and one entering at a
+		; corner starts up to dx/dy pixels late. Clip such an end once,
+		; at the edge the line crosses there, the first end's later
+		; entry or, below, the other's earlier exit, x on a tie.
+		push	ecx
+		push	edx
+		mov	ecx, [ClipXmin]
+		mov	edx, [ClipYmin]
+		test	bp, 800h
+		jnz	ey0
+		mov	edx, [ClipYmax]
+ey0:		call	cmpcross
+		pop	edx
+		pop	ecx
+		ja	c0			; the line enters through y last
+clipx0:
+ENDIF
 		mov	ebp, edx
 
 		sub	eax, [ClipXmin]		; xmin - x0
 		neg	eax
+		; FIXED: LBA.EXE multiplies and divides the low words and keeps
+		; 16 bits of the quotient: past 16 bits a clipped end lands
+		; anywhere, so that the clipping may never end, and a dx or dy
+		; that is a multiple of 65536 divides by 0. Multiply in 64 bits
+		; and divide in 32, here and below, the quotient at most the
+		; other difference while the coordinates lie within 2^30.
+IFDEF	FIXES
+		imul	esi			; * dy
+		idiv	edi			; / dx
+ELSE
 		imul	si			; * dy
 		idiv	di			; / dx
 		movsx	eax, ax
+ENDIF
 		add     ebx, eax		; y0 +=
 		mov	eax, [ClipXmin]		; x0 = xmin
 
@@ -140,9 +173,14 @@ c0:
 		xchg	eax, ebx
 		sub	eax, [ClipYmin]		; ymin - y0
 		neg	eax
+IFDEF	FIXES
+		imul	edi			; * dx
+		idiv	esi			; / dy
+ELSE
 		imul	di			; * dx
 		idiv	si			; / dy
 		movsx	eax, ax
+ENDIF
 		add     eax, ebx		; x0 +=
 		mov	ebx, [ClipYmin]		; y0 = ymin
 
@@ -158,9 +196,14 @@ c1:
 		xchg	eax, ebx
 		sub	eax, [ClipYmax]		; ymax - y0
 		neg	eax
+IFDEF	FIXES
+		imul	edi			; * dx
+		idiv	esi			; / dy
+ELSE
 		imul	di			; * dx
 		idiv	si			; / dy
 		movsx	eax, ax
+ENDIF
 		add     eax, ebx		; x0 +=
 		mov	ebx, [ClipYmax]		; y0 = ymax
 
@@ -173,13 +216,34 @@ c1:
 c2:
 		test	bp, 2
 		jz	c3
-
+IFDEF	FIXES
+		test	bp, 0Ch
+		jz	clipx1
+		push	ecx
+		push	edx
+		mov	ecx, [ClipXmax]
+		mov	edx, [ClipYmin]
+		test	bp, 8
+		jnz	ey1
+		mov	edx, [ClipYmax]
+ey1:		call	cmpcross
+		pop	edx
+		pop	ecx
+		jb	c3			; the line leaves through y first
+clipx1:
+ENDIF
 		mov	ecx, eax			; save x0
 		mov	eax, [ClipXmax]
 		sub	eax, ecx			; xmax - x0
+IFDEF	FIXES
+		imul	esi				; * dy
+		idiv	edi				; / dx
+		mov	edx, eax
+ELSE
 		imul	si				; * dy
 		idiv	di				; / dx
 		movsx	edx, ax
+ENDIF
 		add     edx, ebx			; + y0
 		mov	eax, ecx			; restore x0
 		mov	ecx, [ClipXmax]
@@ -194,9 +258,15 @@ c3:
 		mov	eax, ebx
 		sub	eax, [ClipYmin]			; ymin - y0
 		neg	eax
+IFDEF	FIXES
+		imul	edi				; * dx
+		idiv	esi				; / dy
+		mov	edx, eax
+ELSE
 		imul	di				; * dx
 		idiv	si				; / dy
 		movsx	edx, ax
+ENDIF
 		mov	eax, ecx
 		add     ecx, edx			; x0 +=
 		mov	edx, [ClipYmin]
@@ -211,9 +281,15 @@ c4:
 		mov	eax, ebx
 		sub	eax, [ClipYmax]			; ymax - y0
 		neg	eax
+IFDEF	FIXES
+		imul	edi				; * dx
+		idiv	esi				; / dy
+		mov	edx, eax
+ELSE
 		imul	di				; * dx
 		idiv	si				; / dy
 		movsx	edx, ax
+ENDIF
 		mov	eax, ecx
 		add	ecx, edx
 		mov	edx, [ClipYmax]
@@ -284,6 +360,43 @@ exit:
 		ret
 
 Line_A		endp
+
+IFDEF	FIXES
+;----------------------------------------------------------------------------
+; cmpcross: |ey-y|*dx against (ex-x)*|dy|, products of 64 bits, the flags
+; as an unsigned cmp of the two leaves them (ja, jb, je): x and y in EAX
+; and EBX, the edges ex and ey in ECX and EDX, ex-x 0 or above, dx above
+; 0 in EDI, dy in ESI. EAX, EBX, ECX and EDX are kept.
+
+cmpcross	proc	near
+		push	eax
+		push	ebx
+		push	ecx
+		push	edx
+		sub	edx, ebx		; ey - y
+		jns	ayabs
+		neg	edx
+ayabs:		sub	ecx, eax		; ex - x
+		mov	eax, edx
+		mul	edi			; |ey-y| * dx
+		mov	ebx, eax
+		push	edx
+		mov	eax, esi
+		cdq
+		xor	eax, edx
+		sub	eax, edx		; |dy|
+		mul	ecx			; (ex-x) * |dy|
+		pop	ecx
+		cmp	ecx, edx		; the high dwords
+		jne	cmpdone
+		cmp	ebx, eax		; then the low
+cmpdone:	pop	edx
+		pop	ecx
+		pop	ebx
+		pop	eax
+		ret
+cmpcross	endp
+ENDIF
 
 
 		end

@@ -10,6 +10,7 @@
 ;*══════════════════════════════════════════════════════════════════════════*
 
 		include		p_define.ash
+		include		../lib_sys/idiv.ash
 
 ;*──────────────────────────────────────────────────────────────────────────*
 		.data
@@ -140,6 +141,10 @@ TabJump_2	dd	aff_E_LIGNE
 
 ;*──────────────────────────────────────────────────────────────────────────*
 		.code
+
+ifdef	FIXES
+		extrn	NoLanguage	LongIDiv:near
+endif
 ;*──────────────────────────────────────────────────────────────────────────*
 
 
@@ -969,11 +974,32 @@ endif
 		cmp	word ptr[TypeProj], TYPE_3D
 		jnz	isosph
 
+		; FIXED: LBA.EXE divides the radius by the depth word plus
+		; KFactor in 16 bits, though the word already holds z plus
+		; KFactor: a sphere comes out smaller than its points'
+		; projection makes it, a quotient past 16 bits faults, from a
+		; depth of 32768 less KFactor the divisor is negative and the
+		; radius, taken unsigned, can come out near 65535, and at 65536
+		; less KFactor the divisor is 0. Divide by the word alone in 32
+		; bits, a word of 0, which RotateNuage's depth can leave,
+		; counting as 1, and keep the quotient's low 16 bits.
+ifdef	FIXES
+		movsx	eax, bp			; rayon
+		movsx	edx, word ptr[LFactorX]
+		imul	eax, edx
+		cdq
+		movzx	ebp, word ptr[esi+10]	; Z
+		or	ebp, ebp
+		jnz	sphdiv
+		inc	ebp
+sphdiv:		idiv	ebp
+else
 		mov	ax, bp			; rayon
 		imul	word ptr[LFactorX]
 		mov	bp, word ptr[esi+10]	; Z
 		add	bp, word ptr[KFactor]
 		idiv	bp
+endif
 		movzx	ebp, ax
 		jmp	short affsph
 
@@ -1447,7 +1473,15 @@ boucleproj3D:	movsx	eax, word ptr[esi]	; eax X rot
 		jle	overflow
 
 fixed:		imul	[LFactorX]		; X
+		; FIXED: LBA.EXE's idiv faults on a quotient past 32 bits.
+		; LongIDiv, here and below, divides in 64 bits and keeps the low
+		; 32.
+ifdef	FIXES
+		push	ebp
+		call	LongIDiv
+else
 		idiv	ebp
+endif
 		add	eax, [XCentre]
 
 		; FIXED: LBA.EXE compares the coordinate with 0FFFFh unsigned,
@@ -1473,7 +1507,12 @@ nosxmax3d:
 		mov	eax, ebx
 		neg	eax
 		imul	[LFactorY]		; -Y
+ifdef	FIXES
+		push	ebp
+		call	LongIDiv
+else
 		idiv	ebp
+endif
 		add	eax, [YCentre]
 
 		cmp	eax, 0FFFFh
@@ -1631,7 +1670,9 @@ bouclerot:
 
 		sar	eax, 14
 		cwd
-		idiv    word ptr[esi+6]		; prenormalized range
+		; FIXED: LBA.EXE's idiv faults on a quotient past 16 bits.
+		; IDIV16 divides in 32 bits and keeps the low 16.
+		IDIV16    <word ptr[esi+6]>		; prenormalized range
 		mov	di, ax
 
 nointensity:	mov	eax, [Ptr1]
@@ -1802,7 +1843,9 @@ bouclerot:	mov	ax, [esi]		; AX X
 		or	dx,dx
 		js	nointensity		; saut si negatif
 
-		idiv	bp
+		; FIXED: LBA.EXE's idiv faults on a quotient past 16 bits.
+		; IDIV16 divides in 32 bits and keeps the low 16.
+		IDIV16	bp
 
 		mov	word ptr[edi], ax
 		add	edi, 2

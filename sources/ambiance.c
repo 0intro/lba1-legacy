@@ -15,11 +15,44 @@ ULONG	EndMusicCD = 0 ;
  *══════════════════════════════════════════════════════════════════════════*/
 /*──────────────────────────────────────────────────────────────────────────*/
 
+/*
+ * FIXED: LBA.EXE leaves the loops an actor plays, a tank's engine, playing
+ * after its death until the scene changes. The loops an actor's
+ * animation or track starts are kept with the driver's long handle
+ * (HQ_3D_MixSampleObj), and its death stops them (HQ_StopSamplesObj),
+ * where LbaWin 0.7.6, DotEmu and the Classic stop every sample of an actor
+ * whose life points run out: its death's one-shots play on.
+ */
+#ifdef	FIXES
+#define	MAX_LOOP_OBJ	50	// LIST_SIZE, ce que le driver joue à la fois
+
+typedef	struct	{	WORD	NumObj ;
+			WORD	NumSample ;
+			ULONG	LongHandle ;	}	T_LOOP_OBJ ;
+
+T_LOOP_OBJ	ListLoopObj[MAX_LOOP_OBJ] ;
+WORD		NbLoopObj = 0 ;
+LONG		FlagLoopsKept ;		// les boucles mises de côté
+
+/*──────────────────────────────────────────────────────────────────────────*/
+
+void	DropLoopObj( WORD n )
+{
+	NbLoopObj-- ;
+	ListLoopObj[n] = ListLoopObj[NbLoopObj] ;
+}
+
+/*──────────────────────────────────────────────────────────────────────────*/
+#endif
+
 ULONG	HQ_MixSample( WORD numsample, WORD decalage, WORD repeat, WORD volleft, WORD volright )
 {
 	UBYTE	string[256] ;
 	ULONG	retvalue ;
 	UBYTE	*ptr ;
+#ifdef	FIXES
+	WORD	n ;
+#endif
 
 	retvalue = -1 ;
 
@@ -32,21 +65,154 @@ ULONG	HQ_MixSample( WORD numsample, WORD decalage, WORD repeat, WORD volleft, WO
 	{
 		retvalue =
 		WavePlay( numsample, decalage, repeat, 0, volleft, volright, ptr ) ;
+
+#ifdef	FIXES
+		// un handle rendu de nouveau: la boucle gardée sous lui est finie
+		for( n=NbLoopObj-1; n>=0; n-- )
+		{
+			if( ListLoopObj[n].LongHandle == retvalue )	DropLoopObj( n ) ;
+		}
+#endif
 	}
 
 	return retvalue ;
 }
 
+#ifdef	FIXES
+/*──────────────────────────────────────────────────────────────────────────*/
+// une boucle gardée avec le long handle du driver
+
+void	KeepLoopObj( WORD numobj, WORD numsample, ULONG longhandle )
+{
+	if( (longhandle != 0) AND (longhandle != (ULONG)-1)
+	AND (NbLoopObj < MAX_LOOP_OBJ) )
+	{
+		ListLoopObj[NbLoopObj].NumObj = numobj ;
+		ListLoopObj[NbLoopObj].NumSample = numsample ;
+		ListLoopObj[NbLoopObj].LongHandle = longhandle ;
+		NbLoopObj++ ;
+	}
+}
+#endif
+
 /*══════════════════════════════════════════════════════════════════════════*/
 void	HQ_StopSample()
 {
 	WaveStop()	;
+#ifdef	FIXES
+	NbLoopObj = 0 ;
+	FlagLoopsKept = FALSE ;
+#endif
 }
+
+/*══════════════════════════════════════════════════════════════════════════*/
+/*
+ * FIXED: LBA.EXE stops every sample at the screens that open over the
+ * game, the holomap, the quit menu, the options and Ctrl's menu in
+ * flight, so that the loops an actor's script or animation started once,
+ * the hum of scene 54's protopack in flight among them, stay silent
+ * after them. The actors' loops are set aside in the driver's state and
+ * played on after the screen, the other samples stopped, in the form of
+ * LbaWin 0.8.1's holomap, which pauses its loops and plays them on.
+ */
+#ifdef	FIXES
+// les boucles des objets mises de côté, les autres samples arrêtés
+
+void	HQ_SaveSamples()
+{
+	T_WAVE	*ptrlist ;
+	void	*snap ;
+	LONG	n, k, nbsamp, nbloop ;
+
+	if( FlagLoopsKept )	// dans un autre écran
+	{
+		WaveStop() ;
+		return ;
+	}
+
+	nbsamp = WaveGetSnap( &snap ) ;
+	ptrlist = snap ;
+
+	nbloop = 0 ;
+	for( n=0; n<nbsamp; n++ )
+	{
+		for( k=0; k<NbLoopObj; k++ )
+		{
+			if( ptrlist[n].LongHandle == ListLoopObj[k].LongHandle )
+			{
+				nbloop++ ;
+				break ;
+			}
+		}
+	}
+
+	if( nbloop == 0 )
+	{
+		HQ_StopSample() ;
+		return ;
+	}
+
+	for( n=0; n<nbsamp; n++ )
+	{
+		for( k=0; k<NbLoopObj; k++ )
+		{
+			if( ptrlist[n].LongHandle == ListLoopObj[k].LongHandle )
+				break ;
+		}
+		if( k == NbLoopObj )	WaveStopOneLong( ptrlist[n].LongHandle ) ;
+	}
+
+	WaveSaveState() ;
+	FlagLoopsKept = TRUE ;
+}
+
+/*══════════════════════════════════════════════════════════════════════════*/
+// les boucles mises de côté reprises
+
+void	HQ_RestoreSamples()
+{
+	if( FlagLoopsKept )
+	{
+		WaveRestoreState() ;
+		FlagLoopsKept = FALSE ;
+	}
+}
+#endif
 /*══════════════════════════════════════════════════════════════════════════*/
 void	HQ_StopOneSample(WORD num)
 {
+#ifdef	FIXES
+	WORD	n ;
+
 	WaveStopOne( num )	;
+
+	for( n=NbLoopObj-1; n>=0; n-- )
+	{
+		if( ListLoopObj[n].NumSample == num )	DropLoopObj( n ) ;
+	}
+#else
+	WaveStopOne( num )	;
+#endif
 }
+#ifdef	FIXES
+/*══════════════════════════════════════════════════════════════════════════*/
+// les boucles de numobj, de numsample, ou toutes pour -1, arrêtées
+
+void	HQ_StopSamplesObj( WORD numobj, WORD numsample )
+{
+	WORD	n ;
+
+	for( n=NbLoopObj-1; n>=0; n-- )
+	{
+		if( (ListLoopObj[n].NumObj == numobj)
+		AND ((numsample == -1) OR (ListLoopObj[n].NumSample == numsample)) )
+		{
+			WaveStopOneLong( ListLoopObj[n].LongHandle ) ;
+			DropLoopObj( n ) ;
+		}
+	}
+}
+#endif
 /*══════════════════════════════════════════════════════════════════════════*/
 /*══════════════════════════════════════════════════════════════════════════*/
 
@@ -107,17 +273,29 @@ WORD	GiveBalance( WORD xp, WORD yp, LONG volume, ULONG *volleft, ULONG *volright
 
 /*──────────────────────────────────────────────────────────────────────────*/
 
+#ifdef	FIXES
+ULONG	HQ_3D_MixSample(	WORD numsample, WORD decalage, WORD repeat,
+#else
 void	HQ_3D_MixSample(	WORD numsample, WORD decalage, WORD repeat,
+#endif
 				WORD x, WORD y, WORD z )
 {
 	ULONG	volleft, volright, longhandle ;
 	LONG	balance ;
 
+#ifdef	FIXES
+	if( !SamplesEnable )	return -1 ;
+#else
 	if( !SamplesEnable )	return ;
+#endif
 
 	ProjettePoint(	x-WorldXCube,
 			y-WorldYCube,
 			z-WorldZCube ) ;
+
+#ifdef	FIXES
+	longhandle = -1 ;
+#endif
 
 	if( GiveBalance( Xp, Yp, 128, &volleft, &volright ) )
 	{
@@ -130,7 +308,26 @@ void	HQ_3D_MixSample(	WORD numsample, WORD decalage, WORD repeat,
 		WaveGiveInfo0( longhandle, (ULONG)Xp<<((16 + Yp)&31) ) ;
 #endif
 	}
+
+#ifdef	FIXES
+	return longhandle ;
+#endif
 }
+
+#ifdef	FIXES
+/*──────────────────────────────────────────────────────────────────────────*/
+// un sample d'un objet, gardé s'il boucle
+
+void	HQ_3D_MixSampleObj(	WORD numobj, WORD numsample, WORD decalage,
+				WORD repeat, WORD x, WORD y, WORD z )
+{
+	ULONG	longhandle ;
+
+	longhandle = HQ_3D_MixSample( numsample, decalage, repeat, x, y, z ) ;
+
+	if( repeat == 0 )	KeepLoopObj( numobj, numsample, longhandle ) ;
+}
+#endif
 
 /*══════════════════════════════════════════════════════════════════════════*/
 /*══════════════════════════════════════════════════════════════════════════*/

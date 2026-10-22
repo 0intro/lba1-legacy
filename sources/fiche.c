@@ -264,7 +264,11 @@ void	GereAnimAction( T_OBJET *ptrobj, WORD numobj )
 			{
 				sample = GET_WORD ;
 				repeat = GET_WORD ;
+#ifdef	FIXES
+				HQ_3D_MixSampleObj( numobj, sample, 0x1000, repeat,
+#else
 				HQ_3D_MixSample( sample, 0x1000, repeat,
+#endif
 					ptrobj->PosObjX, ptrobj->PosObjY, ptrobj->PosObjZ ) ;
 			}
 			else	ptrc += 4 ;

@@ -145,6 +145,13 @@ cont:		add	edi, edx
 
 		mov	edi, esi
 		push	edx
+		; FIXED: LBA.EXE swaps up to 65536 dwords on a size under 4,
+		; and counts them in 16 bits. Swap none under 4, a negative
+		; size too, and count in 32 bits.
+IFDEF	FIXES
+		cmp	edx, 4
+		jl	short noswap
+ENDIF
 		shr	edx, 2
 	EVEN
 permute:    	mov	eax, [ebx]
@@ -152,10 +159,17 @@ permute:    	mov	eax, [ebx]
 		mov	[ebx], eax
 		add	ebx, 4
 		add	edi, 4
+IFDEF	FIXES
+		dec	edx
+		jnz	permute
+
+noswap:		pop	edx
+ELSE
 		dec	dx
 		jnz	permute
 
 		pop	edx
+ENDIF
 
 noexchg:	add	esi, edx
 		mov	ecx, ebp
@@ -204,6 +218,12 @@ CopyBlockMCGA		proc	uses esi edi ebx ebp,\
 			mov	ebx, y1			; y0 <=> y1
 			sub	ebx, y0
 			inc	ebx 			; BX Delta Y
+			; FIXED: LBA.EXE copies 2^32 lines on a height of 0 or
+			; less. Copy none.
+IFDEF	FIXES
+			or	ebx, ebx
+			jle	CopyBlockMCGA_End
+ENDIF
 
 			mov	eax, x1
 			sub	eax, x0
@@ -226,7 +246,11 @@ Again:
 			dec	ebx
 			jne	short Again
 
+IFDEF	FIXES
+CopyBlockMCGA_End:	ret
+ELSE
 			ret
+ENDIF
 CopyBlockMCGA		endp
 
 ;*══════════════════════════════════════════════════════════════════════════*
@@ -281,6 +305,15 @@ OkNoClip:
 			mov	edx, ecx		; Init Delta X
 			sub	edx, eax
 			inc	edx
+			; FIXED: LBA.EXE shades 2^32 lines on a height of 0 or
+			; less, and 2^32 pixels on a width of 0 or less. Shade
+			; none.
+IFDEF	FIXES
+			or	ebx, ebx
+			jle	Box_End
+			or	edx, edx
+			jle	Box_End
+ENDIF
 
 			mov	esi, Screen_X
 			sub	esi, edx		; ebp Delta Screen

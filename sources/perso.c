@@ -293,6 +293,9 @@ LONG	MainLoop()
 	T_EXTRA	*ptrextra ;
 	LONG	memoflagdisplaytext ;
 	ULONG	timeralign ;
+#ifdef	FIXES
+	WORD	returnheld = FALSE ;
+#endif
 
 	FirstTime = TRUE ;
 	FlagFade = TRUE ;
@@ -431,7 +434,11 @@ startloop:
 
 			SaveTimer() ;
 			TestRestoreModeSVGA( TRUE ) ;
+#ifdef	FIXES
+			HQ_SaveSamples() ;	// les boucles mises de côté
+#else
 			HQ_StopSample();
+#endif
 			GameOptionMenu[5] = 15 ; // retour au jeu
 
 			FlagSpeak = FALSE ;
@@ -461,6 +468,10 @@ startloop:
 			{
 				PlayMusic( CubeJingle ) ;
 			}
+
+#ifdef	FIXES
+			HQ_RestoreSamples() ;	// les boucles reprises
+#endif
 
 			RestoreTimer() ;
 			AffScene( TRUE ) ;
@@ -632,6 +643,17 @@ startloop:
 					NormalWinDial() ;
 					FlagSpeak = memoflagspeak ;
 					InitDial( START_FILE_ISLAND+Island ) ;
+					/*
+					 * FIXED: LBA.EXE goes back to the game with the
+					 * key that closed the list still down, so that
+					 * the next frame takes Space for Twinsen's
+					 * action and Escape for the quit menu. This
+					 * waits for every key's release but the
+					 * arrows', as the quit menu's Continue does.
+					 */
+#ifdef	FIXES
+					while( Key OR Fire ) ;
+#endif
 				}
 				break ;
 			}
@@ -670,16 +692,42 @@ startloop:
 			AffScene(TRUE) ;
 		}
 
+		/*
+		 * FIXED: LBA.EXE recentres the camera and redraws the whole
+		 * scene, the clock held, on every frame that Return is held,
+		 * so that the world all but stops, and DoDir takes Return for
+		 * a key held, which keeps Twinsen's last move. It recentres
+		 * once a press and keeps the key out of MyFire while it is
+		 * held, as LbaWin, DotEmu and the Classic clear Return in
+		 * MyFire and Fire after the recentring. Fire keeps it, so that
+		 * its release ends the press: LbaWin's keyboard gives Return
+		 * no repeat.
+		 */
 		if( MyFire & F_RETURN )	/* recentre sur perso */
 		{
 			if( !CameraZone ) /* si pas camera forcée */
 			{
+#ifdef	FIXES
+				if( !returnheld )
+				{
+					returnheld = TRUE ;
+					StartXCube = ((ListObjet[NumObjFollow].PosObjX+DEMI_BRICK_XZ)/SIZE_BRICK_XZ) ;
+					StartYCube = ((ListObjet[NumObjFollow].PosObjY+SIZE_BRICK_Y)/SIZE_BRICK_Y) ;
+					StartZCube = ((ListObjet[NumObjFollow].PosObjZ+DEMI_BRICK_XZ)/SIZE_BRICK_XZ) ;
+					FirstTime = TRUE ;
+				}
+				MyFire &= ~F_RETURN ;
+			}
+		}
+		else	returnheld = FALSE ;
+#else
 				StartXCube = ((ListObjet[NumObjFollow].PosObjX+DEMI_BRICK_XZ)/SIZE_BRICK_XZ) ;
 				StartYCube = ((ListObjet[NumObjFollow].PosObjY+SIZE_BRICK_Y)/SIZE_BRICK_Y) ;
 				StartZCube = ((ListObjet[NumObjFollow].PosObjZ+DEMI_BRICK_XZ)/SIZE_BRICK_XZ) ;
 				FirstTime = TRUE ;
 			}
 		}
+#endif
 
 		if( (MyKey == K_H)
 		AND (ListFlagGame[FLAG_HOLOMAP] == 1)
@@ -705,6 +753,14 @@ startloop:
 			}
 			while( Key ) ;
 			while( !Key AND !Joy AND !Fire ) ;
+			/*
+			 * FIXED: LBA.EXE leaves the pause with the P that ends it
+			 * still down, which the next frame takes for a pause
+			 * again. This waits for P's release, the game held.
+			 */
+#ifdef	FIXES
+			while( Key == K_P ) ;
+#endif
 			if( !FlagMCGA )
 			{
 				CopyBlock( 5,446,100,479, Screen, 5,446, Log ) ;
@@ -948,6 +1004,14 @@ startloop:
 				}
 				else	// autre obj
 				{
+#ifdef	FIXES
+					// ses boucles, s'il meurt ici (LM_SUICIDE et
+					// LM_KILL_OBJ l'ont déjà marqué OBJ_DEAD)
+					if( !(ptrobj->WorkFlags & OBJ_DEAD) )
+					{
+						HQ_StopSamplesObj( i, -1 ) ;
+					}
+#endif
 					CheckCarrier( i ) ;
 					ptrobj->WorkFlags |= OBJ_DEAD ;
 					ptrobj->Body = -1 ;
@@ -1346,7 +1410,16 @@ int	main( int argc, char *argv[] )
 #ifdef	CDROM
 	if( InitCDR( "CD_LBA" ) )
 	{
+		/*
+		 * FIXED: LBA.EXE writes the CD's drive letter into a string
+		 * literal, which a compiler may make read-only. This array holds
+		 * the same bytes.
+		 */
+#ifdef	FIXES
+		static	UBYTE	drive[] = "D:" ;
+#else
 		UBYTE	*drive = "D:" ;
+#endif
 
 		// cherche un fichier pour version preview
 

@@ -34,6 +34,7 @@ enum
 	Ngraph = 64,
 	Ours = 0,
 	Asm,
+	Model,	/* farline's: LBA.EXE's model, drawn on our screen */
 };
 
 /* ours, which the game's global.c and its assembly define */
@@ -310,7 +311,101 @@ ended(int status)
 	return Killed;
 }
 
-/* Line from far on side i's screen, in a child: how it ended, the screen it drew in out. */
+/*
+ * LBA.EXE's clipping of a line: each end clipped in x, then in y from
+ * the point that left, by products of 64 bits, which within coord()'s
+ * range are LBA.EXE's 16-bit ones. Whether the line shows, its ends left
+ * clipped in a.
+ */
+static int
+m1994clip(int32_t *a)
+{
+	int32_t x0, y0, x1, y1, t, dx, dy;
+	int c0, c1;
+
+	x0 = a[0];
+	y0 = a[1];
+	x1 = a[2];
+	y1 = a[3];
+	if (x0 > x1) {
+		t = x0;
+		x0 = x1;
+		x1 = t;
+		t = y0;
+		y0 = y1;
+		y1 = t;
+	}
+	for (;;) {
+		c0 = 0;
+		if (x0 < ClipXmin)
+			c0 |= 1;
+		else if (x0 > ClipXmax)
+			return 0;
+		if (y0 < ClipYmin)
+			c0 |= 8;
+		else if (y0 > ClipYmax)
+			c0 |= 4;
+		if (x1 < ClipXmin)
+			return 0;
+		c1 = 0;
+		if (x1 > ClipXmax)
+			c1 |= 2;
+		if (y1 < ClipYmin)
+			c1 |= 8;
+		else if (y1 > ClipYmax)
+			c1 |= 4;
+		if (c0 & c1)
+			return 0;
+		if ((c0 | c1) == 0)
+			break;
+		dx = x1 - x0;
+		dy = y1 - y0;
+		if (c0 & 1) {
+			y0 += (int64_t)(ClipXmin - x0) * dy / dx;
+			x0 = ClipXmin;
+		} else if (c0 & 8) {
+			x0 += (int64_t)(ClipYmin - y0) * dx / dy;
+			y0 = ClipYmin;
+		} else if (c0 & 4) {
+			x0 += (int64_t)(ClipYmax - y0) * dx / dy;
+			y0 = ClipYmax;
+		} else if (c1 & 2) {
+			y1 = y0 + (int64_t)(ClipXmax - x0) * dy / dx;
+			x1 = ClipXmax;
+		} else if (c1 & 8) {
+			x1 = x0 + (int64_t)(ClipYmin - y0) * dx / dy;
+			y1 = ClipYmin;
+		} else {
+			x1 = x0 + (int64_t)(ClipYmax - y0) * dx / dy;
+			y1 = ClipYmax;
+		}
+	}
+	a[0] = x0;
+	a[1] = y0;
+	a[2] = x1;
+	a[3] = y1;
+	return 1;
+}
+
+/*
+ * What LBA.EXE draws of a line, in Log: m1994clip, then our Line on the
+ * clipped ends, which lie in the box, so that it neither swaps nor clips
+ * them again.
+ */
+static void
+m1994line(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t col)
+{
+	int32_t a[4];
+
+	a[0] = x0;
+	a[1] = y0;
+	a[2] = x1;
+	a[3] = y1;
+	if (m1994clip(a))
+		Line(a[0], a[1], a[2], a[3], col);
+}
+
+/* Line from far on side i's screen (Model: the model on ours), in a child: how it ended, the screen it drew in out. */
 static int
 farline(int i, uintptr_t fn, int32_t *a, uint8_t *out)
 {
@@ -325,9 +420,11 @@ farline(int i, uintptr_t fn, int32_t *a, uint8_t *out)
 		setitimer(ITIMER_REAL, &quarter, NULL);
 		if (i == Ours)
 			Line(a[0], a[1], a[2], a[3], a[4]);
+		else if (i == Model)
+			m1994line(a[0], a[1], a[2], a[3], a[4]);
 		else
 			((void(*)(int32_t, int32_t, int32_t, int32_t, int32_t))fn)(a[0], a[1], a[2], a[3], a[4]);
-		memcpy(out, span(svga[i].log), Span);
+		memcpy(out, span(svga[i == Model ? Ours : i].log), Span);
 		_exit(0);
 	}
 	if (waitpid(pid, &status, 0) != pid)
@@ -2292,7 +2389,7 @@ ring(uint8_t *p, int m)
  * in order, all or some, either way round, of any of the 11 materials.
  * One group carries it whole, so that its projection stays convex and
  * clipping adds a point at most at each side of the box. Its 20 points
- * then stay within the 32 TabPoly holds, even were rounding to bend a
+ * then stay within the 33 TabPoly holds, even were rounding to bend a
  * ring so that one side crossed it at every point, where 30 would pass
  * them clipped at all four sides. A body without groups keeps its
  * points in the plane x = 0: RotateNuage hands Proj_ISO the high halves
@@ -3104,12 +3201,15 @@ static int
 fixboxes(void)
 {
 	static uint8_t bo[Span], ba[Span];
-	uintptr_t box, sb, rb;
-	int32_t x0, y0, x1, y1, col;
+	uintptr_t box, shade, cb, mcga, sb, rb;
+	int32_t x0, y0, x1, y1, xd, yd, col;
 	char args[128];
 	int r, k, n;
 
 	box = lookup("Box");
+	shade = lookup("ShadeBox");
+	cb = lookup("CopyBlock");
+	mcga = lookup("CopyBlockMCGA");
 	sb = lookup("SaveBlock");
 	rb = lookup("RestoreBlock");
 	screens();
@@ -3131,6 +3231,10 @@ fixboxes(void)
 		Box(x0, y0, x1, y1, col);
 		if (!asmscreens("Box", args))
 			return 0;
+		acall(shade, 5, x0, y0, x1, y1, col & 15);
+		ShadeBox(x0, y0, x1, y1, col & 15);
+		if (!asmscreens("ShadeBox", args))
+			return 0;
 		fill(bo, Span);
 		memcpy(ba, bo, Span);
 		acall(sb, 6, (int32_t)(uintptr_t)svga[Asm].screen, (int32_t)(uintptr_t)ba, x0, y0, x1, y1);
@@ -3143,10 +3247,465 @@ fixboxes(void)
 		RestoreBlock(svga[Ours].log, bo, x0, y0, x1, y1);
 		if (!asmscreens("RestoreBlock", args))
 			return 0;
+		if (k == 1) {
+			/* a width turned over faults on both sides: CopyBlock's heights alone */
+			over(0, Height-1, &y0, &y1);
+			inorder(0, Width-1, &x0, &x1);
+		}
+		xd = rndn(Width - (x1 - x0));
+		yd = rndn(Height/2);
+		snprintf(args, sizeof args, "%d %d %d %d to %d %d", x0, y0, x1, y1, xd, yd);
+		acall(cb, 8, x0, y0, x1, y1, (int32_t)(uintptr_t)svga[Asm].screen, xd, yd,
+			(int32_t)(uintptr_t)svga[Asm].log);
+		CopyBlock(x0, y0, x1, y1, svga[Ours].screen, xd, yd, svga[Ours].log);
+		if (!asmscreens("CopyBlock", args))
+			return 0;
+		acall(mcga, 8, x0, y0, x1, y1, (int32_t)(uintptr_t)svga[Asm].screen, 0, 0,
+			(int32_t)(uintptr_t)svga[Asm].log);
+		CopyBlockMCGA(x0, y0, x1, y1, svga[Ours].screen, 0, 0, svga[Ours].log);
+		if (!asmscreens("CopyBlockMCGA", args))
+			return 0;
 		n++;
 	}
 	printf("fixes: boxes, %d rounds turned over, the same screens and buffers\n", n);
 	return 1;
+}
+
+static int
+fixsort(void)
+{
+	static uint8_t lo[3*262148 + 16], la[3*262148 + 16];
+	uintptr_t ss;
+	int32_t size, n, len, at;
+	int r;
+
+	ss = lookup("SmallSort");
+	for (r = 0; r < 6000; r++) {
+		if (r % 1000 == 999) {
+			size = r < 3000 ? 262148 : -262148;
+			n = 3;
+		} else {
+			size = r < 3000 ? rndr(1, 3) : rndr(-8, 0);
+			n = rndr(2, 40);
+		}
+		/* a negative size walks the list down from its first entry */
+		at = size < 0 ? (n-1)*-size + 8 : 0;
+		len = size < 0 ? at + 16 : n*size + 16;
+		fill(lo, len);
+		memcpy(la, lo, len);
+		acall(ss, 3, (int32_t)(uintptr_t)(la + at), n, size);
+		SmallSort(lo + at, n, size);
+		if (memcmp(lo, la, len) != 0) {
+			fail("fixes: SmallSort of %d entries of %d bytes: the lists differ", n, size);
+			return 0;
+		}
+	}
+	printf("fixes: sort, %d lists of entries of 1 to 3 bytes, 0 to -8, and 262148 and -262148, the same\n", r);
+	return 1;
+}
+
+static int
+fixgraphs(void)
+{
+	static uint8_t bank[1<<21], graphs[1<<21], masks[1<<21];
+	uintptr_t ag, am, cm;
+	int32_t num, x, y, l, w, xmin, xmax;
+	uint8_t *g;
+	char args[128];
+	int r, n;
+
+	ag = lookup("AffGraph");
+	am = lookup("AffMask");
+	cm = lookup("CoulMask");
+	screens();
+	acall(cm, 1, 0x55);
+	CoulMask(0x55);
+	n = 0;
+	for (r = 0; r < Rounds; r++) {
+		if (r % 500 == 0) {
+			graphbank(bank, Ngraph, 255, 3, 0);
+			maskbank(masks, graphs, Ngraph, 255, 0);
+		}
+		num = rndn(Ngraph);
+		g = bank + get32(bank + 4*num);
+		w = g[0];
+		if (w < 2)
+			continue;
+		y = rndr(0, Height - 121);
+		x = rndr(0, Width - 256);
+		l = x + g[2];
+		xmax = rndr(l, l + w - 2);
+		xmin = rndr(xmax + 1, l + w - 1);
+		setclip(xmin, 0, xmax, Height-1);
+		snprintf(args, sizeof args, "%d at %d %d, clip %d to %d", num, x, y, xmin, xmax);
+		acall(ag, 4, num, x, y, (int32_t)(uintptr_t)bank);
+		AffGraph(num, x, y, bank);
+		if (!asmscreens("AffGraph", args))
+			return 0;
+		g = graphs + get32(graphs + 4*num);
+		w = g[0];
+		l = x + g[2];
+		if (w >= 2) {
+			xmax = rndr(l, l + w - 2);
+			xmin = rndr(xmax + 1, l + w - 1);
+			setclip(xmin, 0, xmax, Height-1);
+			acall(am, 4, num, x, y, (int32_t)(uintptr_t)masks);
+			AffMask(num, x, y, masks);
+			if (!asmscreens("AffMask", args))
+				return 0;
+		}
+		n++;
+	}
+	setclip(0, 0, Width-1, Height-1);
+	printf("fixes: graphs, %d graphs and masks clipped to a width of 0 or less, the same screens\n", n);
+	return 1;
+}
+
+/* A line whose dx or dy is 65536 or 131072, its ends either side of the clip box in that axis. */
+static void
+spanline(int32_t *a)
+{
+	int32_t k, t;
+
+	k = rndr(1, 2) * 65536;
+	if (rndn(2) == 0) {
+		a[0] = rndr(ClipXmax+1 - k, ClipXmin-1);
+		a[1] = rndr(-70000, 70000);
+		a[2] = a[0] + k;
+		a[3] = rndr(ClipYmin, ClipYmax);
+	} else {
+		a[0] = rndr(ClipXmin, ClipXmax);
+		a[1] = rndr(ClipYmax+1 - k, ClipYmin-1);
+		a[2] = rndr(ClipXmin, ClipXmax);
+		a[3] = a[1] + k;
+	}
+	if (rndn(2) == 0) {
+		t = a[0];
+		a[0] = a[2];
+		a[2] = t;
+		t = a[1];
+		a[1] = a[3];
+		a[3] = t;
+	}
+}
+
+/* Whether a screen drawn into out differs from ours outside the clip box, and where from the screen's start in *at. */
+static int
+outside(uint8_t *out, int32_t *at)
+{
+	uint8_t *b;
+	int32_t k, x, y;
+
+	b = span(svga[Ours].log);
+	for (k = 0; k < Span; k++) {
+		if (out[k] == b[k])
+			continue;
+		*at = k - Slack;
+		if (k < Slack || k >= Slack + Width*Height)
+			return 1;
+		x = *at % Width;
+		y = *at / Width;
+		if (x < ClipXmin || x > ClipXmax || y < ClipYmin || y > ClipYmax)
+			return 1;
+	}
+	return 0;
+}
+
+/* A clip box one line high or one column wide, at random on the screen. */
+static void
+thinclip(void)
+{
+	int32_t x0, y0;
+
+	x0 = rndn(Width);
+	y0 = rndn(Height);
+	if (rndn(2) == 0)
+		setclip(x0, y0, rndr(x0, Width-1), y0);
+	else
+		setclip(x0, y0, x0, rndr(y0, Height-1));
+}
+
+/* The clip box filled with v on the sides' screens. */
+static void
+fillclip(uint8_t v)
+{
+	int32_t x, y;
+	int i;
+
+	for (i = 0; i < nsvga; i++)
+		for (y = ClipYmin; y <= ClipYmax; y++)
+			for (x = ClipXmin; x <= ClipXmax; x++)
+				svga[i].log[y*Width + x] = v;
+}
+
+/* Whether a screen drawn into out holds v in the clip box. */
+static int
+inclip(uint8_t *out, uint8_t v)
+{
+	int32_t x, y;
+
+	for (y = ClipYmin; y <= ClipYmax; y++)
+		for (x = ClipXmin; x <= ClipXmax; x++)
+			if (out[Slack + y*Width + x] == v)
+				return 1;
+	return 0;
+}
+
+/*
+ * Lines from far, as the game never draws them: from up to 70000 out,
+ * through the clip box from 70000 and from 2^29, with a dx or dy that is
+ * a multiple of 65536, its ends either side of the box, and through
+ * boxes one line high or one column wide from 70000 and from 2000.
+ * LBA.EXE's assembly, clipping in 16 bits, faulted on the dx or dy and
+ * faulted or never ended on the others, and its corner clipping lost
+ * lines through the thin boxes. The build's must end on every one with
+ * ours, drawing the same screen, nothing outside the box, and a line
+ * through a thin box, the box filled with its colour's complement first,
+ * must leave a byte of its colour there. The lines LBA.EXE's order of
+ * clipping (m1994line) loses so are counted.
+ */
+static int
+fixlines(void)
+{
+	enum {
+		Nfar = 2000,	/* lines of each kind */
+		Thin = 4,	/* the first kind through a thin box */
+	};
+	static char *kinds[] = {
+		"from far", "through the box from 70000", "through the box from 2^29", "of a dx or dy of 65536",
+		"through a thin box from 70000", "through a thin box from 2000",
+	};
+	uintptr_t s;
+	uint8_t *c, *d, *m;
+	int32_t a[5], at;
+	int r, i, k, oc, oa, drawn, lost;
+
+	s = lookup("Line");
+	screens();
+	c = mmap(NULL, Span, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+	d = mmap(NULL, Span, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+	m = mmap(NULL, Span, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+	if (c == MAP_FAILED || d == MAP_FAILED || m == MAP_FAILED)
+		fatal("fixes: cannot map");
+	drawn = 0;
+	lost = 0;
+	for (k = 0; k < (int)nelem(kinds); k++)
+		for (r = 0; r < Nfar; r++) {
+			if (k >= Thin)
+				thinclip();
+			else
+				randclip();
+			switch (k) {
+			case 0:
+				for (i = 0; i < 4; i++)
+					a[i] = rndr(-70000, 70000);
+				break;
+			case 1:
+			case 4:
+				throughbox(a, 70000);
+				break;
+			case 2:
+				throughbox(a, 1<<29);
+				break;
+			case 3:
+				spanline(a);
+				break;
+			default:
+				throughbox(a, 2000);
+				break;
+			}
+			a[4] = rnd();
+			if (k >= Thin)
+				fillclip(~a[4]);
+			oc = farline(Ours, 0, a, c);
+			oa = farline(Asm, s, a, d);
+			if (oc != Drawn || oa != Drawn) {
+				fail("fixes: Line %s %d %d %d %d, clip %d %d %d %d: ours %s, the assembly's %s", kinds[k],
+					a[0], a[1], a[2], a[3], ClipXmin, ClipYmin, ClipXmax, ClipYmax, ends[oc], ends[oa]);
+				return 0;
+			}
+			if (memcmp(c, d, Span) != 0) {
+				fail("fixes: Line %s %d %d %d %d, clip %d %d %d %d: drawn otherwise", kinds[k],
+					a[0], a[1], a[2], a[3], ClipXmin, ClipYmin, ClipXmax, ClipYmax);
+				return 0;
+			}
+			if (outside(c, &at)) {
+				fail("fixes: Line %s %d %d %d %d, clip %d %d %d %d: byte %d (%d,%d) outside the box drawn",
+					kinds[k], a[0], a[1], a[2], a[3], ClipXmin, ClipYmin, ClipXmax, ClipYmax, at,
+					at%Width, at/Width);
+				return 0;
+			}
+			if (k >= Thin && !inclip(c, a[4])) {
+				fail("fixes: Line %s %d %d %d %d, clip %d %d %d %d: lost, nothing drawn in the box",
+					kinds[k], a[0], a[1], a[2], a[3], ClipXmin, ClipYmin, ClipXmax, ClipYmax);
+				return 0;
+			}
+			if (k >= Thin && farline(Model, 0, a, m) == Drawn && !inclip(m, a[4]))
+				lost++;
+			drawn += memcmp(c, span(svga[Ours].log), Span) != 0;
+		}
+	setclip(0, 0, Width-1, Height-1);
+	printf("fixes: lines, %d from far, %d through the clip box from 70000 and %d from 2^29, %d whose dx or dy is"
+		" a multiple of 65536, %d through a thin box from 70000 and %d from 2000: every one ended, %d drawn,"
+		" the same screens, none lost, where LBA.EXE's order of clipping loses %d\n", Nfar, Nfar, Nfar, Nfar,
+		Nfar, Nfar, drawn, lost);
+	munmap(c, Span);
+	munmap(d, Span);
+	munmap(m, Span);
+	return 1;
+}
+
+/* Whether AsmFillProp, bringing its ends into the clip box in y, divides past 32 bits. */
+static int
+fillpast(int32_t x0, int32_t y0, int32_t x1, int32_t y1)
+{
+	int64_t q;
+	int32_t t;
+	int past;
+
+	if (y0 > y1) {
+		t = y0;
+		y0 = y1;
+		y1 = t;
+		t = x0;
+		x0 = x1;
+		x1 = t;
+	}
+	if (y0 > ClipYmax || y1 < ClipYmin || y0 == y1)
+		return 0;
+	past = 0;
+	if (y0 < ClipYmin) {
+		q = (int64_t)(ClipYmin - y0) * (x0 - x1) / (y0 - y1);
+		past |= q < INT32_MIN || q > INT32_MAX;
+		x0 += q;
+		y0 = ClipYmin;
+	}
+	if (y1 > ClipYmax) {
+		q = (int64_t)(ClipYmax - y1) * (x0 - x1) / (y0 - y1);
+		past |= q < INT32_MIN || q > INT32_MAX;
+	}
+	return past;
+}
+
+/*
+ * AsmFillProp between ends anywhere in 32 bits, which bringing an end to
+ * the clip box's edge in y divides past 32 bits about once in twenty:
+ * LBA.EXE's assembly's idiv faulted there. One round in eight is in a
+ * box turned over, its ClipYmax above its ClipYmin, which brings the
+ * ends that cross it to its edges in reverse, where LBA.EXE's assembly
+ * stepped some 2^32 words. The build's must step the words as ours, and
+ * fill none in such a box.
+ */
+static int
+fixfillprop(void)
+{
+	static int16_t pa[Height + 16], pc[Height + 16];
+	uintptr_t af;
+	int32_t x0, y0, x1, y1, a, b;
+	int r, past, over;
+
+	af = lookup("AsmFillProp");
+	past = 0;
+	over = 0;
+	for (r = 0; r < Rounds; r++) {
+		x0 = rnd();
+		y0 = rnd();
+		x1 = rnd();
+		y1 = rnd();
+		if (r%8 == 0) {
+			a = rndr(1, Height-1);
+			b = rndr(0, a-1);
+			setclip(0, a, Width-1, b);
+			over += (y0 < y1 ? y0 : y1) <= b && (y0 > y1 ? y0 : y1) >= a;
+		} else {
+			setclip(0, 0, Width-1, Height-1);
+			past += fillpast(x0, y0, x1, y1);
+		}
+		memset(pa, 0, sizeof pa);
+		memset(pc, 0, sizeof pc);
+		acall(af, 5, (int32_t)(uintptr_t)pa, x0, y0, x1, y1);
+		AsmFillProp(pc, x0, y0, x1, y1);
+		if (memcmp(pa, pc, sizeof pa) != 0) {
+			fail("fixes: AsmFillProp %d %d %d %d: the words differ", x0, y0, x1, y1);
+			return 0;
+		}
+	}
+	setclip(0, 0, Width-1, Height-1);
+	printf("fixes: fillprop, %d edges, %d brought in past 32 bits, %d across a box turned over, the same words\n",
+		r, past, over);
+	return 1;
+}
+
+/*
+ * FillVertic of each type at each level on ten lines, the first from x
+ * 0 to x 65535, its intensities 0 and 8000h, first so that no line
+ * turned over before it puts the intensities a line behind: the C's
+ * widths of 16 bits skip that line, or fill its 65536 pixels in Gouraud
+ * and Dith, where LBA.EXE's assembly drew 64 or 128 KB, or faulted (Dith
+ * divided -32768 by -1, Marbre by 0). The build's must draw as ours.
+ */
+static int
+fixfill(void)
+{
+	enum {
+		Nfill = 10,
+		Wide = 0,
+		Ntype = 9,
+	};
+	uintptr_t fv, sd;
+	uint8_t *at[4], *aymin, *aymax;
+	int16_t *ot[4];
+	int32_t col;
+	int level, type, i, k, n, bad;
+
+	fv = lookup("FillVertic");
+	sd = lookup("SetFillDetails");
+	at[0] = (uint8_t*)lookup("TabVerticG");
+	at[1] = (uint8_t*)lookup("TabVerticD");
+	at[2] = (uint8_t*)lookup("TabCoulG");
+	at[3] = (uint8_t*)lookup("TabCoulD");
+	aymin = (uint8_t*)lookup("Ymin");
+	aymax = (uint8_t*)lookup("Ymax");
+	ot[0] = TabVerticG;
+	ot[1] = TabVerticD;
+	ot[2] = TabCoulG;
+	ot[3] = TabCoulD;
+	screens();
+	setclip(0, 0, Width-1, Height-1);
+	n = 0;
+	bad = 0;
+	for (level = 0; level < 3; level++) {
+		acall(sd, 1, level);
+		SetFillDetails(level);
+		for (type = 0; type < Ntype; type++) {
+			for (i = 0; i < Nfill; i++) {
+				ot[0][i] = rndn(Width);
+				ot[1][i] = rndn(Width);
+				ot[2][i] = rnd();
+				ot[3][i] = rnd();
+			}
+			ot[0][Wide] = 0;
+			ot[1][Wide] = (int16_t)0xFFFF;
+			ot[2][Wide] = 0;
+			ot[3][Wide] = (int16_t)0x8000;
+			for (k = 0; k < 4; k++)
+				memcpy(at[k], ot[k], 2*Nline);
+			Ymin = 0;
+			Ymax = Nfill - 1;
+			put16(aymin, Ymin);
+			put16(aymax, Ymax);
+			col = rnd() & 0xFF;
+			acall(fv, 2, type, col);
+			FillVertic(type, col);
+			if (!asmscreens("FillVertic", fillnames[3*type + level])) {
+				memcpy(span(svga[Asm].log), span(svga[Ours].log), Span);
+				bad++;
+			}
+			n++;
+		}
+	}
+	printf("fixes: fill, %d fills with a line 65536 wide, %d the same screens\n", n, n - bad);
+	return bad == 0;
 }
 
 /*
@@ -3189,23 +3748,75 @@ fixsizefont(void)
 	return 1;
 }
 
-enum
+/*
+ * ComputePoly of polygons of 32 and 33 points on a circle across the
+ * clip box's left edge, flat and Gouraud: LBA.EXE's assembly put the
+ * copy of the first point that closes them past TabPoly, where the
+ * clipping wrote before reading it. The build's must give our frame and
+ * lines.
+ */
+static int
+fixpoly(void)
 {
-	Nsphere = 3,	/* the most spheres fixsphere gives a body */
-};
+	enum {
+		Npts = 33,
+	};
+	uintptr_t cp;
+	uint8_t *atp, *anp, *atype, *ay[2], *at[4];
+	int16_t pts[3*Npts], *ot[4];
+	int32_t ra, rc, type;
+	double a;
+	int r, n, i, k, y;
 
-typedef struct Sphereout Sphereout;
-
-/* what a side's AffObjetIso left, copied out of the child that ran it */
-struct Sphereout
-{
-	int32_t	rc;
-	uint8_t	box[4][2];
-	uint8_t	point[6];
-	uint8_t	entity[12*Nsphere];
-	uint8_t	tri[8*Nsphere];	/* the entities' places as offsets in List_Entity */
-	uint8_t	log[Span];
-};
+	cp = lookup("ComputePoly");
+	atp = (uint8_t*)lookup("TabPoly");
+	anp = (uint8_t*)lookup("NbPolyPoints");
+	atype = (uint8_t*)lookup("TypePoly");
+	ay[0] = (uint8_t*)lookup("Ymin");
+	ay[1] = (uint8_t*)lookup("Ymax");
+	at[0] = (uint8_t*)lookup("TabVerticG");
+	at[1] = (uint8_t*)lookup("TabVerticD");
+	at[2] = (uint8_t*)lookup("TabCoulG");
+	at[3] = (uint8_t*)lookup("TabCoulD");
+	ot[0] = TabVerticG;
+	ot[1] = TabVerticD;
+	ot[2] = TabCoulG;
+	ot[3] = TabCoulD;
+	setclip(0, 0, Width-1, Height-1);
+	for (r = 0; r < 400; r++) {
+		n = 32 + r%2;
+		type = r/2 % 2 ? 7 : 0;
+		for (i = 0; i < n; i++) {
+			a = 2*M_PI*(i + r%7/7.0)/n;
+			pts[3*i] = rnd();
+			pts[3*i+1] = lround(100*cos(a));
+			pts[3*i+2] = lround(240 + 100*sin(a));
+		}
+		memcpy(TabPoly, pts, 2*3*n);
+		memcpy(atp, pts, 2*3*n);
+		NbPolyPoints = n;
+		put16(anp, n);
+		TypePoly = type;
+		put16(atype, type);
+		ra = acall(cp, 0);
+		rc = ComputePoly();
+		if (ra != rc || (int16_t)get16(ay[0]) != Ymin || (int16_t)get16(ay[1]) != Ymax) {
+			fail("fixes: ComputePoly of %d points: the assembly gives %d, lines %d to %d, ours %d, %d to %d",
+				n, ra, (int16_t)get16(ay[0]), (int16_t)get16(ay[1]), rc, Ymin, Ymax);
+			return 0;
+		}
+		if (rc == 0)
+			continue;
+		for (k = 0; k < (type == 7 ? 4 : 2); k++)
+			for (y = Ymin; y <= Ymax; y++)
+				if ((int16_t)get16(at[k] + 2*y) != ot[k][y]) {
+					fail("fixes: ComputePoly of %d points: line %d's %s differs", n, y, tabnames[k]);
+					return 0;
+				}
+	}
+	printf("fixes: poly, %d polygons of 32 and 33 points clipped, the same lines\n", r);
+	return 1;
+}
 
 /* how a polygon of 0 points ended in a side's child: nothing shown, shown, or by a signal */
 static char*
@@ -3284,6 +3895,24 @@ fixnopoint(void)
 	return 1;
 }
 
+enum
+{
+	Nsphere = 3,	/* the most spheres fixsphere gives a body */
+};
+
+typedef struct Sphereout Sphereout;
+
+/* what a side's AffObjetIso left, copied out of the child that ran it */
+struct Sphereout
+{
+	int32_t	rc;
+	uint8_t	box[4][2];
+	uint8_t	point[6];
+	uint8_t	entity[12*Nsphere];
+	uint8_t	tri[8*Nsphere];	/* the entities' places as offsets in List_Entity */
+	uint8_t	log[Span];
+};
+
 /*
  * A body of one point and n spheres on it, as AffObjetIso reads one: the
  * header (INFO_ANIM, no info), the point at 0,0,0, a group of it (a
@@ -3355,22 +3984,28 @@ sphereside(int s, uintptr_t af, int32_t *a, uint8_t *b, int n, Sphereout *o)
 
 /*
  * AffObjetIso in perspective on bodies of one point and 1 to 3 spheres
- * on it, LFactorX 1024 to 2000, at depths of the game's range, their
- * centres on the screen and off its edges: LBA.EXE's assembly put a
- * centre left of or above the screen at -1. Each side draws in a child:
- * the build's must leave our lists and box, and draw our screen.
+ * on it, LFactorX 1024 to 2000, at the depths where LBA.EXE's divisor,
+ * KFactor added to the depth in 16 bits, turns negative, wraps to 0 and
+ * past it, and at random depths from 30000 to 70000, behind the camera,
+ * in the game's range and from 1 to 400, where a radius over the depth
+ * word alone passes 16 bits, their centres on the screen and off its
+ * edges. LBA.EXE's assembly took the radius of such a sphere near 65535
+ * and wrote 128 KB on either side of TabVerticG, or divided by 0, and
+ * put a centre left of or above the screen at -1. Each side draws in a
+ * child: the build's must leave our lists and box, and draw our screen.
  */
 static int
 fixsphere(void)
 {
 	enum {
 		Nround = 4000,
+		Nedge = 6,	/* depths at the edges, each taken 20 times first */
 	};
 	static uint8_t sb[2][72 + 8*Nsphere];
 	Sphereout *o[2];
 	uintptr_t af, sp, sf, sd;
-	int32_t a[7], d, k, lx, ly, w;
-	int r, s, n, level, oc, oa, off, drawn;
+	int32_t a[7], edge[Nedge], d, k, lx, ly, w;
+	int r, s, n, level, oc, oa, deep, behind, off, drawn;
 	char *what;
 
 	af = lookup("AffObjetIso");
@@ -3383,7 +4018,7 @@ fixsphere(void)
 		if (o[s] == MAP_FAILED)
 			fatal("fixes: cannot map");
 	}
-	off = drawn = 0;
+	deep = behind = off = drawn = 0;
 	for (r = 0; r < Nround; r++) {
 		if (r % 500 == 0)
 			screens();
@@ -3401,7 +4036,23 @@ fixsphere(void)
 		SetProjection(320, 240, k, lx, ly);
 		acall(sf, 7, 0, 0, 0, 0, 0, 0, 0);
 		SetFollowCamera(0, 0, 0, 0, 0, 0, 0);
-		d = rndr(k+1, 32000);
+		edge[0] = 32767 - k;
+		edge[1] = 32768 - k;
+		edge[2] = 65535 - k;
+		edge[3] = 65536 - k;
+		edge[4] = 65535;
+		edge[5] = 65536;
+		w = rndn(8);
+		if (r < 20*Nedge)
+			d = edge[r%Nedge];
+		else if (w == 0)
+			d = rndr(-5000, 0);
+		else if (w == 1)
+			d = rndr(k+1, 32000);
+		else if (w == 2)
+			d = rndr(1, 400);
+		else
+			d = rndr(30000, 70000);
 		n = rndr(1, Nsphere);
 		spherebody(sb[Ours], n);
 		memcpy(sb[Asm], sb[Ours], sizeof sb[Ours]);
@@ -3435,15 +4086,171 @@ fixsphere(void)
 				a[0], a[1], d, k, lx, n, what);
 			return 0;
 		}
+		deep += d >= 32768 - k;
+		behind += d <= 0;
 		off += (int16_t)get16(o[Ours]->point) < 0 || (int16_t)get16(o[Ours]->point + 2) < 0;
 		drawn += memcmp(o[Ours]->log, span(svga[Ours].log), Span) != 0;
 	}
 	setclip(0, 0, Width-1, Height-1);
-	printf("fixes: sphere, %d bodies of 1 to %d spheres, %d centred left of or above the screen, %d drawn,"
-		" the same lists, boxes and screens\n", r, Nsphere, off, drawn);
+	printf("fixes: sphere, %d bodies of 1 to %d spheres, %d from a depth of 32768 less KFactor, %d behind the"
+		" camera, %d centred left of or above the screen, %d drawn, the same lists, boxes and screens\n", r,
+		Nsphere, deep, behind, off, drawn);
 	for (s = 0; s < 2; s++)
 		munmap(o[s], sizeof *o[s]);
 	return 1;
+}
+
+enum
+{
+	Reach = 192*1024,	/* how far from TabVerticG a line of a circle can land */
+	Nstretch = 8,
+	Nostray = INT32_MIN,
+};
+
+extern char	__data_start[], _end[];
+
+typedef struct Stretch Stretch;
+typedef struct Circleout Circleout;
+
+/* memory a side's ComputeSphere may reach */
+struct Stretch
+{
+	uint8_t	*lo;
+	uint8_t	*hi;
+};
+
+/* what a side's ComputeSphere left, copied out of the child that ran it */
+struct Circleout
+{
+	int32_t	rc;
+	int16_t	ymin;
+	int16_t	ymax;
+	int16_t	g[Nline];
+	int16_t	d[Nline];
+	int32_t	stray;	/* a byte changed beside the tables and the frame, from TabVerticG, or Nostray */
+};
+
+/* Side s's writable memory within Reach of its TabVerticG: ours from .data to the end of .bss, the image's segments. */
+static int
+stretches(int s, Stretch *st)
+{
+	uint32_t lo[Nstretch], hi[Nstretch];
+	uint8_t *t, *a, *b;
+	int i, n, k;
+
+	if (s == Ours) {
+		t = (uint8_t*)TabVerticG;
+		lo[0] = (uint32_t)(uintptr_t)__data_start;
+		hi[0] = (uint32_t)(uintptr_t)_end;
+		n = 1;
+	} else {
+		t = (uint8_t*)lookup("TabVerticG");
+		n = segments(lo, hi, Nstretch);
+	}
+	k = 0;
+	for (i = 0; i < n; i++) {
+		a = (uint8_t*)(uintptr_t)lo[i];
+		b = (uint8_t*)(uintptr_t)hi[i];
+		if ((uintptr_t)a + Reach < (uintptr_t)t)
+			a = t - Reach;
+		if ((uintptr_t)b > (uintptr_t)t + Reach)
+			b = t + Reach;
+		if (a < b) {
+			st[k].lo = a;
+			st[k].hi = b;
+			k++;
+		}
+	}
+	return k;
+}
+
+/* Whether p lies in what side s's ComputeSphere writes: its two tables and its frame. */
+static int
+circlewrites(int s, uint8_t *p)
+{
+	static char *names[] = {"Xmin", "Ymin", "Xmax", "Ymax"};
+	uint8_t *g, *d, *f;
+	int i;
+
+	g = s == Ours ? (uint8_t*)TabVerticG : (uint8_t*)lookup("TabVerticG");
+	d = s == Ours ? (uint8_t*)TabVerticD : (uint8_t*)lookup("TabVerticD");
+	if ((p >= g && p < g + 2*Nline) || (p >= d && p < d + 2*Nline))
+		return 1;
+	for (i = 0; i < 4; i++) {
+		if (s == Ours)
+			f = i == 0 ? (uint8_t*)&Xmin : i == 1 ? (uint8_t*)&Ymin : i == 2 ? (uint8_t*)&Xmax : (uint8_t*)&Ymax;
+		else
+			f = (uint8_t*)lookup(names[i]);
+		if (p >= f && p < f + 2)
+			return 1;
+	}
+	return 0;
+}
+
+/*
+ * ComputeSphere of side s about xc, yc, radius r, in a child that a
+ * fault or a quarter second's alarm ends: how it ended, and in o its
+ * result, frame, lines from Ymin to Ymax and any byte it changed beside
+ * them within Reach of TabVerticG.
+ */
+static int
+circleside(int s, uintptr_t cs, int32_t xc, int32_t yc, int32_t r, Circleout *o)
+{
+	Stretch st[Nstretch];
+	uint8_t *save, *q, *p;
+	int16_t *g, *d, *ymin, *ymax;
+	size_t len;
+	int status, n, i, y, f0;
+	pid_t pid;
+
+	f0 = failures();
+	pid = fork();
+	if (pid < 0)
+		fatal("fixes: cannot fork");
+	if (pid == 0) {
+		setitimer(ITIMER_REAL, &quarter, NULL);
+		n = stretches(s, st);
+		len = 0;
+		for (i = 0; i < n; i++)
+			len += st[i].hi - st[i].lo;
+		save = malloc(len);
+		if (save == NULL)
+			fatal("fixes: out of memory");
+		q = save;
+		for (i = 0; i < n; i++) {
+			memcpy(q, st[i].lo, st[i].hi - st[i].lo);
+			q += st[i].hi - st[i].lo;
+		}
+		if (s == Ours)
+			o->rc = ComputeSphere(xc, yc, r);
+		else
+			o->rc = acall(cs, 3, xc, yc, r);
+		o->stray = Nostray;
+		g = s == Ours ? TabVerticG : (int16_t*)lookup("TabVerticG");
+		q = save;
+		for (i = 0; i < n && o->stray == Nostray; i++)
+			for (p = st[i].lo; p < st[i].hi; p++, q++)
+				if (*p != *q && !circlewrites(s, p)) {
+					o->stray = (int32_t)(p - (uint8_t*)g);
+					break;
+				}
+		d = s == Ours ? TabVerticD : (int16_t*)lookup("TabVerticD");
+		ymin = s == Ours ? &Ymin : (int16_t*)lookup("Ymin");
+		ymax = s == Ours ? &Ymax : (int16_t*)lookup("Ymax");
+		o->ymin = *ymin;
+		o->ymax = *ymax;
+		memset(o->g, 0, sizeof o->g);
+		memset(o->d, 0, sizeof o->d);
+		if (o->rc != 0)
+			for (y = o->ymin < 0 ? 0 : o->ymin; y <= o->ymax && y < Nline; y++) {
+				o->g[y] = g[y];
+				o->d[y] = d[y];
+			}
+		_exit(failures() != f0);
+	}
+	if (waitpid(pid, &status, 0) != pid)
+		fatal("fixes: cannot wait");
+	return ended(status);
 }
 
 /*
@@ -3588,17 +4395,6 @@ fixgouraud(void)
 	printf("fixes: gouraud, %d bodies of a Gouraud polygon, %d drawn, %d of them with points either side of FFh,"
 		" the same lists, boxes and screens\n", r, drawn, wrapped);
 	return 1;
-}
-
-/* how a frame of 0 lines ended in a side's child: nothing drawn, drawn, or by a signal */
-static char*
-frameend(int status)
-{
-	if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
-		return "nothing drawn";
-	if (WIFEXITED(status))
-		return "drawn";
-	return ends[ended(status)];
 }
 
 /*
@@ -3790,6 +4586,117 @@ fixnone(void)
 	printf("fixes: none, %d bodies of no point, of no group and with a polygon of no point drawn, %d of no group"
 		" patched, the same lists, boxes, screens and bodies\n", r, k);
 	return 1;
+}
+
+/*
+ * ComputeSphere of radii from 32768 to 65535 and at random, about
+ * centres from -20000 to 65535 (LBA.EXE's affsphere passes its centre's
+ * 16 bits unsigned), in random clip boxes, then 50 rounds aimed at each of its
+ * four tests of a clipped line, and 50 in a clip box one line high:
+ * LBA.EXE's assembly tested a line in 16 bits and wrote it at its 32-bit
+ * index, 128 KB on either side of TabVerticG, and gave up a circle its
+ * clipping left one line high. Each side runs in a child: the build's result, frame and
+ * lines from Ymin to Ymax must be ours, and neither side may change a
+ * byte beside its tables and frame.
+ */
+static int
+fixcircle(void)
+{
+	enum {
+		Nround = 4000,
+		Naim = 50,	/* rounds aimed at each test */
+	};
+	uintptr_t cs;
+	Circleout *o[2];
+	int32_t xc, yc, r;
+	int k, s, oc, oa, wide, line;
+	char *what;
+
+	cs = lookup("ComputeSphere");
+	for (s = 0; s < 2; s++) {
+		o[s] = mmap(NULL, sizeof *o[s], PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+		if (o[s] == MAP_FAILED)
+			fatal("fixes: cannot map");
+	}
+	wide = line = 0;
+	for (k = 0; k < Nround + 5*Naim; k++) {
+		if (rndn(4) == 0)
+			setclip(0, 0, Width-1, Height-1);
+		else
+			randclip();
+		xc = rndn(4) == 0 ? rndr(0, 65535) : rndr(-1000, Width+1000);
+		switch (k < Nround ? -1 : (k - Nround)/Naim) {
+		case 0:	/* yc+y */
+			yc = rndr(20000, 45000);
+			r = rndr(32768, 65535);
+			break;
+		case 1:	/* yc+x */
+			yc = rndr(20000, 65535);
+			r = rndr(40000, 65535);
+			break;
+		case 2:	/* yc-y */
+			yc = rndr(0, Height-1);
+			r = rndr(65100, 65535);
+			break;
+		case 3:	/* yc-x */
+			yc = rndr(-20000, -19000);
+			r = rndr(64000, 65535);
+			break;
+		case 4:	/* one line */
+			yc = rndn(Height);
+			setclip(0, yc, Width-1, yc);
+			xc = rndr(0, Width);
+			r = rndr(1, 200);
+			yc += rndr(-r, r);
+			line++;
+			break;
+		default:
+			yc = rndn(4) == 0 ? rndr(-20000, 0) : rndn(2) == 0 ? rndr(0, Height) : rndr(0, 65535);
+			r = rndn(4) == 0 ? rndr(65000, 65535) : rndn(2) == 0 ? rndr(32768, 65535) : (int32_t)rndn(65536);
+			break;
+		}
+		oc = circleside(Ours, 0, xc, yc, r, o[Ours]);
+		oa = circleside(Asm, cs, xc, yc, r, o[Asm]);
+		if (oc != Drawn || oa != Drawn) {
+			fail("fixes: ComputeSphere %d %d %d, clip %d %d %d %d: ours %s, the assembly's %s",
+				xc, yc, r, ClipXmin, ClipYmin, ClipXmax, ClipYmax,
+				oc == Drawn ? "ended" : ends[oc], oa == Drawn ? "ended" : ends[oa]);
+			return 0;
+		}
+		what = NULL;
+		if (o[Ours]->stray != Nostray || o[Asm]->stray != Nostray)
+			what = "a byte beside the tables";
+		else if (o[Ours]->rc != o[Asm]->rc)
+			what = "the result";
+		else if (o[Ours]->ymin != o[Asm]->ymin || o[Ours]->ymax != o[Asm]->ymax)
+			what = "the frame";
+		else if (memcmp(o[Ours]->g, o[Asm]->g, sizeof o[Ours]->g) != 0
+		|| memcmp(o[Ours]->d, o[Asm]->d, sizeof o[Ours]->d) != 0)
+			what = "the lines";
+		if (what != NULL) {
+			fail("fixes: ComputeSphere %d %d %d, clip %d %d %d %d: %s differs (ours at %d, the assembly's at %d)",
+				xc, yc, r, ClipXmin, ClipYmin, ClipXmax, ClipYmax, what, o[Ours]->stray, o[Asm]->stray);
+			return 0;
+		}
+		wide += r > 32767;
+	}
+	setclip(0, 0, Width-1, Height-1);
+	printf("fixes: circle, %d circles, %d of them of a radius from 32768, %d in a clip box one line high, the same"
+		" lines, nothing written beside them\n", k, wide, line);
+	for (s = 0; s < 2; s++)
+		munmap(o[s], sizeof *o[s]);
+	return 1;
+}
+
+/* how a frame of 0 lines ended in a side's child: nothing drawn, drawn, or by a signal */
+static char*
+frameend(int status)
+{
+	if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+		return "nothing drawn";
+	if (WIFEXITED(status))
+		return "drawn";
+	return ends[ended(status)];
 }
 
 /*
@@ -4116,15 +5023,22 @@ fixzero(void)
 
 /*
  * The drawing modules' fixes (asmoracle.c's fixes): boxes and blocks
- * turned over, spheres centred off the screen, Gouraud faces whose
- * points lie either side of FFh, a movie's frames of 0 lines, strings
- * measured under interleaves of 256 or more, masks copied clipped from
- * another screen and with runs of 128 or more, graphs and masks of 0
- * lines and with lines of 0 blocks or runs.
+ * turned over, SmallSort of entries of 1 to 3 bytes, of 0 to -8 and of
+ * 262148 either way, graphs and masks clipped to nothing, lines from
+ * far, with a dx or dy of 65536 and through thin boxes, AsmFillProp's
+ * ends brought in past 32 bits and across a box turned over, every
+ * filler with a line 65536 wide, polygons of 32 and 33 points clipped,
+ * spheres centred off the screen, deep in perspective and behind the
+ * camera, Gouraud faces whose points lie either side of FFh, circles of
+ * a radius from 32768, a movie's frames of 0 lines, strings measured
+ * under interleaves of 256 or more, masks copied clipped from another
+ * screen and with runs of 128 or more, graphs and masks of 0 lines and
+ * with lines of 0 blocks or runs.
  */
 int
 fixsvga(void)
 {
-	return fixboxes() && fixnopoint() && fixsphere() && fixgouraud() && fixnone() && fixframe()
-		&& fixsizefont() && fixcopymask() && fixzero();
+	return fixboxes() && fixsort() && fixgraphs() && fixlines() && fixfillprop() && fixfill()
+		&& fixpoly() && fixnopoint() && fixsphere() && fixgouraud() && fixnone() && fixcircle()
+		&& fixframe() && fixsizefont() && fixcopymask() && fixzero();
 }

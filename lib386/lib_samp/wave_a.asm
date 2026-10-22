@@ -289,7 +289,14 @@ SonList                 db      STRUCT_SIZE*LIST_SIZE+4 dup (?)
 BackCurrentList         db      STRUCT_SIZE*LIST_SIZE+4 dup (?)
 BackSonList             db      STRUCT_SIZE*LIST_SIZE+4 dup (?)
 
+; FIXED: The CD's drivers give SnapList room for 50 entries of 8 bytes,
+; where GetSnapSample writes one of 12 for each sample of both lists, of
+; 50 each. This holds 100 of 12.
+IFDEF	FIXES
+SnapList		db	SNAP_SIZE*LIST_SIZE*2 dup (?)
+ELSE
 SnapList		db	SNAP_SIZE*LIST_SIZE dup (?)
+ENDIF
 
 IRQ_mask                db      ?
 
@@ -1659,9 +1666,17 @@ keeplooking:    cmp     dword ptr[edx], 0
 		add     edx, STRUCT_SIZE
 		jmp     short keeplooking
 exit:
+		; FIXED: The CD's drivers test the list's end against SonList's
+		; start, which differ while a sample waits in SonList, so that
+		; a long handle in neither list is looked for there for ever.
+		; Go on to SonList from CurrentList alone, which lies below it.
 		cmp     edx, ecx
 		mov	edx, ecx
+IFDEF	FIXES
+		jb      keeplooking
+ELSE
 		jne     keeplooking
+ENDIF
 
 		xor	edx, edx
 found:
@@ -1713,6 +1728,31 @@ notfound:
 		push	edi
 		mov	edi, edx
 
+		; FIXED: The CD's drivers take both volumes in words and divide
+		; in 16 bits, so that a volright of 512 or more wraps where
+		; MixSample divides in 32. Divide in 32 bits, as MixSample does.
+		; FIXED: The CD's drivers test the ratio as their MixSample did,
+		; 74 first. Test 222 first and store the card's byte for each
+		; speaker, as MixSample does.
+IFDEF	FIXES
+		mov	ecx, volleft
+		or	ecx, ecx
+		jnz	short okleft
+		mov	cx, RIGHTPOS			; if volleft = 0 then right
+		jmp	short storepos
+okleft:		mov     eax, volright
+		shl	eax, 7				; * 128
+		xor	edx, edx
+		div	ecx
+		mov	cx, RIGHTPOS			; right
+		cmp	eax, 222			; 1.732 (= tan 60) * 128
+		jae	short storepos
+		mov	cx, LEFTPOS			; left
+		cmp	eax, 74				; .577  (= tan 30) * 128
+		jb	short storepos
+		xor	cx, cx				; middle
+storepos:	mov	word ptr[edi+VOL_LEFT], cx	; Store position (0:middle, 1:first byte, 2:second)
+ELSE
 		mov	cx, word ptr[volleft]
 		or	cx, cx
 		jnz	short okleft
@@ -1730,6 +1770,7 @@ okleft:		mov     ax, word ptr[volright]
 		jae	short storepos
 		dec	cx				; middle
 storepos:	mov	word ptr[edi+VOL_LEFT], cx	; Store position (0:middle, 1:left, 2:right)
+ENDIF
 
 		pop	edi
 notfound:
@@ -1762,7 +1803,14 @@ else
 		mov	word ptr[edi+VOL_LEFT], ax	; VOL_LEFT = sqr(volleft^2 + volright^2)
 
 		pop	ebx
+		; FIXED: The CD's drivers pop ESI here, where they pushed EDI,
+		; so that they return with ESI the caller's EDI and EDI an
+		; entry's address. Pop EDI.
+IFDEF	FIXES
+		pop	edi
+ELSE
 		pop	esi
+ENDIF
 
 notfound:
 
@@ -1925,15 +1973,33 @@ ENDIF
 		shr     ebx, 16
 		adc     bx, 0                           ; ebx = scaled sampling rate
 
+		; FIXED: The CD's drivers divide in 16 bits, which faults on a
+		; step past 16 bits before the test below brings it down to
+		; 0FFFFh. This divides in 32 bits.
+IFDEF	FIXES
+		xchg    eax, ebx                        ; eax = sr, ebx = size
+		shl     eax, 16                         ; eax = sr:0
+		xor     edx, edx
+		movzx   ecx, word ptr[PlayRate]
+		div     ecx                             ; eax = INCR
+ELSE
 		xor     edx, edx
 		xchg    eax, ebx                        ; edx = 0, eax = sr, ebx = size
 		xchg    edx, eax                        ; edx = sr, eax = 0, ebx = size
 		div     word ptr[PlayRate]              ; dx:ax / PlayRate; ax = INCR
+ENDIF
 
 		cmp	eax, 0FFFFh
 		jbe	okincr
 		mov	eax, 0FFFFh
 okincr:		mov     dword ptr[save_2], eax          ; save_2 = INCR
+
+		; FIXED: The CD's drivers divide by a step of 0 below, which
+		; faults. Play no such sample.
+IFDEF	FIXES
+		or	eax, eax
+		jz	typeunknown
+ENDIF
 
 		mov     ecx, ebx                        ; ecx = size
 		mov     esi, ebx
@@ -1945,6 +2011,16 @@ okincr:		mov     dword ptr[save_2], eax          ; save_2 = INCR
 		dec     eax                             ; A TRY !!!! (will make loop around next longer...)
 
 		shl     eax, 16
+		; FIXED: The CD's drivers fault when the quotient passes 32
+		; bits. Divide the high doubleword first, so that the
+		; quotient's low 32 bits are left.
+IFDEF	FIXES
+		push	eax
+		mov	eax, edx
+		xor	edx, edx
+		div	ebx
+		pop	eax
+ENDIF
 		div     ebx                             ; div 64 bits !!!
 		sub     eax, esi                        ; sub max roundoff error
 		mov     esi, eax                        ; esi = eax = new size
@@ -2009,6 +2085,12 @@ keeplooking1:   cmp     dword ptr[ebx], 0
 		add     ebx, STRUCT_SIZE
 		jmp     short keeplooking1
 exit:
+		; FIXED: The CD's drivers return here with the value pushed at
+		; okfilter on the stack, so that the epilogue gives back EBX,
+		; EDI and ESI a slot off. Take it off.
+IFDEF	FIXES
+		pop	eax
+ENDIF
 		xor	eax, eax
 		jmp	endcritical
 found:
@@ -2023,8 +2105,15 @@ SearchEnd:	add	edi, STRUCT_SIZE
 		cmp	eax, dword ptr[edi]
 		jne	short SearchEnd
 
+		; FIXED: The CD's drivers leave a full list by typeunknown,
+		; their critical section entered, so that the card's interrupt
+		; mixes no half until a call leaves one. Leave it.
 		cmp	edi, ebx
+IFDEF	FIXES
+		jae	exit
+ELSE
 		jae	typeunknown
+ENDIF
 
 		mov     dword ptr[follow], ecx          ; update follow
 		mov     dword ptr[edi+HANDLE], ecx      ; sample handle
@@ -2057,7 +2146,18 @@ ifdef	STEREO
 
 		mov     word ptr[edi+VOL_RIGHT], ax
 	else
+		; FIXED: The CD's drivers test 74 first and 222 after, the order
+		; their SB Pro and PAS want, which play the first byte of a pair
+		; on the right, so that a Sound Blaster 16, which plays it on the
+		; left, plays a sample louder on the left on the right, and all
+		; three put a sample on the right alone, volleft 0, in the second
+		; byte. Test 222 first, as version 2.00 beta did (n_wave.asm),
+		; and store the card's byte for each speaker.
+IFDEF	FIXES
+		mov	si, RIGHTPOS			; right
+ELSE
 		mov	si, 2				; right
+ENDIF
 		mov	ecx, volleft
 		or	ecx, ecx
 		jz	short storepos
@@ -2065,6 +2165,15 @@ okleft:		mov     eax, volright
 		shl	eax, 7				; * 128
 		xor	edx, edx
 		div	ecx
+IFDEF	FIXES
+		cmp	eax, 222			; 1.732 (= tan 60) * 128
+		jae	short storepos
+		mov	si, LEFTPOS			; left
+		cmp	eax, 74				; .577  (= tan 30) * 128
+		jb	short storepos
+		xor	si, si				; middle
+storepos:	mov	word ptr[edi+VOL_LEFT], si	; Store position (0:middle, 1:first byte, 2:second)
+ELSE
 		cmp	eax, 74				; 1.732 (= tan 60) * 128
 		jb	short storepos
 		dec	si				; left
@@ -2072,6 +2181,7 @@ okleft:		mov     eax, volright
 		jae	short storepos
 		dec	si				; middle
 storepos:	mov	word ptr[edi+VOL_LEFT], si	; Store position (0:middle, 1:left, 2:right)
+ENDIF
 		mov	word ptr[edi+VOL_RIGHT], 1	; to fill with non 0
 	endif
 else
@@ -2519,18 +2629,38 @@ keeplooking:    cmp     dword ptr[edx], 0
 		sub	ebx, dword ptr[edx+START]
 		mov	dword ptr[eax+8], ebx
 
+IFDEF	FIXES
+		add	eax, SNAP_SIZE
+ELSE
 		add	eax, 12
+ENDIF
 		add     edx, STRUCT_SIZE
 		jmp     short keeplooking
 exit:
+		; FIXED: The CD's drivers test the list's end against SonList's
+		; start, which differ while a sample waits in SonList, so that
+		; they walk SonList again and again, writing past SnapList. Go
+		; on to SonList from CurrentList alone, which lies below it.
 		cmp     ecx, edx
 		mov	edx, ecx
+IFDEF	FIXES
+		ja      keeplooking
+ELSE
 		jne     keeplooking
+ENDIF
 
 	END_CRIT_SECT
 
+		; FIXED: The CD's drivers count the list's bytes over 8, where
+		; an entry has 12. Divide them by the entry's size.
 		sub	eax, offset SnapList
+IFDEF	FIXES
+		xor	edx, edx
+		mov	ecx, SNAP_SIZE
+		div	ecx
+ELSE
 		shr	eax, 3
+ENDIF
 
 		ret
 
@@ -2599,13 +2729,26 @@ waitpause:	cmp	byte ptr[FlagPause], 1
 		lea	esi, BackCurrentList		; restore CurrentList
 		lea	edi, CurrentList
 		call	CopyList
+		; FIXED: The CD's drivers load BackSonList into EDI where ESI
+		; was meant, so that SonList is copied back from where the copy
+		; of BackCurrentList ended and comes back empty, and load
+		; weirdcount where they mean to store it. Copy from BackSonList,
+		; and store weirdcount.
+IFDEF	FIXES
+		lea	esi, BackSonList		; restore SonList
+ELSE
 		lea	edi, BackSonList		; restore SonList
+ENDIF
 		lea	edi, SonList
 		call	CopyList
 		mov	eax, dword ptr[backfollow]	; restore follow
 		mov	dword ptr[follow], eax
 		mov	eax, dword ptr[backweirdcount]	; restore weirdcount
+IFDEF	FIXES
+		mov	dword ptr[weirdcount], eax
+ELSE
 		mov	eax, dword ptr[weirdcount]
+ENDIF
 
 	END_CRIT_SECT
 

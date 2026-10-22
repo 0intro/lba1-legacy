@@ -6,8 +6,7 @@
 
 /*
  * The frames of the movies (FLA), of adfli_a.asm, drawn in Log as a
- * 320-wide picture. BlackFrame and CopyFrame step 640 a line, as the
- * assembly did.
+ * 320-wide picture.
  */
 
 /*
@@ -89,22 +88,35 @@ UpdateFrame(void *frame, int32_t dx)
 	} while (--nl != 0);
 }
 
-/* BlackFrame is adfli_a.asm's BlackFrame: 200 lines of 320 cleared, 640 apart. */
+/*
+ * BlackFrame is adfli_a.asm's BlackFrame: 200 lines of 320 cleared.
+ *
+ * FIXED: LBA.EXE steps 640 a line where the picture is 320 wide, as
+ * DrawFrame and UpdateFrame are given it, so that a black pass would
+ * clear every other line of the picture and as many below it. This
+ * steps 320.
+ */
 void
 BlackFrame(void)
 {
 	int y;
 
 	for (y = 0; y < 200; y++)
-		memset(Log + 640*y, 0, 320);
+		memset(Log + 320*y, 0, 320);
 }
 
-/* CopyFrame is adfli_a.asm's CopyFrame: 200 lines of 320 from src, 640 apart. */
+/*
+ * CopyFrame is adfli_a.asm's CopyFrame: 200 lines of 320 from src.
+ *
+ * FIXED: LBA.EXE steps 640 a line where the picture is 320 wide, so
+ * that a copy pass would put its lines on every other line of the
+ * picture and below it. This steps 320.
+ */
 void
 CopyFrame(void *src)
 {
 	int y;
 
 	for (y = 0; y < 200; y++)
-		memcpy(Log + 640*y, (uint8_t*)src + 320*y, 320);
+		memcpy(Log + 320*y, (uint8_t*)src + 320*y, 320);
 }

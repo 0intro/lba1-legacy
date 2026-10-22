@@ -90,9 +90,17 @@ LONG	PtrDefReadWord()
 	}
 	while( c <= 32 ) ;
 
+	/*
+	 * FIXED: LBA.EXE copies a word into DefString whatever its length,
+	 * past its 256 bytes where longer. The word keeps its first 255.
+	 */
 	do	/* lit mot */
 	{
+#ifdef	FIXES
+		if( ptr < DefString+sizeof(DefString)-1 )	*ptr++ = c ;
+#else
 		*ptr++ = c ;
+#endif
 		c = *PtrDef++ ;
 		if( PtrDef >= EndPtrDef )	c = 26 ;
 	}
@@ -117,9 +125,18 @@ LONG	PtrDefReadIdent()
 	}
 	while( c <= 32 ) ;
 
+	/*
+	 * FIXED: LBA.EXE copies a key, or a comment's line whole, into
+	 * DefString whatever its length, past its 256 bytes where longer.
+	 * It keeps the first 255, more than any key holds.
+	 */
 	do	/* lit mot */
 	{
+#ifdef	FIXES
+		if( ptr < DefString+sizeof(DefString)-1 )	*ptr++ = c ;
+#else
 		*ptr++ = c ;
+#endif
 		c = *PtrDef++ ;
 		if( PtrDef >= EndPtrDef )	c = 26 ;
 	}
@@ -180,9 +197,17 @@ void	PtrDefReadString()
 	}
 	while( c <= 32 ) ;
 
+	/*
+	 * FIXED: LBA.EXE copies a value into DefString whatever its length,
+	 * past its 256 bytes where longer. The value keeps its first 255.
+	 */
 	do	/* lit phrase jusqu'a CR/LF */
 	{
+#ifdef	FIXES
+		if( ptr < DefString+sizeof(DefString)-1 )	*ptr++ = c ;
+#else
 		*ptr++ = c ;
+#endif
 		c = *PtrDef++ ;
 		if( PtrDef >= EndPtrDef )	c = 13 ;
 	}
@@ -237,25 +262,60 @@ LONG	PtrDefReadThisString()
 
 	ptr = DefString ;
 
+	/*
+	 * FIXED: LBA.EXE reads a byte first, so that a key that ends the
+	 * file, its line's end missing, takes PtrDef past it, and
+	 * Def_WriteString writes the rest's length of -1. The end is tested
+	 * first too.
+	 */
 	do	// saute espace
 	{
+#ifdef	FIXES
+		if( PtrDef >= EndPtrDef )	return FALSE ;
+#endif
 		c = *PtrDef++ ;
 		if( PtrDef >= EndPtrDef )	return FALSE ;
 	}
 	while( c == 32 ) ;
 
+	/*
+	 * FIXED: LBA.EXE takes the old value to a CR alone, one led by a
+	 * tab for an empty one, then skips a byte for the LF. Where lines
+	 * end in LF alone it reads on to the next CR or the file's end,
+	 * into DefString past its 256 bytes, and Def_WriteString writes the
+	 * file again without the lines it passed, and at the file's end the
+	 * skip takes PtrDef past it, the rest's length then -1. The value
+	 * runs to its line's end, a CR or an LF, keeping its first 255
+	 * bytes, and the LF that follows a CR within the file is skipped.
+	 */
+#ifdef	FIXES
+	if( (c != 13) AND (c != 10) )	// on a pu lire un cr
+#else
 	if( c>31 )	// on a pu lire un cr
+#endif
 	{
 		do	// lit phrase jusqu'a CR/LF
 		{
+#ifdef	FIXES
+			if( ptr < DefString+sizeof(DefString)-1 )	*ptr++ = c ;
+#else
 			*ptr++ = c ;
+#endif
 			c = *PtrDef++ ;
 			if( PtrDef >= EndPtrDef )	c = 13 ;
 		}
+#ifdef	FIXES
+		while( (c != 13) AND (c != 10) ) ;
+	}
+
+	if( (c == 13) AND (PtrDef < EndPtrDef) AND (*PtrDef == 10) )
+		PtrDef++ ;		// lit LF ou rien si fin
+#else
 		while( c != 13 ) ;
 	}
 
 	PtrDef++ ;			// lit LF ou rien si fin
+#endif
 
 	*ptr++ = 0 ;
 

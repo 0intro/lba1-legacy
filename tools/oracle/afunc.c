@@ -265,6 +265,107 @@ testpfunc(void)
 		allangles(ga, ad);
 }
 
+static void
+put32(uint8_t *p, uint32_t v)
+{
+	p[0] = v;
+	p[1] = v >> 8;
+	p[2] = v >> 16;
+	p[3] = v >> 24;
+}
+
+static void
+put16(uint8_t *p, uint32_t v)
+{
+	p[0] = v;
+	p[1] = v >> 8;
+}
+
+/*
+ * GetRealValue and GetRealAngle over durations of 32768 ticks and more,
+ * where the assembly's 16-bit idiv faulted on a quotient past 16 bits:
+ * ours and the build's assembly, which divides in 32 bits.
+ */
+static int
+fixreal(void)
+{
+	uintptr_t gv, ga;
+	uint8_t ro[Real], ra[Real];
+	uint32_t *atimer, memo, el;
+	int32_t y, z, d, q;
+	int r, angle, past;
+
+	gv = lookup("GetRealValue");
+	ga = lookup("GetRealAngle");
+	atimer = (uint32_t*)lookup("TimerRef");
+	past = 0;
+	for (r = 0; r < Rounds; r++) {
+		angle = r & 1;
+		put16(ro, rnd());
+		put16(ro + 2, rnd());
+		put16(ro + 4, rndr(32768, 65535));
+		memo = rnd();
+		put32(ro + 6, memo);
+		el = rndn(get16(ro + 4));
+		memcpy(ra, ro, Real);
+		TimerRef = memo + el;
+		*atimer = TimerRef;
+		if (angle) {
+			y = GetRealAngle(ro);
+			z = (int16_t)acall(ga, 1, (int32_t)(uintptr_t)ra);
+		} else {
+			y = GetRealValue(ro);
+			z = (int16_t)acall(gv, 1, (int32_t)(uintptr_t)ra);
+		}
+		if (y != z || memcmp(ro, ra, Real) != 0) {
+			fail("fixes: %s from %d to %d, %u of %u ticks: ours %d, the assembly's %d",
+				angle ? "GetRealAngle" : "GetRealValue", (int16_t)get16(ro), (int16_t)get16(ro + 2),
+				el, get16(ro + 4), y, z);
+			return 0;
+		}
+		d = (int16_t)(get16(ro + 2) - get16(ro));
+		if (angle && d < -512)
+			d += 1024;
+		else if (angle && d > 512)
+			d -= 1024;
+		q = d * (int16_t)el / (int16_t)get16(ro + 4);
+		past += q < -32768 || q > 32767;
+	}
+	printf("fixes: real, %d values and angles, %d of them past 16 bits, the same\n", r, past);
+	return 1;
+}
+
+/* RegleTrois32 of any values and counts, where the assembly's idiv faulted on a quotient past 32 bits. */
+static int
+fixregle(void)
+{
+	uintptr_t rt;
+	int32_t v1, v2, n, s, y, z;
+	int64_t q;
+	int r, past;
+
+	rt = lookup("RegleTrois32");
+	past = 0;
+	for (r = 0; r < 10*Rounds; r++) {
+		v1 = rnd();
+		v2 = rnd();
+		n = rndn(4) == 0 ? (int32_t)rnd() : rndr(-5, 2000);
+		s = rnd();
+		y = RegleTrois32(v1, v2, n, s);
+		z = acall(rt, 4, v1, v2, n, s);
+		if (y != z) {
+			fail("fixes: RegleTrois32 %d %d %d %d: ours %d, the assembly's %d", v1, v2, n, s, y, z);
+			return 0;
+		}
+		if (n > 0) {
+			q = (int64_t)(int32_t)((uint32_t)v2 - (uint32_t)v1) * s / n;
+			past += q < INT32_MIN || q > INT32_MAX;
+		}
+	}
+	printf("fixes: regle, %d rules of three, %d of them past 32 bits, the same\n", r, past);
+	return 1;
+}
+
 /*
  * GetAngle over the game's coordinates, where LBA.EXE's search of the
  * sine table gives half the angles a step off the nearer one: ours and
@@ -298,5 +399,5 @@ fixangle(void)
 int
 fixfunc(void)
 {
-	return fixangle();
+	return fixreal() && fixregle() && fixangle();
 }

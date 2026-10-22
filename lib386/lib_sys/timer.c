@@ -11,7 +11,16 @@
 #define	FREQUENCE	50		/*    1193180 / 23864	*/
 
 
+/*
+ * FIXED: LBA.EXE gives the PIT back FFFFh, where the BIOS had 0, a count
+ * of 65536, so that DOS's clock, which counts the BIOS's ticks, runs fast
+ * by one part in 65535 once the game has ended. It gets the BIOS's 0.
+ */
+#ifdef	FIXES
+#define	OLD_DIVISOR	0
+#else
 #define	OLD_DIVISOR	0xFFFF
+#endif
 
 
 extern	void	__interrupt 		NewIntPM08(void)	;

@@ -102,11 +102,35 @@ ENDIF
 
 ;*--------------------------------------------------------------------------*
 
+IFDEF	FIXES
+; The byte of an 8-bit stereo pair each card plays on its left speaker,
+; MixSample's and ChangeVolume's position for it: the SB16 the first, as
+; Creative's guide orders the bytes and UpdateBuffer's comments name them,
+; the SB Pro the second, its channels reversed against the SB16's (Vogons'
+; measurements in DOSBox Staging's issue 2942, ESS's ES1868 and ES1869
+; datasheets), the PAS the second, its channels crossed by ResetCard.
+
+IFDEF	SB16
+	LEFTPOS		equ	1
+ELSE
+	LEFTPOS		equ	2
+ENDIF
+RIGHTPOS		equ	3 - LEFTPOS
+
+;*--------------------------------------------------------------------------*
+ENDIF
+
 BUFFER_SIZE		equ	1024			; number of samples
 							; in half-buffer
 LIST_SIZE               equ     50
 STRUCT_SIZE             equ     44
+; FIXED: The CD's drivers make SNAP_SIZE 8, where GetSnapSample writes an
+; entry of 12 bytes. This is the entry's size.
+IFDEF	FIXES
+SNAP_SIZE		equ	12
+ELSE
 SNAP_SIZE		equ	8
+ENDIF
 
 SHIFT_SAMPLE		equ	3			; max number of
 							; samples mixed

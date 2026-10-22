@@ -36,7 +36,18 @@ char	*ListIdentifier[] = {	"MidiBase" ,
 				"MidiDMA" ,
 				"" };
 
+/*
+ * FIXED: LBA.EXE declares Midi_Base, Midi_IRQ and Midi_DMA apart, so
+ * that the MidiIRQ and MidiDMA that InitAdelineSystem writes after
+ * MidiBase through AskMidiVars's pointer land in other variables,
+ * MidiDMA in hdriver, which a value other than 0 makes a handle with no
+ * driver. The three are one array, in ListIdentifier's order.
+ */
+#ifdef	FIXES
+LONG	Midi_Vars[3] ;
+#else
 LONG	Midi_Base, Midi_IRQ, Midi_DMA ;
+#endif
 
 
 HDRIVER hdriver ;
@@ -67,7 +78,11 @@ LONG	MaxVolume = 100 ;
 void	AskMidiVars( char ***listidentifier, LONG **ptrvars )
 {
 	*listidentifier = ListIdentifier ;
+#ifdef	FIXES
+	*ptrvars = Midi_Vars ;
+#else
 	*ptrvars = &Midi_Base ;
+#endif
 }
 
 //████████████████████████████████████████████████████████████████████████████
@@ -238,12 +253,21 @@ LONG	InitMidi()
 
    // use if defined new parameters
 
+#ifdef	FIXES
+	if( Midi_Vars[0] != -1 )	desc->default_IO  = Midi_Vars[0] ;
+	if( Midi_Vars[1] != -1 )	desc->default_IRQ = Midi_Vars[1] ;
+	if( Midi_Vars[2] != -1 )
+	{
+		desc->default_DMA = Midi_Vars[2] ;
+		desc->default_DRQ = Midi_Vars[2] ;
+#else
 	if( Midi_Base != -1 )	desc->default_IO  = Midi_Base ;
 	if( Midi_IRQ  != -1 )	desc->default_IRQ = Midi_IRQ ;
 	if( Midi_DMA  != -1 )
 	{
 		desc->default_DMA = Midi_DMA ;
 		desc->default_DRQ = Midi_DMA ;
+#endif
 	}
 
    //

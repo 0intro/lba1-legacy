@@ -30,7 +30,6 @@ AffMask(int32_t num, int32_t x, int32_t y, void *bank)
 	uint8_t *m, *d, *line, nb, nl, n;
 	uint32_t off;
 	int32_t w, h, x1, y1, ox, npix, i;
-	uint32_t c;
 
 	memcpy(&off, (uint8_t*)bank + 4*num, 4);
 	m = (uint8_t*)bank + off;
@@ -116,13 +115,13 @@ AffMask(int32_t num, int32_t x, int32_t y, void *bank)
 			}
 		}
 		m++;
-		/* a clipped width of 0 or less runs past the line, as the assembly's count */
-		for (i = 0, c = npix; ; i++) {
+		/*
+		 * FIXED: LBA.EXE runs 2^32 pixels on a clipped width of 0 or
+		 * less. This loop ends at once on such a width.
+		 */
+		for (i = 0; i < npix; i++)
 			if (clip[ox+i] != 0)
 				line[ox+i] = clip[ox+i];
-			if (--c == 0)
-				break;
-		}
 		line += 640;
 	} while (--nl != 0);
 }

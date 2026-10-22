@@ -15,8 +15,16 @@
 			extrn	NoLanguage	Close:PROC
 
 ;----------------------------------------------------------------------------
+; FIXED: LBA.EXE's Touch loads BX with the file's handle and returns with
+; it, though Watcom's convention has a callee keep EBX. The uses list
+; saves it.
+IFDEF	FIXES
+Touch			proc	uses ebx,\
+			filename:DWORD
+ELSE
 Touch			proc	,\
 			filename:DWORD
+ENDIF
 			local	handle:DWORD
 			local	time:WORD
 			local	date:WORD

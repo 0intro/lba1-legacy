@@ -1,8 +1,28 @@
+#ifdef	FIXES
+extern void DropLoopObj(int16_t );
+#endif
 extern uint32_t HQ_MixSample(int16_t ,int16_t ,int16_t ,int16_t ,int16_t );
+#ifdef	FIXES
+extern void KeepLoopObj(int16_t ,int16_t ,uint32_t );
+#endif
 extern void HQ_StopSample(void);
+#ifdef	FIXES
+extern void HQ_SaveSamples(void);
+extern void HQ_RestoreSamples(void);
+#endif
 extern void HQ_StopOneSample(int16_t );
+#ifdef	FIXES
+extern void HQ_StopSamplesObj(int16_t ,int16_t );
+#endif
 extern int16_t GiveBalance(int16_t ,int16_t ,int32_t ,uint32_t *,uint32_t *);
+#ifdef	FIXES
+extern uint32_t HQ_3D_MixSample(int16_t ,int16_t ,int16_t ,int16_t ,int16_t ,int16_t );
+#else
 extern void HQ_3D_MixSample(int16_t ,int16_t ,int16_t ,int16_t ,int16_t ,int16_t );
+#endif
+#ifdef	FIXES
+extern void HQ_3D_MixSampleObj(int16_t ,int16_t ,int16_t ,int16_t ,int16_t ,int16_t ,int16_t );
+#endif
 extern void HQ_ChangeBalanceSamples(int16_t ,int16_t );
 extern void GereAmbiance(void);
 extern void FadePal(unsigned char ,unsigned char ,unsigned char ,unsigned char *,int16_t );

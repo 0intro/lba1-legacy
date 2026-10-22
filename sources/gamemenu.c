@@ -203,8 +203,20 @@ void	DrawFire( WORD x0, WORD y0, WORD x1, WORD y1, WORD coul )
 void	WaitReleaseSpace()
 {
 	SaveTimer() ;
+	/*
+	 * FIXED: LBA.EXE waits for Space and Escape alone, so that a
+	 * dialogue or a question closed by another key goes back to the
+	 * game with it down, which the next frame takes for its own: Shift
+	 * for the inventory, Return for the camera, H for the holomap. This
+	 * waits for every key's release but the arrows', as the quit menu's
+	 * Continue does.
+	 */
+#ifdef	FIXES
+	while( Key OR Fire ) ;
+#else
 	while( (Fire & F_SPACE)
 	OR (Key == K_ESC) ) ;
+#endif
 	RestoreTimer() ;
 }
 
@@ -487,8 +499,13 @@ void	MenuComportement()
 
 	if( Comportement == C_PROTOPACK )
 	{
+#ifdef	FIXES
+		SetComportement( C_NORMAL ) ;	// le bourdonnement arrêté
+		HQ_SaveSamples() ;		// et les boucles mises de côté
+#else
 		HQ_StopSample() ;
 		SetComportement( C_NORMAL ) ;
+#endif
 	}
 
 	ptrobj = &ListObjet[NUM_PERSO] ;
@@ -588,6 +605,10 @@ void	MenuComportement()
 
 	FlagSpeak = memoflagspeak ;
 	InitDial( START_FILE_ISLAND+Island ) ;
+
+#ifdef	FIXES
+	HQ_RestoreSamples() ;	// les boucles reprises
+#endif
 
 	RestoreTimer() ;
 }
@@ -1104,8 +1125,20 @@ argexit:
 
 	InitDial( START_FILE_ISLAND+Island ) ;
 
+#ifdef	FIXES
 	while( Key == K_ESC ) ;
 
+	/*
+	 * FIXED: LBA.EXE goes back to the game with the key that closed
+	 * the found object's box still down, Escape alone waited for, so
+	 * that the next frame takes Space for Twinsen's action or a jump
+	 * and Shift for the inventory. This waits for every key's release
+	 * but the arrows', as the quit menu's Continue does.
+	 */
+	while( Key OR Fire ) ;
+#else
+	while( Key == K_ESC ) ;
+#endif
 }
 
 /*══════════════════════════════════════════════════════════════════════════*/
@@ -2269,7 +2302,11 @@ LONG	OptionsMenu()
 
 	CopyScreen( Log, Screen ) ;
 
+#ifdef	FIXES
+	HQ_SaveSamples() ;	// les boucles du jeu gardées de côté
+#else
 	HQ_StopSample() ;
+#endif
 #ifdef	CDROM
 	PlayCdTrack( 9 ) ;
 #else
@@ -2312,6 +2349,15 @@ LONG	OptionsMenu()
 	}
 	CopyScreen( Screen, Log ) ;
 	Flip() ;
+	/*
+	 * FIXED: LBA.EXE goes back to the game with the key that chose
+	 * Return to game still down, which the next frame takes for
+	 * Twinsen's action, or Return for the camera's recentring. This
+	 * waits for its release, as the quit menu's Continue does.
+	 */
+#ifdef	FIXES
+	if( select == 15 )	while( Key OR Fire ) ;
+#endif
 
 	return FALSE ;
 }
@@ -2661,7 +2707,11 @@ LONG	QuitMenu()
 	LONG memoflagspeak ;
 
 	CopyScreen( Log, Screen ) ;
+#ifdef	FIXES
+	HQ_SaveSamples() ;	// les boucles mises de côté
+#else
 	HQ_StopSample() ;
+#endif
 
 	while( TRUE )
 	{
@@ -2677,6 +2727,17 @@ LONG	QuitMenu()
 		switch( select )	// num mess
 		{
 			case 28: // continue
+				/*
+				 * FIXED: LBA.EXE goes back to the game with the key
+				 * that chose Continue still down, which the next
+				 * frame takes for Twinsen's action. This waits for
+				 * its release, as the inventory does. LbaWin waits
+				 * for Key alone, which holds no fire key here.
+				 */
+#ifdef	FIXES
+				while( Key OR Fire ) ;
+				HQ_RestoreSamples() ;	// et reprises
+#endif
 				return FALSE ;
 
 			case 27: // abandonner

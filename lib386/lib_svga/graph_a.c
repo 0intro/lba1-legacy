@@ -33,7 +33,6 @@ AffGraph(int32_t num, int32_t x, int32_t y, void *bank)
 	static uint8_t clip[512];
 	uint8_t *s, *d, *line, op, n, nb, nl;
 	int32_t w, h, x1, y1, off, npix, i;
-	uint32_t c;
 
 	s = graph(bank, num);
 	w = s[0];
@@ -125,13 +124,13 @@ AffGraph(int32_t num, int32_t x, int32_t y, void *bank)
 				memset(d, *s++, n);
 			d += n;
 		} while (--nb != 0);
-		/* a clipped width of 0 or less runs past the line, as the assembly's count */
-		for (i = 0, c = npix; ; i++) {
+		/*
+		 * FIXED: LBA.EXE runs 2^32 pixels on a clipped width of 0 or
+		 * less. This loop ends at once on such a width.
+		 */
+		for (i = 0; i < npix; i++)
 			if (clip[off+i] != 0)
 				line[off+i] = clip[off+i];
-			if (--c == 0)
-				break;
-		}
 		line += 640;
 	} while (--nl != 0);
 }
