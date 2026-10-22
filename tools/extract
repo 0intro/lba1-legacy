@@ -17,7 +17,7 @@
 # PlayStation's disc, SLES-00698, the Redump image in $LBAISO: the nine
 # files of its root's data, its executable and SYSTEM.CNF, its texts
 # (TEXT.HQR) and its scenes (GAME.HQR, SCENES.BLK) among them, go into
-# $LBATMP/ps, where make check reads the texts, tools/patches.py the
+# $LBATMP/ps, where make check and test/lbapatch read the texts and the
 # scenes and cdimagetest the whole root, and its cue sheet is linked as
 # $LBATMP/iso/ps/ps.cue beside links to its BIN files, a name make
 # passes whole. By default extract makes pc.

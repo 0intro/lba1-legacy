@@ -1,0 +1,223 @@
+#!/usr/bin/env bash
+#
+# lbapatch: tools/lbapatch.py's definitive data, made from each install
+# $LBATMP holds, held to the tool's hashes, and played by the records of
+# the fixes.
+#
+#     test/lbapatch check [-x lba]
+#     test/lbapatch refuse
+#
+# check runs the tool on the European CD's files ($LBATMP/pc/LBA), the
+# North American CD's ($LBATMP/gog/cd), GOG's Classic (Common and
+# CommonClassic) and GOG's DOS copy (Speedrun/Windows and Common), each
+# into $LBATMP/lbapatch/NAME. The first three must give the same
+# SCENE.HQR, LBA_GRI.HQR and TEXT.HQR, which -l names the definitive,
+# and the DOS copy the same SCENE.HQR and TEXT.HQR and its grids fixed.
+# The texts taken from the PlayStation's disc ($LBATMP/ps) must be the
+# same bytes, and the tool run on the definitive files writes nothing.
+# The face and the full head from the disc must be the forms -l names,
+# and the face over either must be refused, as the face sets take the
+# PC's bodies alone, and the face over a FILE3D.HQR outside the tool's
+# table too. A refusal met after a first file, GOG's Common without
+# CommonClassic's TEXT.HQR, or the face over a face with the defaults,
+# must write nothing. It must refuse a file outside its table, and as
+# wrong usages, before it reads a file, an unknown set, its arguments
+# out of place, the face or the full head without the disc, both heads
+# at once and an output directory that is a game directory: refuse
+# tries these alone, on files of its own, as CI runs it without the
+# game's files.
+#
+# Then the records of the fixes replay on lba (build/linux-amd64-gcc/lba
+# by default) with the definitive files read first, where the port's
+# fixes at load find their work done: each must show its screens and
+# leave its files. A record made on the port's default CD, its first
+# game directory's parent (-c -), names that CD, which the definitive
+# files' directory read first would move. By hand, a copy of lba with
+# its fixes at load taken out (LoadScene's switch given no case, the
+# three tables of gridfix.c and textfix.c emptied) must replay them too:
+# that proves the definitive files the port's fixes, which then the
+# tool's hashes hold. A change of the fixes changes those hashes, to be
+# given again after that proof.
+#
+# LBATMP is the tree's ../lba1-tmp unless set.
+
+set -Eeuo pipefail
+
+TEST=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPO=$(cd -- "$TEST/.." && pwd)
+LBATMP=${LBATMP:-$(cd -- "$REPO/.." && pwd)/lba1-tmp}
+OUT=$LBATMP/lbapatch
+RECORDS="mine9 door12 ladder77 zone105 zone20 gun9 gun12 bunny42
+	julia58 redcard hall5 rocks8 hole5 corner76 ledge109 lastmeal idcard
+	spanishstart helpkeys bonuslistfr"
+
+usage() {
+	echo "usage: lbapatch check [-x lba]" >&2
+	echo "       lbapatch refuse" >&2
+	exit 2
+}
+
+fail() {
+	echo "lbapatch: $*" >&2
+	exit 1
+}
+
+# patch name dir...: the tool's files for the install of dirs in
+# $OUT/name, made anew.
+patch() {
+	local name=$1
+	shift
+	rm -rf -- "${OUT:?}/$name"
+	mkdir -p "$OUT/$name"
+	python3 -I "$REPO/tools/lbapatch.py" -o "$OUT/$name" "$@"
+}
+
+# refuse status arg...: the tool run on args, which must exit with
+# status.
+refuse() {
+	local want=$1 got=0 err
+	shift
+	err=$(python3 -I "$REPO/tools/lbapatch.py" "$@" 2>&1 > /dev/null) || got=$?
+	(( got == want )) || fail "lbapatch.py $*: status $got, want $want"
+	[[ $err != *Traceback* ]] || fail "lbapatch.py $*: $err"
+}
+
+# refusals dir game ps: each refusal of the tool, its files in dir, made
+# anew, the game's directory game and the PlayStation's ps.
+refusals() {
+	local dir=$1 game=$2 ps=$3
+	rm -rf -- "${dir:?}"
+	mkdir -p "$dir/bad" "$dir/out"
+	printf 'not an HQR file' > "$dir/bad/TEXT.HQR"
+	refuse 1 -s texts -o "$dir/out" "$dir/bad"
+	refuse 2 -s texts -o "$dir/bad" "$dir/bad"
+	refuse 2 -s texts -o "$dir/bad/." "$dir/out" "$dir/bad"
+	[[ $(cat "$dir/bad/TEXT.HQR") == 'not an HQR file' && $(ls -A "$dir/bad") == TEXT.HQR ]] ||
+		fail "an output into a game directory wrote there"
+	refuse 2 -s nothing -o "$dir/out" "$game"
+	refuse 2 -l -o "$dir/out" "$game"
+	refuse 2 -o "$dir/out"
+	refuse 2
+	refuse 2 -s face -o "$dir/out" "$game"
+	refuse 2 -s face-full -o "$dir/out" "$game"
+	refuse 2 -s face -s face-full -p "$ps" -o "$dir/out" "$game"
+	refuse 2 -s texts -p "$dir/out" -o "$dir/out" "$game"
+	refuse 1 -s texts -p "$dir/bad" -o "$dir/out" "$game"
+	[[ -z $(ls -A "$dir/out") ]] || fail "a refusal wrote files"
+	echo "lbapatch: the refusals"
+}
+
+# form dir file: the form -l names for file in dir.
+form() {
+	python3 -I "$REPO/tools/lbapatch.py" -l "$1" | awk -F'\t' -v f="$2" '$1 == f { print $3 }'
+}
+
+(( $# )) || usage
+case $1 in
+refuse)
+	(( $# == 1 )) || usage
+	tmp=$(mktemp -d)
+	trap 'rm -rf -- "$tmp"' EXIT
+	refusals "$tmp/refuse" "$tmp/game" "$tmp/ps"
+	exit 0
+	;;
+check)
+	;;
+*)
+	usage
+	;;
+esac
+shift
+exe=$REPO/build/linux-amd64-gcc/lba
+while (( $# )); do
+	case $1 in
+	-x)
+		(( $# > 1 )) || usage
+		exe=$(cd -- "$(dirname -- "$2")" && pwd)/$(basename -- "$2")
+		shift 2
+		;;
+	*)
+		usage
+		;;
+	esac
+done
+
+patch eu "$LBATMP/pc/LBA"
+patch us "$LBATMP/gog/cd"
+patch gog "$LBATMP/gog/lba1/Common" "$LBATMP/gog/lba1/CommonClassic"
+patch dos "$LBATMP/gog/lba1/Speedrun/Windows" "$LBATMP/gog/lba1/Common"
+for f in SCENE.HQR LBA_GRI.HQR TEXT.HQR; do
+	[[ $(form "$OUT/eu" "$f") == "the definitive" ]] ||
+		fail "eu: $f is not the definitive"
+	cmp -s "$OUT/eu/$f" "$OUT/us/$f" || fail "us: $f differs"
+	cmp -s "$OUT/eu/$f" "$OUT/gog/$f" || fail "gog: $f differs"
+done
+cmp -s "$OUT/eu/SCENE.HQR" "$OUT/dos/SCENE.HQR" || fail "dos: SCENE.HQR differs"
+cmp -s "$OUT/eu/TEXT.HQR" "$OUT/dos/TEXT.HQR" || fail "dos: TEXT.HQR differs"
+[[ $(form "$OUT/dos" LBA_GRI.HQR) == "DotEmu's DOS copy fixed" ]] ||
+	fail "dos: LBA_GRI.HQR is not the DOS copy's fixed"
+patch ps -s texts -p "$LBATMP/ps" "$LBATMP/gog/cd"
+cmp -s "$OUT/eu/TEXT.HQR" "$OUT/ps/TEXT.HQR" || fail "ps: TEXT.HQR differs"
+patch again "$OUT/eu"
+[[ -z $(ls -A "$OUT/again") ]] || fail "the definitive files patched again"
+echo "lbapatch: the definitive files from eu, us, gog and dos, the same"
+patch face -s face -p "$LBATMP/ps" "$LBATMP/pc/LBA"
+[[ $(form "$OUT/face" BODY.HQR) == "the PlayStation's face" ]] ||
+	fail "face: BODY.HQR is not the PlayStation's face"
+patch full -s face-full -p "$LBATMP/ps" "$LBATMP/pc/LBA"
+[[ $(form "$OUT/full" BODY.HQR) == "the PlayStation's head" ]] ||
+	fail "face-full: BODY.HQR is not the PlayStation's head"
+for f in face full; do
+	rm -rf -- "${OUT:?}/twice"
+	mkdir -p "$OUT/twice"
+	msg=$(python3 -I "$REPO/tools/lbapatch.py" -s face -p "$LBATMP/ps" -o "$OUT/twice" \
+		"$OUT/$f" "$LBATMP/pc/LBA" 2>&1) && fail "face over $f: taken"
+	[[ $msg == *"take the PC's bodies alone"* ]] || fail "face over $f: $msg"
+	[[ -z $(ls -A "$OUT/twice") ]] || fail "face over $f: files written"
+done
+echo "lbapatch: the face and the head"
+rm -rf -- "${OUT:?}/part"
+mkdir -p "$OUT/part"
+refuse 1 -o "$OUT/part" "$LBATMP/gog/lba1/Common"
+refuse 1 -s scenes -s grids -s texts -s face -p "$LBATMP/ps" -o "$OUT/part" \
+	"$OUT/face" "$LBATMP/pc/LBA"
+[[ -z $(ls -A "$OUT/part") ]] || fail "a refusal after a first file wrote files"
+mkdir -p "$OUT/part/file3d"
+cp "$LBATMP/pc/LBA/FILE3D.HQR" "$OUT/part/file3d/"
+python3 -I -c 'import sys; p = sys.argv[1]; b = bytearray(open(p, "rb").read()); b[len(b) // 2] ^= 1; open(p, "wb").write(b)' \
+	"$OUT/part/file3d/FILE3D.HQR"
+refuse 1 -s face -p "$LBATMP/ps" -o "$OUT/part" "$OUT/part/file3d" "$LBATMP/pc/LBA"
+[[ $(ls -A "$OUT/part") == file3d ]] || fail "the face over a FILE3D.HQR outside the table wrote files"
+echo "lbapatch: the refusals after a first file"
+
+refusals "$OUT/refuse" "$LBATMP/pc/LBA" "$LBATMP/ps"
+
+# The records, each on the definitive files of its install read first.
+e2e=$OUT/e2e
+rm -rf -- "${e2e:?}"
+mkdir -p "$e2e"
+for name in $RECORDS; do
+	src=$LBATMP/e2e
+	[[ -e $src/$name.in ]] || fail "$name: no such record"
+	cp -R "$src/$name.in" "$src/$name.sums" "$src/$name.pref" "$src/$name.out" "$e2e/"
+	games=$(cat "$src/$name.game" 2>/dev/null || echo pc/LBA)
+	if [[ -e $src/$name.cd && $(< "$src/$name.cd") == - ]]; then
+		read -r first _ <<< "$games"
+		dirname -- "$first" > "$e2e/$name.cd"
+	elif [[ -e $src/$name.cd ]]; then
+		cp "$src/$name.cd" "$e2e/"
+	fi
+	case $games in
+	*Speedrun*)
+		over=dos
+		;;
+	*)
+		over=eu
+		;;
+	esac
+	printf '%s\n' "lbapatch/$over" $games > "$e2e/$name.game"
+done
+# shellcheck disable=SC2086 # the records' names are words
+E2E=$e2e "$REPO/test/e2e" check -x "$exe" $RECORDS > "$OUT/e2e.log" 2>&1 || fail "the records on the definitive files: $(cat "$OUT/e2e.log")"
+cat "$OUT/e2e.log"
+echo "lbapatch: the records on the definitive files"

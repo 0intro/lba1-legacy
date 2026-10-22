@@ -214,12 +214,14 @@ $(addprefix $(O)/,$(ARRAYS)): $(O)/%.o: $(O)/%.c
 -include $(wildcard $(O)/*.d $(O)/*/*.d $(O)/*/*/*.d)
 
 # test runs what needs the tree alone: the unit tests (test/unit), the
-# game's start without its files, cfgtest among its runs (test/nodata),
-# and lbasave's saves (test/lbasave check).
+# game's start without its files, cfgtest among its runs
+# (test/nodata), lbasave's saves (test/lbasave check) and lbapatch's
+# refusals (test/lbapatch refuse).
 test: all
 	test/unit $(O)
 	test/nodata -x $(O)/lba$(EXE)
 	test/lbasave check -x $(O)/lbasave$(EXE)
+	test/lbapatch refuse
 
 # The parts of check that a Linux target alone runs: the proof of the
 # tunes cut from the CD's tracks, which runs pcm, and the start in real
@@ -234,8 +236,8 @@ LIVEMUSIC_linux=test/livemusic -x $(O)/lba
 # CDs' images, the proofs of the tables the C holds (the PlayStation's
 # tracks of the tunes, sources/psmusic.c, the cells and the texts of
 # the data's fixes, sources/gridfix.c and sources/textfix.c, and the
-# places the scripts rewrite, sources/patch.c) and the records (test/e2e
-# check).
+# places the scripts rewrite, sources/patch.c), the definitive data
+# (test/lbapatch check) and the records (test/e2e check).
 check: lint test oraclecheck $(CHECKDEPS_$(OS))
 	rm -rf $(O)/run/cfg && mkdir -p $(O)/run/cfg
 	$(RUN) $(O)/cfgtest$(EXE) $(call HOSTPATH,$(O)/run/cfg) $(call HOSTPATH,$(LBATMP)/pc/LBA)
@@ -254,5 +256,6 @@ check: lint test oraclecheck $(CHECKDEPS_$(OS))
 		$(LBATMP)/pc/LBA/TEXT.HQR $(LBATMP)/gog/lba1/CommonClassic/TEXT.HQR\
 		$(LBATMP)/ps/TEXT.HQR
 	$(CUTS_$(OS))
+	test/lbapatch check -x $(O)/lba$(EXE)
 	test/e2e check -x $(O)/lba$(EXE)
 	$(LIVEMUSIC_$(OS))

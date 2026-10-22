@@ -2,17 +2,18 @@ name: C
 
 # Every target built in the latest Fedora and tested on the tree alone
 # (make test): the unit tests (test/unit), the game's start without its
-# files (test/nodata) and lbasave's saves (test/lbasave check), Linux
-# with gcc, clang and UBSan, and the Windows builds, with SDL3 as make
-# fetch installs it, run natively, beside one made by MSYS2's UCRT64.
-# The DOS builds, by OpenWatcom and JWasm (CC=openwatcom) or by Watcom C
-# 9.01 and 9.5, MASM 6.11 and TASM 3.1 as LBA.EXE was (CC=watcom,
-# LBA.EXE's code, and with FIXES=1 its fixes), with Watcom C/C++ 10.0a's
-# qsort, each tool as make fetch installs it (mk/fetch.mk), against
-# their sums (dos/CC.sums, dos/watcom-fixes.sums), the oracles and
-# DOSBox (dos/nodata). The tree's rules (make lint), the modules' .def
-# files made again (make defs) and the oracles built with -Werror, and
-# the workflows read by actionlint and zizmor. On a pushed tag v*, once
+# files (test/nodata), lbasave's saves (test/lbasave check) and
+# tools/lbapatch.py's refusals (test/lbapatch refuse), Linux with gcc,
+# clang and UBSan, and the Windows builds, with SDL3 as make fetch
+# installs it, run natively, beside one made by MSYS2's UCRT64. The DOS
+# builds, by OpenWatcom and JWasm (CC=openwatcom) or by Watcom C 9.01
+# and 9.5, MASM 6.11 and TASM 3.1 as LBA.EXE was (CC=watcom, LBA.EXE's
+# code, and with FIXES=1 its fixes), with Watcom C/C++ 10.0a's qsort,
+# each tool as make fetch installs it (mk/fetch.mk), against their sums
+# (dos/CC.sums, dos/watcom-fixes.sums), the oracles and DOSBox
+# (dos/nodata). The tree's rules (make lint), the modules' .def files
+# made again (make defs) and the oracles built with -Werror, and the
+# workflows read by actionlint and zizmor. On a pushed tag v*, once
 # every other job has passed, the release job publishes the tag's GitHub
 # release: make dist's archives, with the tag's annotation as its notes.
 # make check reads the game's files in $LBATMP: the CD's and the
