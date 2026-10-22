@@ -1,0 +1,27 @@
+# The holomap, from the save saveload.keys made, kept with dosrun -k and
+# given the holomap outside the prison, where nothing is confiscated: for
+# a player name of three letters, ListFlagGame[FLAG_HOLOMAP] is byte 6,
+# NumCube byte 261 and SceneStartX bytes 270-271 (-1: the scene's own
+# start),
+#
+#     printf '\001' | dd of=S1234.LBA bs=1 seek=6 conv=notrunc
+#     printf '\001' | dd of=S1234.LBA bs=1 seek=261 conv=notrunc
+#     printf '\377\377' | dd of=S1234.LBA bs=1 seek=270 conv=notrunc
+#
+# Areas are of the 1280x960 screen dosrun's DOSBox draws in.
+
+hold 0.05
+wait menu 814x76+234+470 150
+key Down Return
+sleep 3
+key Return
+hold 0.15
+# the pipes of the scene outside the prison (the guard walks)
+wait outside 300x250+800+130 120
+key h
+# the holomap's title
+wait holo 280x70+500+130 60
+sleep 3
+shot holomap
+key Escape
+wait after 300x250+800+130 60

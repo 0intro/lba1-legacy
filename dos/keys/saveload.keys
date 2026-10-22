@@ -1,0 +1,50 @@
+# A new game, the inventory, the behaviour menu, quitting (which saves) and
+# the save loaded back. Areas are of the 1280x960 screen dosrun's DOSBox
+# draws in.
+
+wait menu 814x76+234+470 150
+key Return
+wait name 400x56+440+152 60
+key a b c Return
+# the introduction's text: the corner it leaves to the planet
+wait text 400x200+700+620 60
+key Escape
+sleep 8
+key Escape
+wait scene 280x200+300+124 240
+
+# the inventory opens on Shift, closes on Escape: its grid
+down Shift_L
+sleep 0.3
+up Shift_L
+wait inventory 400x150+190+140 30
+key Escape
+sleep 2
+
+# the behaviour menu stays while Ctrl is held: its label
+down Control_L
+wait behaviour 380x60+620+500 30
+up Control_L
+sleep 2
+
+# Escape asks to continue or give up, which saves: the left of Quit game
+key Escape
+wait quit 300x60+240+452 30
+key Down Return
+# the main menu again, drawn over the scene: the left of its lower
+# buttons, clear of Twinsen behind them
+wait menu2 300x150+240+390 90
+
+# Continue saved game, the only save: the list's title
+key Down Return
+wait choose 520x50+380+160 30
+key Return
+# a save of the first chapter replays the introduction
+wait text 400x200+700+620 60
+sleep 1
+shot intro
+key Escape
+sleep 8
+shot movie
+key Escape
+wait loaded 280x200+300+124 240

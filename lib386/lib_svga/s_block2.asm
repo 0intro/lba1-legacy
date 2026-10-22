@@ -12,7 +12,7 @@ EVEN
 CptPixl		dw	0
 CptLine		dw	0
 
-			include	f:\projet\lib386\lib_svga\svga.ash
+			include	svga.ash
 
 
 ;----------------------------------------------------------------------------
@@ -69,7 +69,7 @@ ScanAgain:
 			add	esi, ebx	; Maj ESI
 
 			mov	ebx, ecx	; EBX = Bytes Restant
-			rep	scasb		; Combien != 0 ?
+			repe	scasb		; Combien != 0 ?
 			je	short UntilEnd  ; Tous jusqu'a fin (Quick!
 
 			inc	ecx		; Maj	ECX

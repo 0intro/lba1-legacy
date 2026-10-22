@@ -1,0 +1,27 @@
+# A new game: the name, the intro text and movie, the first scene.
+# Areas are of the 1280x960 Xephyr screen dosrun's DOSBox draws in.
+
+# the Quit button: the fire plays on New game
+wait menu 814x76+234+470 150
+key Return
+# Type your name:
+wait name 400x56+440+152 60
+key a b c
+sleep 1
+shot typed
+key Return
+# the introduction's text: the corner it leaves to the planet
+wait text 400x200+700+620 60
+sleep 1
+shot intro
+key Escape
+sleep 8
+shot movie
+key Escape
+# the lamps above the cell
+wait scene 280x200+300+124 240
+down Up
+sleep 1
+up Up
+sleep 1
+shot walked

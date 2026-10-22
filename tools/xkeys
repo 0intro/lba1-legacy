@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+#
+# xkeys: drive a program in our Xephyr (tools/xrun) from a script of keys
+# and screenshots.
+#
+#     xkeys [-o dir] [-r dir] [-c class] script command [args...]
+#
+# The command starts in the background, under xrun unless already in one,
+# and the script runs against its window, the first of the class (dosbox
+# by default). None may be open before. A line of the script is one of
+#
+#     sleep seconds
+#     key keysym...                  press each key in turn
+#     hold seconds                   how long key holds each (0.15)
+#     down keysym...                 hold the keys
+#     up keysym...                   release them
+#     shot name                      screenshot into dir/name.png
+#     wait name [geometry] seconds   wait for a screen, then as shot
+#     leave name [geometry] seconds  wait for the screen to leave it, then as shot
+#
+# wait polls until the screen, or its area geometry (WxH+X+Y), matches
+# refdir/name.png (every pixel within 8%: DOSBox scales the same frame the
+# same way, so a frame that is drawn matches exactly, one in a fade does
+# not), and fails after the given seconds. leave polls until the screen
+# differs from it: the first screen after a black one, say. Without a
+# reference each sleeps the seconds instead: run a script once on the
+# original game to make the references, then keep them as refdir. Blank
+# lines and lines starting with # are skipped.
+#
+# Each wait and leave prints its name and the seconds since the start. The
+# command is killed when the script ends or a wait or leave fails. -o sets
+# the screenshot directory (default $LBATMP/cap/xkeys), -r the reference
+# one.
+
+set -Eeuo pipefail
+
+TOOLS=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+TOP=$(cd -- "$TOOLS/../.." && pwd)
+LBATMP=${LBATMP:-$TOP/lba1-tmp}
+out=$LBATMP/cap/xkeys
+ref=
+class=dosbox
+
+usage() { echo "usage: xkeys [-o dir] [-r dir] [-c class] script command [args...]" >&2; exit 2; }
+while (( $# )); do
+	case $1 in
+	-o) out=${2:?}; shift 2 ;;
+	-r) ref=${2:?}; shift 2 ;;
+	-c) class=${2:?}; shift 2 ;;
+	-*) usage ;;
+	*) break ;;
+	esac
+done
+(( $# >= 2 )) || usage
+
+if [[ -z ${XRUN_DISPLAY:-} ]]; then
+	exec "$TOOLS/xrun" "$TOOLS/xkeys" -o "$out" ${ref:+-r "$ref"} -c "$class" "$@"
+fi
+
+# the Xephyr is shared with earlier commands: a window of theirs left
+# open would pass for this one's
+if xdotool search --onlyvisible --class "$class" > /dev/null 2>&1; then
+	echo "xkeys: a $class window is already open on $XRUN_DISPLAY" >&2
+	exit 1
+fi
+
+script=$1; shift
+exec 3< "$script"
+mkdir -p "$out"
+
+# a key the Xephyr saw go down but not up (the host's focus moving
+# meanwhile) stays down for every program after it, and SDL hands a
+# window the keys down as it takes the focus: the modifiers and the
+# locks, which change every key sent, are released first
+xdotool keyup Shift_L Shift_R Control_L Control_R Alt_L Alt_R Super_L Super_R Num_Lock Caps_Lock
+
+"$@" &
+pid=$!
+trap 'kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true' EXIT
+start=$(date +%s.%N)
+
+window() {
+	win=$(timeout 60 xdotool search --sync --onlyvisible --class "$class" | head -n 1) || {
+		echo "xkeys: no $class window" >&2; exit 1; }
+}
+window
+
+elapsed() { echo "$(date +%s.%N) - $start" | bc; }
+focus() { xdotool windowfocus --sync "$win" 2>/dev/null || { window; xdotool windowfocus --sync "$win"; }; }
+shot() { import -window root "$out/$1.png"; }
+
+# A game reads its keys once a frame: a press and release sent together
+# can fall between two frames, so each key is held a little. Not too
+# long in menus: one that returns while the key is down leaves the next
+# menu to read it too.
+hold=0.15
+press() {
+	local k
+	for k; do
+		xdotool keydown "$k"; sleep "$hold"
+		xdotool keyup "$k"; sleep 0.1
+	done
+}
+
+matches() {
+	local name=$1 geom=$2 cur=$out/.cur.png d
+	import -window root "$cur"
+	d=$(magick "$cur" "$ref/$name.png" ${geom:+-crop "$geom" +repage} \
+		-fuzz 8% -metric AE -compare -format '%[distortion]' info: 2>/dev/null) ||
+		{ echo "xkeys: $name: $ref/$name.png: magick failed to compare the screen" >&2; exit 1; }
+	[[ $d == 0 ]]
+}
+
+# wait_for match|change name [geometry] seconds: the screen polled until
+# it matches name's reference, or until it differs from it
+wait_for() {
+	local want=$1 name=$2 geom='' secs end m
+	shift 2
+	if (( $# == 2 )); then geom=$1; secs=$2; else secs=$1; fi
+	if [[ -z $ref || ! -e $ref/$name.png ]]; then
+		sleep "$secs"
+		shot "$name"
+		printf '%s\t%.1f\tslept\n' "$name" "$(elapsed)"
+		return
+	fi
+	end=$(echo "$(date +%s.%N) + $secs" | bc)
+	while :; do
+		if matches "$name" "$geom"; then m=match; else m=change; fi
+		[[ $m == "$want" ]] && break
+		if (( $(echo "$(date +%s.%N) > $end" | bc) )); then
+			mv "$out/.cur.png" "$out/$name.png"
+			printf '%s\t%.1f\tno %s\n' "$name" "$(elapsed)" "$want"
+			echo "xkeys: $name: no $want after $secs s" >&2
+			exit 1
+		fi
+		sleep 0.2
+	done
+	mv "$out/.cur.png" "$out/$name.png"
+	printf '%s\t%.1f\n' "$name" "$(elapsed)"
+}
+
+while read -r -u 3 cmd args || [[ -n $cmd ]]; do
+	[[ -z $cmd || $cmd == \#* ]] && continue
+	read -r -a a <<< "$args"
+	case $cmd in
+	sleep) sleep "${a[0]}" ;;
+	key) focus; press "${a[@]}" ;;
+	hold) hold=${a[0]} ;;
+	down) focus; xdotool keydown "${a[@]}" ;;
+	up) focus; xdotool keyup "${a[@]}" ;;
+	shot) shot "${a[0]}" ;;
+	wait) wait_for match "${a[@]}" ;;
+	leave) wait_for change "${a[@]}" ;;
+	*) echo "xkeys: $script: unknown command $cmd" >&2; exit 2 ;;
+	esac
+done

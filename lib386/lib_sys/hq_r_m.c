@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <fcntl.h>
 
-#include "\projet\lib386\lib_sys\adeline.h"
-#include "\projet\lib386\lib_sys\lib_sys.h"
+#include "adeline.h"
+#define	HQ_R_M		/* lib_sys.h leaves HQRM_Load to this file */
+#include "lib_sys.h"
 
 #define	RECOVER_AREA	500
 

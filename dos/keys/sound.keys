@@ -1,0 +1,17 @@
+# The sound of a new game, for dosrun -r to record: the menu, the
+# introduction read aloud, the movie, the first scene's music and effects.
+# Areas are of the 1280x960 screen dosrun's DOSBox draws in.
+
+wait menu 814x76+234+470 150
+sleep 2
+key Return
+wait name 400x56+440+152 60
+key a b c Return
+# the introduction's text: the corner it leaves to the planet
+wait text 400x200+700+620 60
+sleep 18
+key Escape
+sleep 15
+key Escape
+wait scene 280x200+300+124 240
+sleep 10

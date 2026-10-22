@@ -17,9 +17,11 @@
 #include <string.h>
 #include <conio.h>
 
-#include "f:\projet\lib386\lib_sys\adeline.h"
-#include "f:\projet\lib386\lib_sys\lib_sys.h"
-#include "f:\projet\lib386\lib_midi\lib_midi.h"
+#include "../lib_sys/adeline.h"
+#include "../lib_sys/lib_sys.h"
+#include "../lib_sys/dll.h"
+#include "ail32.h"      // Audio Interface Library API function header
+#include "lib_midi.h"
 
 /***************************************************************/
 

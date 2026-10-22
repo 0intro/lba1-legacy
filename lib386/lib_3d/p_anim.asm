@@ -4,7 +4,7 @@
 
 		.model	SMALL, SYSCALL
 
-		include P_define.ash
+		include p_define.ash
 
 ;*══════════════════════════════════════════════════════════════════════════*
 ;                    P_     █▀▀▀█ ██▄ █  █    █▄ ▄█
@@ -15,7 +15,7 @@
 
 		.data
 
-		include	\projet\lib386\lib_sys\lib_sys.ash
+		include	../lib_sys/lib_sys.ash
 
 ;*──────────────────────────────────────────────────────────────────────────*
 

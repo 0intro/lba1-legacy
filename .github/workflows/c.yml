@@ -1,0 +1,131 @@
+name: C
+
+# Every target built in the latest Fedora and tested on the tree alone
+# (make test): the DOS builds, by OpenWatcom and JWasm (CC=openwatcom)
+# or by Watcom C 9.01 and 9.5, MASM 6.11 and TASM 3.1 as LBA.EXE was
+# (CC=watcom, LBA.EXE's code, and with FIXES=1 its fixes), with
+# Watcom C/C++ 10.0a's qsort, each tool as make fetch installs it
+# (mk/fetch.mk), against their sums (dos/CC.sums,
+# dos/watcom-fixes.sums) and DOSBox (dos/nodata). The tree's rules (make
+# lint) and the workflows read by actionlint and zizmor. On a pushed tag
+# v*, once every other job has passed, the release job publishes the
+# tag's GitHub release: make dist's archives, with the tag's annotation
+# as its notes.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+  - cron: '17 5 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  dos:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    container: quay.io/fedora/fedora:latest # zizmor: ignore[unpinned-images] the latest Fedora, by choice
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - name: dos-386-openwatcom
+          cc: openwatcom
+          fixes: ''
+        - name: dos-386-watcom
+          cc: watcom
+          fixes: ''
+        - name: dos-386-watcom-fixes
+          cc: watcom
+          fixes: '1'
+    env:
+      CC: ${{ matrix.cc }}
+      FIXES: ${{ matrix.fixes }}
+    steps:
+    - name: dnf install
+      run: dnf -y install --setopt=install_weak_deps=False make gcc libatomic.x86_64 git-core findutils diffutils python3 tar xz gzip curl 7zip dosbox-staging mesa-libEGL mesa-dri-drivers
+    - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+    - name: make fetch
+      run: make fetch OS=dos ARCH=386 CC="$CC"
+    - name: make
+      run: make -j"$(nproc)" all OS=dos ARCH=386 CC="$CC" FIXES="$FIXES"
+    - name: make test
+      run: make test OS=dos ARCH=386 CC="$CC" FIXES="$FIXES"
+    - name: make dist
+      run: make dist OS=dos ARCH=386 CC="$CC" FIXES="$FIXES"
+    - uses: actions/upload-artifact@v7
+      with:
+        path: dist/lba1-${{ matrix.name }}.zip
+        archive: false
+        if-no-files-found: error
+
+  lint:
+    runs-on: ubuntu-latest
+    container: quay.io/fedora/fedora:latest # zizmor: ignore[unpinned-images] the latest Fedora, by choice
+    timeout-minutes: 15
+    steps:
+    - name: dnf install
+      run: dnf -y install --setopt=install_weak_deps=False make git-core findutils python3 ShellCheck
+    - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+    - name: git config
+      run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+    - name: make lint
+      run: make lint
+
+  actions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+    - name: actionlint
+      env:
+        GH_TOKEN: ${{ github.token }}
+        SHELLCHECK_OPTS: -S warning
+      run: |
+        d=$RUNNER_TEMP/actionlint
+        gh release download -R rhysd/actionlint -D "$d" -p 'actionlint_*_linux_amd64.tar.gz' -p 'actionlint_*_checksums.txt'
+        (cd "$d" && sha256sum -c --ignore-missing actionlint_*_checksums.txt && tar -xzf actionlint_*_linux_amd64.tar.gz actionlint)
+        "$d/actionlint"
+    - uses: zizmorcore/zizmor-action@v0.6.4
+      with:
+        advanced-security: false
+
+  release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [dos, lint, actions]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+    - uses: actions/download-artifact@v8
+      with:
+        pattern: 'lba1-*.{zip,tar.gz}'
+        path: dist
+        merge-multiple: true
+        skip-decompress: true
+    - name: gh release create
+      env:
+        GH_TOKEN: ${{ github.token }}
+        TAG: ${{ github.ref_name }}
+      run: gh release create "$TAG" --verify-tag --notes-from-tag dist/*

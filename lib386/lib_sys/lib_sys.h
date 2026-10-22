@@ -5,14 +5,6 @@
 		▀▀  ▀ ▀▀▀▀▀ ▀▀    ▀▀▀▀▀ ▀▀▀▀▀ ▀▀  ▀ ▀▀  ▀ ▀▀▀▀
  *══════════════════════════════════════════════════════════════════════════*/
 
-#ifdef	WATCOM9
-	#pragma	library	("f:\projet\lib386\lib_sys\lb9_sys.lib");
-#else
-	#pragma	library	("f:\projet\lib386\lib_sys\lib_sys.lib");
-#endif
-
-#include	"f:\projet\lib386\lib_sys\dll.h"
-
 extern	volatile	UWORD	Key	;	/* scan code keyboard */
 
 #define	K_ESC		1
@@ -303,8 +295,11 @@ LONG		HQR_Change_Ressource( T_HQR_HEADER *header, char *newhqrname ) ;
 void		HQR_Reset_Ressource( T_HQR_HEADER *header ) ;
 void    	HQR_Free_Ressource( T_HQR_HEADER *header ) ;
 
+/* LBA.EXE's callers pass the index unsigned, hq_ress.c reads it signed */
+#ifndef	HQ_RESS
 void		*HQR_Get( T_HQR_HEADER *header, UWORD index ) ;
 void		*HQR_GetSample( T_HQR_HEADER *header, UWORD index ) ;
+#endif
 
 UWORD		HQR_Del_Bloc( T_HQR_HEADER *header, WORD index ) ;
 UWORD		HQR_Del_Bloc_Sample( T_HQR_HEADER *header, WORD index ) ;
@@ -318,7 +313,7 @@ extern	ULONG	Size_HQM_Free ;
 
 LONG	HQM_Init_Memory( ULONG size ) ;
 void	HQM_Clear_Memory() ;
-LONG	HQM_Alloc( ULONG size, void **ptr ) ;
+LONG	HQM_Alloc( ULONG size, void *ptrptr ) ;
 void	HQM_Free_All() ;
 void	HQM_Free( void *ptr ) ;
 LONG	HQM_Check() ;
@@ -327,7 +322,9 @@ void	HQM_Shrink_Last( void *ptr, ULONG newsize ) ;
 /*──────────────────────────────────────────────────────────────────────*/
 /*				HQ_R_M.C				*/
 
-LONG	HQRM_Load( UBYTE *name, UWORD index, void **ptrptr ) ;
+#ifndef	HQ_R_M
+LONG	HQRM_Load( UBYTE *name, UWORD index, void *ptr ) ;
+#endif
 
 /*──────────────────────────────────────────────────────────────────────*/
 /*				ADELINE.C				*/

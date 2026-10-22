@@ -120,7 +120,13 @@ RMI_SS		dw	0
 
 
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; FIXED: LBA.EXE's TalkCDR_O returns with EDI changed, which Watcom's convention
+; has a callee keep. The uses list saves it.
+ifdef	FIXES
+TalkCDR_O		proc	uses ebx es edi
+else
 TalkCDR_O		proc	uses ebx es
+endif
 
 			mov	ebx, [PtDosCD]
 			mov	word ptr [ebx+I_STATUS], 0
@@ -308,7 +314,7 @@ NoError:
 			mov	edi, nameid
 			mov	ecx, [lennameid]
 
-			rep	cmpsb			;' Compar with Copyright
+			repe	cmpsb			;' Compar with Copyright
 			je	TheGoodOne
 NotGoodOne:
 			call	UnLockCDR

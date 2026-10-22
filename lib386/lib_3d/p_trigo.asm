@@ -12,7 +12,7 @@
 ;*──────────────────────────────────────────────────────────────────────────*
 		.data
 
-		include P_define.ash
+		include p_define.ash
 
 
 		extrn	NoLanguage P_SinTab:WORD

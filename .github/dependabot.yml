@@ -1,0 +1,16 @@
+# The actions of .github/workflows by their tag, moved weekly, a
+# release taken once it is a week old.
+version: 2
+updates:
+- package-ecosystem: github-actions
+  directory: /
+  schedule:
+    interval: weekly
+  cooldown:
+    default-days: 7
+  groups:
+    actions:
+      patterns:
+      - '*'
+  commit-message:
+    prefix: .github/workflows

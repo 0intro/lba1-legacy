@@ -486,7 +486,7 @@ SuperIncrust		MACRO
 			xor	eax, eax	; Je cherche != 0
 Again:
 			xchg	esi, edi
-			rep	scasb		; Arret quand != 0
+			repe	scasb		; Arret quand != 0
 			jne	OkCopy		; Ok Data Rencontrée(s)
 ;-----------------------
 			add	esi, ebx
@@ -623,7 +623,7 @@ Bank0:			mov	eax, 0			; Bank 0
 			sub	eax, 0A0000h		; EAX = log0-Phys
 			mov	ecx, 04000h		; 64Kb
 Cont0:
-			rep	cmpsd			; Cherche Difference
+			repe	cmpsd			; Cherche Difference
 			jne	Diff0			; Il y a Difference
 ;----------------------
 Bank1:			mov	eax, 1			; Bank 1
@@ -632,7 +632,7 @@ Bank1:			mov	eax, 1			; Bank 1
 			sub	eax, 0A0000h		; Car Nouvelle Bank
 			mov	ecx, 04000h		; 64Kb
 Cont1:
-			rep	cmpsd			; Cherche Difference
+			repe	cmpsd			; Cherche Difference
 			jne	Diff1			; Il y a Difference
 ;----------------------
 Bank2:			mov	eax, 2			; Bank 1
@@ -641,7 +641,7 @@ Bank2:			mov	eax, 2			; Bank 1
 			sub	eax, 0A0000h		; Car Nouvelle Bank
 			mov	ecx, 04000h		; 64Kb
 Cont2:
-			rep	cmpsd			; Cherche Difference
+			repe	cmpsd			; Cherche Difference
 			jne	Diff2			; Il y a Difference
 ;----------------------
 Bank3:			mov	eax, 3			; Bank 1
@@ -650,7 +650,7 @@ Bank3:			mov	eax, 3			; Bank 1
 			sub	eax, 0A0000h		; Car Nouvelle Bank
 			mov	ecx, 04000h		; 64Kb
 Cont3:
-			rep	cmpsd			; Cherche Difference
+			repe	cmpsd			; Cherche Difference
 			jne	Diff3			; Il y a Difference
 ;----------------------
 Bank4:			mov	eax, 4			; Bank 1
@@ -659,7 +659,7 @@ Bank4:			mov	eax, 4			; Bank 1
 			sub	eax, 0A0000h		; Car Nouvelle Bank
 			mov	ecx, 02C00h		; 64Kb
 Cont4:
-			rep	cmpsd			; Cherche Difference
+			repe	cmpsd			; Cherche Difference
 			jne	Diff4			; Il y a Difference
 ;----------------------
 			ret
@@ -783,7 +783,7 @@ FlipComp386	proc	uses ds es si di, \
 		mov	cx, 07D00h/2		; 100 Lines * 4 (LONG)
 Aqui:
 		mov	es, dx			; es = Log0
-		rep	cmpsd			; Comp Log0 & Log1
+		repe	cmpsd			; Comp Log0 & Log1
 		je	TheEnd			; No difference, End
 
 		mov	bp, si			; Save offset in BP

@@ -1,0 +1,7 @@
+# Actions are named by a tag, their major one where they have one, which
+# Dependabot moves (.github/dependabot.yml), not by a commit's hash.
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        '*': ref-pin

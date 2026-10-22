@@ -1,0 +1,30 @@
+# The option menus from the main menu, run after saveload.keys with
+# dosrun -k so the saved games list has its save. A menu that returns on
+# Return leaves the next to read the same key while it is down, so keys
+# are short here. A menu keeps its selection. Areas are of the 1280x960
+# screen dosrun's DOSBox draws in.
+
+hold 0.05
+wait menu 814x76+234+470 150
+key Down Down Return
+sleep 3
+shot options
+key Down Return
+sleep 3
+shot volume
+key Return
+sleep 3
+shot back
+key Down Return
+sleep 3
+shot saves
+key Return
+sleep 3
+key Down Return
+sleep 3
+shot advanced
+key Return
+sleep 3
+key Up Up Up Return
+sleep 3
+shot main

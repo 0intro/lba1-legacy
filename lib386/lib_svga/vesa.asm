@@ -90,6 +90,11 @@ InitModeVesa		proc
 			mov	edi, offset RMI		; registers
 			mov	ax, 0300h		; DMPI generate real-mode int
 			mov	bx, 10h			; int 10h
+			; FIXED: LBA.EXE leaves CX, the count of stack words
+			; DPMI copies, as its caller had it. Copy none.
+IFDEF	FIXES
+			xor	ecx, ecx		; 0 words of stack to copy
+ENDIF
 			int	31h
 			pop	es			; restore es
 

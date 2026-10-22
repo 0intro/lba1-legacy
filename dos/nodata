@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+#
+# nodata: the DOS build run without the game's files, as CI runs it, in
+# DOSBox from its start to "No CD".
+#
+#     dos/nodata [-k] [-g dos4gw] [-x exe]
+#
+# C: holds the exe, a DOS/4GW (dos4gw, OpenWatcom's by default:
+# $WATCOM/binw/dos4gw.exe, WATCOM being $LBATMP/tools/ow2 unless set) and
+# test/nodata.cfg as LBA.CFG, alone: the game loads no driver, sets
+# VESA's mode, plays the logo's fades on a black screen, waits its 4 s,
+# finds no CD and quits with "No CD". DOSBox runs on no display
+# (tools/dosrun -n), muted, and what the program prints goes to OUT.TXT,
+# which must be dos/nodata.out byte for byte, DOS/4GW's banner aside: -k
+# keeps it there instead. A run that hangs is ended after 300 s.
+#
+# exe is build/dos-386-openwatcom/lba0.exe by default. The run's
+# directory is $LBATMP/dos/nodata, DOSBox's log dosbox.log there.
+
+set -Eeuo pipefail
+
+DOS=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPO=$(cd -- "$DOS/.." && pwd)
+LBATMP=${LBATMP:-$(cd -- "$REPO/.." && pwd)/lba1-tmp}
+WATCOM=${WATCOM:-$LBATMP/tools/ow2}
+RUN=$LBATMP/dos/nodata
+
+usage() {
+	echo "usage: nodata [-k] [-g dos4gw] [-x exe]" >&2
+	exit 2
+}
+
+keep=
+exe=$REPO/build/dos-386-openwatcom/lba0.exe
+dos4gw=$WATCOM/binw/dos4gw.exe
+while (( $# )); do
+	case $1 in
+	-k) keep=1; shift ;;
+	-g) dos4gw=${2:?}; shift 2 ;;
+	-x) exe=${2:?}; shift 2 ;;
+	*) usage ;;
+	esac
+done
+[[ -f $exe ]] || { echo "nodata: no $exe; build it first" >&2; exit 1; }
+[[ -f $dos4gw ]] || { echo "nodata: no $dos4gw" >&2; exit 1; }
+
+rm -rf -- "$RUN"
+mkdir -p "$RUN"
+cp "$dos4gw" "$RUN/DOS4GW.EXE"
+cp "$REPO/test/nodata.cfg" "$RUN/LBA.CFG"
+if ! timeout -k 10 300 "$REPO/tools/dosrun" -n -q -o -d "$RUN" -e "$exe" > "$RUN/dosbox.log" 2>&1; then
+	echo "nodata: DOSBox failed or was ended, see $RUN/dosbox.log" >&2
+	exit 1
+fi
+if [[ ! -f $RUN/OUT.TXT ]] || ! grep -q 'No CD' "$RUN/OUT.TXT"; then
+	echo "nodata: $exe ended without \"No CD\"" >&2
+	[[ -f $RUN/OUT.TXT ]] && cat "$RUN/OUT.TXT" >&2
+	exit 1
+fi
+# what the game printed: DOS/4GW 1.6 (Watcom C 9.01's) prints its banner
+# there too, 1.97 (OpenWatcom's) elsewhere
+out=$RUN/game.txt
+sed '/^DOS\/4GW Protected Mode Run-time/{N;d;}' "$RUN/OUT.TXT" > "$out"
+
+if [[ $keep ]]; then
+	cp "$out" "$DOS/nodata.out"
+	echo "nodata: kept, $(wc -l < "$out") lines"
+	exit 0
+fi
+if ! cmp -s "$out" "$DOS/nodata.out"; then
+	echo "nodata: the output differs from dos/nodata.out:" >&2
+	diff "$DOS/nodata.out" "$out" >&2 || true
+	exit 1
+fi
+echo "nodata: same, $(wc -l < "$out") lines"

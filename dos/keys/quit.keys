@@ -1,0 +1,7 @@
+# Quit from the main menu, so the program ends and what it printed (dosrun
+# -o) is complete. Areas are of the 1280x960 screen dosrun's DOSBox draws in.
+
+hold 0.05
+wait menu 814x76+234+470 150
+key Up Return
+sleep 5

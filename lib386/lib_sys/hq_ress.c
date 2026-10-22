@@ -5,8 +5,9 @@
 #include <fcntl.h>
 
 #include "adeline.h"
+#define	HQ_RESS		/* lib_sys.h leaves HQR_Get and HQR_GetSample to this file */
 #include "lib_sys.h"
-#include "\projet\lib386\lib_samp\lib_wave.h"
+#include "../lib_samp/lib_wave.h"
 
 #define	RECOVER_AREA	500
 

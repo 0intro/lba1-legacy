@@ -2761,7 +2761,7 @@ StartDMACard    PROC
 
 ;		mov eax,MV_filter
 ;		or  eax,11000000b
-		mov eax,11100000b
+		mov eax,11100001b
 		mov edx,AUDIOFILT
 		out dx,al               ;start the transfer
 		mov MV_filter,eax

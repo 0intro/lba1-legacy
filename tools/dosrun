@@ -1,0 +1,201 @@
+#!/usr/bin/env bash
+#
+# dosrun: run LBA.EXE, or a build of ours, in DOSBox, in our Xephyr (xrun).
+#
+#     dosrun [-k] [-p] [-o] [-q] [-r] [-n] [-s sb16|wave|sb16_8|sbpro|none] [-d dir] [-e exe] [-c dosbox-command]...
+#
+# C: is a hard disk install made as INSTALL makes one: the program and its
+# data from the CD's LBA directory in C:\LBA, an empty C:\LBA\VOX for the
+# voices the game copies there, and LBA.CFG set for the sound: none, or a
+# Sound Blaster 16 (W_SB16.DLL and M_SB16.DLL at 220h, A32SP2FM.DLL for the
+# OPL3, the volumes SETUP.LST gives), or its samples alone (wave: the
+# music NoMidi, as the CD's LBA.CFG has it), or them played 8-bit stereo
+# by the North American CD's W_SB16_8.DLL (sb16_8, copied out of its
+# image, $LBATMP/gog/lba1/Speedrun/Windows/LBA.DOT, where innoextract
+# puts it from GOG's installer), or a Sound Blaster Pro 2's samples
+# (sbpro: DOSBox's sbtype sbpro2, W_SBPRO.DLL at 220h, IRQ 7 and DMA 1,
+# M_SBPRO.DLL, the volumes SETUP.LST gives). D: is the PC CD image,
+# little_big_adventure_1.iso in $LBAISO (../iso by default), which the
+# game checks for and reads the movies and voices from.
+#
+# Every run starts from a fresh install in $LBATMP/dos/run unless -k keeps
+# the last one (and its saves). -q mutes DOSBox: the sound is still made,
+# but SDL plays it nowhere. -r records it instead of playing it, into
+# $LBATMP/cap/dos/sound.raw (what DOSBox's mixer sends SDL: 48 kHz stereo
+# float, at the pace it would be played), at the cards' own level: the
+# master at 100% where DOSBox has 50%, no compressor, no output filter on
+# the Sound Blaster or its OPL, so that a recording is what the drivers
+# and the chip made. -e runs another executable, copied into C:\LBA,
+# with the wave drivers built beside it (w_*.dll), which take the place
+# of the CD's (a run without -e puts the CD's back). -p
+# leaves DOSBox at the prompt when the program ends, to read what it
+# printed. -o sends its output to C:\LBA\OUT.TXT instead
+# ($LBATMP/dos/run/LBA/OUT.TXT). Screenshots (Ctrl+F5) go to
+# $LBATMP/cap/dos. Under xrun (XRUN_DISPLAY set) DOSBox uses that display.
+# Otherwise dosrun starts xrun itself. -n draws on no display, through
+# SDL's offscreen video and the mouse left free, for a run that needs
+# no keys. -d makes C: dir as it stands, where the program and the
+# commands run, and leaves D: empty: a run without the game's files.
+#
+# LBATMP is ../lba1-tmp beside the tree unless set.
+
+set -Eeuo pipefail
+
+TOOLS=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+TOP=$(cd -- "$TOOLS/../.." && pwd)
+LBATMP=${LBATMP:-$TOP/lba1-tmp}
+ISO=${LBAISO:-$TOP/iso}/little_big_adventure_1.iso
+CD=$LBATMP/pc/LBA
+NACD=$LBATMP/gog/lba1/Speedrun/Windows/LBA.DOT
+
+keep=
+mute=
+rec=
+nodisplay=
+dir=
+prompt=
+out=
+sound=sb16
+exe=
+cmds=()
+argv=("$@")	# for the run under xrun: the loop below shifts them away
+while (( $# )); do
+	case $1 in
+	-k) keep=1; shift ;;
+	-p) prompt=1; shift ;;
+	-o) out=1; shift ;;
+	-q) mute=1; shift ;;
+	-r) rec=1; shift ;;
+	-n) nodisplay=1; shift ;;
+	-d) dir=${2:?}; shift 2 ;;
+	-s)
+		sound=${2:?}
+		case $sound in
+		sb16|wave|sb16_8|sbpro|none) ;;
+		*) echo "dosrun: -s $sound: sb16, wave, sb16_8, sbpro or none" >&2; exit 2 ;;
+		esac
+		soundset=1
+		shift 2
+		;;
+	-e) exe=${2:?}; shift 2 ;;
+	-c) cmds+=("${2:?}"); shift 2 ;;
+	*) echo "usage: dosrun [-k] [-p] [-o] [-q] [-r] [-n] [-s sb16|wave|sb16_8|sbpro|none] [-d dir] [-e exe] [-c dosbox-command]..." >&2; exit 2 ;;
+	esac
+done
+[[ -z $keep || -z ${soundset:-} ]] || { echo "dosrun: -k keeps the last install's sound: -s sets a fresh one's" >&2; exit 2; }
+
+if [[ -z $nodisplay && -z ${XRUN_DISPLAY:-} ]]; then
+	exec "$TOOLS/xrun" "$TOOLS/dosrun" "${argv[@]}"
+fi
+if [[ -n $dir ]]; then
+	[[ -d $dir ]] || { echo "dosrun: no $dir" >&2; exit 1; }
+	hd=$(cd -- "$dir" && pwd)
+	run=$hd
+else
+	[[ -d $CD ]] || { echo "dosrun: no $CD: tools/extract makes it" >&2; exit 1; }
+	hd=$LBATMP/dos/run
+	run=$hd/LBA
+fi
+if [[ -z $dir ]] && [[ -z $keep || ! -d $hd/LBA ]]; then
+	rm -rf -- "${hd:?}"
+	mkdir -p "$hd/LBA/VOX"
+	find "$CD" -maxdepth 1 -type f -exec cp {} "$hd/LBA/" \;
+	chmod -R u+w "$hd"
+	cfg=$hd/LBA/LBA.CFG
+	set_cfg() { sed -i "s/^$1:.*\$/$1: $2\r/" "$cfg"; }
+	set_cfg SvgaDriver VESA
+	case $sound in
+	sb16|wave|sb16_8)
+		if [[ $sound == sb16 ]]; then
+			set_cfg MidiDriver A32SP2FM.DLL; set_cfg MidiType FM; set_cfg MidiBase 220h
+		fi
+		w=W_SB16.DLL
+		if [[ $sound == sb16_8 ]]; then
+			w=W_SB16_8.DLL
+		fi
+		set_cfg WaveDriver "$w"; set_cfg WaveBase 220h; set_cfg WaveRate 22000
+		set_cfg MixerDriver M_SB16.DLL; set_cfg MixerBase 220h
+		set_cfg WaveVolume 255; set_cfg MusicVolume 187; set_cfg CDVolume 216
+		set_cfg LineVolume 216; set_cfg MasterVolume 255 ;;
+	sbpro)
+		set_cfg WaveDriver W_SBPRO.DLL; set_cfg WaveBase 220h; set_cfg WaveIRQ 7
+		set_cfg WaveDMA 1; set_cfg WaveRate 22000
+		set_cfg MixerDriver M_SBPRO.DLL; set_cfg MixerBase 220h
+		set_cfg WaveVolume 255; set_cfg MusicVolume 166; set_cfg CDVolume 192
+		set_cfg LineVolume 192; set_cfg MasterVolume 255 ;;
+	none) ;;
+	*) echo "dosrun: sound is sb16, wave, sb16_8, sbpro or none" >&2; exit 2 ;;
+	esac
+fi
+prog=LBA.EXE
+[[ -n $dir ]] && prog=
+[[ -z $dir ]] && cp "$CD"/W_*.DLL "$run/"
+if [[ -z $dir && $sound == sb16_8 ]]; then
+	[[ -s $NACD ]] || { echo "dosrun: no $NACD: innoextract GOG's installer into $LBATMP/gog/lba1" >&2; exit 1; }
+	python3 -I "$TOOLS/isocat.py" "$NACD" /LBA/W_SB16_8.DLL > "$run/W_SB16_8.DLL"
+fi
+if [[ -n $exe ]]; then
+	cp "$exe" "$run/"
+	prog=$(basename -- "$exe")
+	if [[ -z $dir ]]; then
+		# under the CD's names: DOSBox would see a lowercase copy beside them
+		for f in "$(dirname -- "$exe")"/w_*.dll; do
+			[[ -e $f ]] || continue
+			n=$(basename -- "$f")
+			cp "$f" "$run/${n^^}"
+		done
+	fi
+fi
+
+mkdir -p "$LBATMP/cap/dos" "$LBATMP/dos"
+# a run in a directory takes a configuration of its own, removed after
+if [[ -n $dir ]]; then
+	conf=$(mktemp "$LBATMP/dos/dir.XXXXXX")
+	trap 'rm -f -- "$conf"' EXIT
+else
+	conf=$hd.conf
+fi
+{
+	printf '[capture]\ncapture_dir = %s\n' "$LBATMP/cap/dos"
+	[[ -n $rec ]] && printf '[mixer]\ncompressor = off\n'
+	printf '[sblaster]\n'
+	[[ $sound == sbpro ]] && printf 'sbtype = sbpro2\n'
+	[[ -n $rec ]] && printf 'sb_filter = off\nopl_filter = off\n'
+	[[ -n $nodisplay ]] && printf '[mouse]\nmouse_capture = nomouse\n'
+	if [[ -n $dir ]]; then
+		printf '[autoexec]\nmount c "%s"\nc:\n' "$hd"
+	else
+		printf '[autoexec]\nmount c "%s"\nimgmount d "%s" -t cdrom\nc:\ncd \\LBA\n' "$hd" "$ISO"
+	fi
+	[[ -n $rec ]] && printf 'mixer master 100 /noshow\n'
+	(( ${#cmds[@]} )) && printf '%s\n' "${cmds[@]}"
+	[[ -n $prog ]] && printf '%s%s\n' "$prog" "${out:+ > OUT.TXT}"
+	[[ -n $prompt ]] || printf 'exit\n'
+} > "$conf"
+[[ -n $mute ]] && export SDL_AUDIODRIVER=dummy
+[[ -n $nodisplay ]] && export SDL_VIDEODRIVER=offscreen
+if [[ -n $rec ]]; then
+	export SDL_AUDIODRIVER=disk SDL_DISKAUDIOFILE=$LBATMP/cap/dos/sound.raw
+fi
+# --exit: DOSBox refuses the shell's exit after a program that ran under a
+# second, as a probe does
+end=()
+[[ -n $prompt ]] || end=(--exit)
+# DOSBox takes the script's place, so that a kill of the script ends it,
+# but for a run of -d, whose trap removes its configuration: the script
+# passes TERM, INT and HUP on to it and waits for its end, so that a
+# timeout -k, whose kill comes only while the script lives, ends a DOSBox
+# that a TERM left running
+if [[ -n $dir ]]; then
+	dosbox --noprimaryconf --nolocalconf --conf "$TOOLS/dosbox.conf" --conf "$conf" "${end[@]}" &
+	pid=$!
+	trap 'kill "$pid" 2> /dev/null || true' TERM INT HUP
+	st=0
+	wait "$pid" || st=$?
+	while kill -0 "$pid" 2> /dev/null; do
+		wait "$pid" || st=$?
+	done
+	exit "$st"
+else
+	exec dosbox --noprimaryconf --nolocalconf --conf "$TOOLS/dosbox.conf" --conf "$conf" "${end[@]}"
+fi

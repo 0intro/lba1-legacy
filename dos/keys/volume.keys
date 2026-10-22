@@ -1,0 +1,21 @@
+# The volume screen from the main menu, one Down onto the music's slider
+# and held there: while a slider is selected the screen plays sample 126,
+# or 34, every 30 ticks at a random balance from full left to the centre,
+# for dosrun -r to record and tools/loudness.py -c to read channel by
+# channel. A menu that returns on Return leaves the next to read the same
+# key while it is down, so keys are short here. Areas are of the 1280x960
+# screen dosrun's DOSBox draws in.
+
+hold 0.05
+wait menu 814x76+234+470 150
+key Down Down Return
+sleep 3
+shot options
+key Down Return
+sleep 3
+shot volume
+key Down
+sleep 30
+shot slider
+key Up Return
+sleep 3

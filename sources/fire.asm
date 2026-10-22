@@ -7,8 +7,8 @@
 
 		.data
 
-		include	\projet\lib386\lib_svga\svga.ash
-		include	\projet\lib386\lib_sys\lib_sys.ash
+		include	../lib386/lib_svga/svga.ash
+		include	../lib386/lib_sys/lib_sys.ash
 
 		public	NoLanguage      Imagen
 
@@ -47,13 +47,13 @@ ComputeFire	proc	uses esi edi ebx edx
 		XOR     BH,BH
 @@lp:
 		XOR     AX,AX
-		ADD     AL,-1[eSI]
+		ADD     AL,[eSI-1]
 		ADC     AH,BH
-		ADD     AL,-320[eSI]
+		ADD     AL,[eSI-320]
 		ADC     AH,BH
-		ADD     AL,-319[eSI]
+		ADD     AL,[eSI-319]
 		ADC     AH,BH
-		ADD     AL,-321[eSI]
+		ADD     AL,[eSI-321]
 		ADC     AH,BH
 		ADD     AL,1[eSI]
 		ADC     AH,BH

@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <fcntl.h>
 
-#include "\projet\lib386\lib_sys\adeline.h"
-#include "\projet\lib386\lib_sys\lib_sys.h"
+#include "adeline.h"
+#include "lib_sys.h"
 
 /*══════════════════════════════════════════════════════════════════════════*
 	     █   █ █▀▀▀█       █▄ ▄█ █▀▀▀▀ █▄ ▄█ █▀▀▀█ █▀▀▀█ █  ▄▀
@@ -58,8 +58,10 @@ void	HQM_Clear_Memory()
 /*══════════════════════════════════════════════════════════════════════════*/
 // alloue un bloc de memoire
 
-LONG	HQM_Alloc( ULONG size, void **ptr )
+LONG	HQM_Alloc( ULONG size, void *ptrptr )
 {
+	void	**ptr = ptrptr ;
+
 	if( !Ptr_HQM_Memory )
 	{
 		*ptr = 0 ;

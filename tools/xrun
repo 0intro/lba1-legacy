@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+#
+# xrun: run a command in a Xephyr of ours.
+#
+#     xrun [-s WxH] [-n] command [args...]
+#     xrun -x
+#
+# The Xephyr is kept between commands and reused until xrun -x stops
+# it. The first command starts it on the first free display from :2 up,
+# never the one the desktop runs on: a display is free when neither its
+# socket /tmp/.X11-unix/Xn nor its lock /tmp/.Xn-lock exists, and a lost
+# race moves on to the next. $LBATMP/xauth/xrun records it, and later
+# commands run on it while it is alive and ours (its process is Xephyr on
+# that display). A command asking for another size than the kept one's is
+# refused: xrun -x alone stops the kept Xephyr. Commands take turns: one
+# waits until the one before has finished. A command already running
+# under xrun (XRUN_DISPLAY set) that calls it again just runs.
+#
+# The server gets a cookie of its own (under $LBATMP/xauth), so only these
+# commands and their children reach it. A command runs with DISPLAY and
+# XAUTHORITY set, and XRUN_DISPLAY naming the display, so a driver script
+# can run xdotool or import against it and nothing else.
+#
+# The server's keymap is its default with XKB's srvrkeys:none, set when
+# it starts, and on a kept server that lacks it at the next command. The
+# option gives the F-keys two levels: under the default's CTRL+ALT type,
+# xdotool presses Alt with each F-key, which the game reads as a key of
+# its own.
+#
+# -s sets the screen size (default 1280x960, room for a 640x480 window
+# scaled twice), -n gives the command a Xephyr of its own, killed when it
+# exits, and -x stops the kept one.
+#
+# LBATMP is ../lba1-tmp beside the tree unless set.
+
+set -Eeuo pipefail
+
+TOP=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
+LBATMP=${LBATMP:-$TOP/lba1-tmp}
+size=1280x960
+fresh=
+stopkept=
+
+usage() { echo "usage: xrun [-s WxH] [-n] command [args...] | xrun -x" >&2; exit 2; }
+while (( $# )); do
+	case $1 in
+	-s) size=${2:?}; shift 2 ;;
+	-n) fresh=1; shift ;;
+	-x) stopkept=1; shift ;;
+	--) shift; break ;;
+	-*) usage ;;
+	*) break ;;
+	esac
+done
+if [[ -n $stopkept ]]; then
+	[[ $# == 0 && -z $fresh ]] || usage
+	[[ -z ${XRUN_DISPLAY:-} ]] || { echo "xrun: -x from a command under xrun, which holds the server" >&2; exit 2; }
+elif (( $# == 0 )); then
+	usage
+elif [[ -n ${XRUN_DISPLAY:-} ]]; then
+	exec "$@"
+fi
+
+mkdir -p "$LBATMP/xauth"
+state=$LBATMP/xauth/xrun
+n='' pid='' auth=''
+
+free() { [[ ! -e /tmp/.X11-unix/X$1 && ! -e /tmp/.X$1-lock ]]; }
+
+# start a Xephyr on the first free display: sets n, pid and auth
+start() {
+	n=2
+	while (( n < 100 )); do
+		if ! free "$n"; then n=$((n + 1)); continue; fi
+		auth=$LBATMP/xauth/X$n
+		rm -f "$auth"; : > "$auth"
+		xauth -q -f "$auth" add ":$n" . "$(mcookie)"
+		setsid Xephyr ":$n" -auth "$auth" -screen "$size" -nolisten tcp -br -noreset \
+			-no-host-grab -title "xrun :$n" < /dev/null > "$LBATMP/xauth/X$n.log" 2>&1 9>&- &
+		pid=$!
+		for _ in $(seq 50); do
+			[[ -S /tmp/.X11-unix/X$n ]] && break
+			kill -0 "$pid" 2>/dev/null || break
+			sleep 0.1
+		done
+		if [[ -S /tmp/.X11-unix/X$n ]] && kill -0 "$pid" 2>/dev/null; then
+			DISPLAY=:$n XAUTHORITY=$auth setxkbmap -option srvrkeys:none ||
+				{ stop "$n" "$pid"; echo "xrun: setxkbmap fails on :$n" >&2; exit 1; }
+			return
+		fi
+		kill "$pid" 2>/dev/null || true
+		rm -f "$auth"
+		# a lost race leaves another's socket or lock, anything else a Xephyr that cannot start
+		if free "$n"; then
+			echo "xrun: Xephyr ends at once on :$n: $LBATMP/xauth/X$n.log" >&2
+			exit 1
+		fi
+		rm -f "$LBATMP/xauth/X$n.log"
+		n=$((n + 1))
+	done
+	echo "xrun: no free display" >&2
+	exit 1
+}
+
+# stop the Xephyr pid on display n
+stop() {
+	kill "$2" 2>/dev/null || true
+	for _ in $(seq 50); do
+		kill -0 "$2" 2>/dev/null || break
+		sleep 0.1
+	done
+	rm -f "$LBATMP/xauth/X$1"
+}
+
+# the kept Xephyr, if it is alive and ours: sets n, pid and auth, and its
+# size in ksize
+kept() {
+	[[ -r $state ]] || return 1
+	read -r n pid ksize < "$state" || return 1
+	kill -0 "$pid" 2>/dev/null || return 1
+	[[ $(tr '\0' ' ' < "/proc/$pid/cmdline") == "Xephyr :$n "* ]] || return 1
+	[[ -S /tmp/.X11-unix/X$n ]] || return 1
+	auth=$LBATMP/xauth/X$n
+}
+
+if [[ -n $fresh ]]; then
+	start
+	trap 'stop "$n" "$pid"' EXIT
+	echo "xrun: Xephyr on :$n" >&2
+else
+	exec 9> "$state.lock"
+	flock 9
+	ksize=
+	if [[ -n $stopkept ]]; then
+		if kept; then
+			stop "$n" "$pid"
+			rm -f "$state"
+			echo "xrun: Xephyr :$n stopped" >&2
+		fi
+		exit 0
+	fi
+	if kept; then
+		if [[ $ksize != "$size" ]]; then
+			echo "xrun: the kept Xephyr :$n is $ksize, not $size: ask before stopping it (xrun -x)" >&2
+			exit 1
+		fi
+		opts=$(DISPLAY=:$n XAUTHORITY=$auth setxkbmap -query)
+		[[ $opts == *srvrkeys:none* ]] || DISPLAY=:$n XAUTHORITY=$auth setxkbmap -option srvrkeys:none
+	else
+		start
+		printf '%s %s %s\n' "$n" "$pid" "$size" > "$state"
+		echo "xrun: Xephyr on :$n, kept (pid $pid; tools/xrun -x stops it)" >&2
+	fi
+fi
+
+export DISPLAY=:$n XAUTHORITY=$auth XRUN_DISPLAY=:$n
+"$@" 9>&-

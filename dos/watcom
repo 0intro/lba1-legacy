@@ -1,0 +1,412 @@
+#!/usr/bin/env bash
+#
+# watcom: Watcom C 9.01 and 9.5, MASM 6.11 and Turbo Assembler 3.1, the
+# compilers and the assemblers LBA.EXE was built with, installed from
+# their floppies and run in DOSBox for make CC=watcom, and the library of
+# Watcom C/C++ 10.0a whose qsort LBA.EXE links first, with its linker,
+# which linked the CD's wave drivers.
+#
+#     dos/watcom install archive [patch]...
+#     dos/watcom build dir
+#     dos/watcom dll dir
+#
+# install is make fetch's (mk/fetch.mk names each archive): it unpacks
+# archive, a version's floppies as WinWorld keeps them in a 7-Zip
+# archive, their files in one directory, and runs Watcom's INSTALL.EXE on
+# them in DOSBox, its answers redirected: the C compiler, the DOS hosted
+# tools, DOS/4GW. Watcom C/386 9.01 (six disks) goes into
+# $LBATMP/tools/w901, Watcom C/C++ 9.5b into $LBATMP/tools/w95, each the
+# C: of its install, the compiler in WATCOM. Then each patch of 9.01
+# named after archive, in their order, a ZIP of Watcom's (c386_b.zip to
+# c386_d.zip, as WinWorld's floppies hold level A), is applied to
+# $LBATMP/tools/w901 by its own APPLYx.BAT in DOSBox, what it printed
+# left in WATCOM's parent as APPLYx.TXT. Watcom C/C++ 10.0a (its
+# CD's image) gives $LBATMP/tools/w100a/WATCOM/LIB386/DOS/CLIB3R.LIB,
+# the DOS builds' source of the module qsort (tools/libmod.py), and its
+# DOS-hosted linker, BIN/WLINK.EXE with WLINK.LNK, DOS4GW.EXE and
+# BINB/WLSYSTEM.LNK, each copied from the installed tree the CD holds by
+# tools/isocat.py. MASM 6.11 gives $LBATMP/tools/masm: ML.EXE, ML.ERR
+# and DOSXNT.EXE, the DOS extender ML runs under, expanded from its
+# first floppy by the floppy's own DECOMP.EXE in DOSBox. Borland C++
+# 3.1's floppies give $LBATMP/tools/tasm/TASM.EXE, Turbo Assembler 3.1,
+# from the ZIP their seventh and ninth floppies split in two.
+#
+# build is make CC=watcom's: in one DOSBox, ML 6.11 assembles the
+# modules of DOSML from the tree with the 1994 makefiles' options and
+# DOSMLDEFS, /DFIXES for the build with the fixes, AIL/32 with
+# a32wr.mak's, and TASM 3.1 those of DOSTASM, cdrom.asm, with
+# lib_cd.mak's and DOSTASMDEFS, /dFIXES with the fixes, into dir. Then
+# it compiles the C modules of the lists make passes in the environment
+# (DOSGAME, DOSSYS, ...) from dir/src, each by 9.01's wcc386p but those
+# of DOS95 by 9.5's wcc386, with the 1994 makefiles' options and DOSDEFS,
+# -dFIXES for the build with the fixes, makes the libraries with 9.01's
+# wlib, and links with 9.01's wlink and C library in LBA.EXE's order,
+# 10.0a's qsort (dir/qsort10.obj) first, into dir/lba0.exe and
+# dir/lba0.map. The commands, their response files and what the tools
+# printed lie in dir/dos, DOSBox's C:.
+#
+# dll is make CC=watcom's for the wave drivers: in one DOSBox, ML 6.11
+# assembles lib_samp/wave_a.asm for each driver of DOSDLL with its
+# card's defines (w_sb_DEFS, ...) into dir/lib386/lib_samp/name.obj, and
+# 10.0a's wlink, which linked the CD's, links it into dir/name.dll, an
+# OS/2 LX DLL, both as lib_samp/wave_dll.mak does, and its map into
+# dir/name.map. Its C: is dir/dll.
+#
+# LBA.EXE's run-time is 9.01's at patch level D ("WATCOM C 386 Run-Time
+# system. (c) Copyright by WATCOM Systems Inc. 1989, 1992."), whose
+# strcmp, memmove and ten others it holds as D's library has them, the
+# 1994 makefiles name 9.01's tools where it installs them (bin\wcc386p,
+# binb\wlib), and lib_midi's names Watcom 9.5's wcc386.
+
+set -Eeuo pipefail
+
+DOS=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPO=$(cd -- "$DOS/.." && pwd)
+LBATMP=${LBATMP:-$(cd -- "$REPO/.." && pwd)/lba1-tmp}
+
+usage() {
+	echo "usage: watcom install archive [patch]... | build dir | dll dir" >&2
+	exit 2
+}
+
+install() {
+	local archive=$1 v d p
+	local -a answers
+	shift
+	[[ -f $archive ]] || { echo "watcom: no $archive" >&2; exit 1; }
+	# each archive's top folder names its product
+	case $(7z l -ba "$archive") in
+	*"Watcom C 386 9.01"*)
+		v=901
+		# INSTALL.SCR's questions in order: continue (y), DOS as the
+		# host (y), OS/2 (n), a DOS extender (y), Phar Lap's (n),
+		# Ergo's (n), Rational's (y), then ADS, Windows, OS/2 2.0, the
+		# help, NLM debugging, the profiler and PenPoint (n)
+		answers=(y y n y n n y n n n n n n n)
+		;;
+	*"Watcom CPP 10.0a"*)
+		(( $# == 0 )) || usage
+		install10 "$archive"
+		return
+		;;
+	*"Macro Assembler 6.11"*)
+		(( $# == 0 )) || usage
+		installml "$archive"
+		return
+		;;
+	*"Borland CPP 3.1"*)
+		(( $# == 0 )) || usage
+		installtasm "$archive"
+		return
+		;;
+	*"Watcom CPP 9.5b"*)
+		(( $# == 0 )) || usage
+		v=95
+		# INSTALL.SCR's questions in order: continue (y), the C
+		# compiler (y), C++ (n), the DOS host (y), OS/2's and NT's (n),
+		# a DOS extender (y), Phar Lap's and Ergo's (n), Rational's
+		# (y), then ADS, Windows, OS/2 2.0, NT, NetWare, the help, the
+		# profiler, PenPoint and the examples (n)
+		answers=(y y n y n n y n n y n n n n n n n n n)
+		;;
+	*)
+		echo "watcom: $archive holds none of 9.01's floppies, 9.5b's, 10.0a's CD, MASM 6.11's and Borland C++ 3.1's floppies" >&2
+		exit 1
+		;;
+	esac
+	local w=$LBATMP/tools/w$v
+	local t=$LBATMP/tools/w$v.disks
+	rm -rf -- "$w" "$t"
+	mkdir -p "$w/SRC" "$t"
+	7z x -y -o"$t" "$archive" > /dev/null
+	for d in "$t"/*/*.img; do
+		case $v:$(basename -- "$d") in
+		901:Disk*|95:W9532_*) 7z e -y -o"$w/SRC" "$d" > /dev/null ;;
+		esac
+	done
+	rm -rf -- "$t"
+	{
+		printf '%s\r\n' "${answers[@]}"
+		# the Enter each disk asks for
+		for _ in $(seq 20); do printf '\r\n'; done
+	} > "$w/ANSW.TXT"
+	timeout -k 10 900 "$REPO/tools/dosrun" -n -q -d "$w" -c "mount a \"$w/SRC\"" \
+		-c 'A:\INSTALL A: C:\WATCOM\ < C:\ANSW.TXT > C:\INST.TXT' > "$t.log" 2>&1 || true
+	mv -- "$t.log" "$w/dosbox.log"
+	[[ -f $w/WATCOM/BIN/WCC386P.EXE ]] || { echo "watcom: the install failed, see $w/INST.TXT" >&2; exit 1; }
+	rm -rf -- "$w/SRC"
+	for p; do
+		patch901 "$p"
+	done
+	echo "watcom: installed in $w/WATCOM"
+}
+
+# patch901 archive: a patch of 9.01, its files and its APPLYx.BAT in
+# archive or in a ZIP inside it (C386_D.ZIP), applied to the install in
+# $LBATMP/tools/w901 by its batch in DOSBox. The batch runs bpatch on
+# each file and wlib on each library, and prints a line for each file it
+# patches or creates, its copy's lines and wlib's banner: a line of
+# another kind, bpatch's for a file at another level among them, is a
+# failure. bpatch and wlib run in real mode, at 3000 cycles a
+# millisecond by DOSBox's default, where a patch takes 5 minutes: at max
+# cycles it takes seconds.
+patch901() {
+	local archive=$1 z b
+	local w=$LBATMP/tools/w901
+	local t=$LBATMP/tools/w901.patch
+	rm -rf -- "$t"
+	mkdir -p "$t"
+	7z e -y -o"$t" "$archive" > /dev/null
+	for z in "$t"/C386_?.ZIP; do
+		if [[ -f $z ]]; then
+			7z e -y -o"$t" "$z" > /dev/null
+		fi
+	done
+	b=$(cd -- "$t" && ls APPLY?.BAT 2> /dev/null || true)
+	[[ -n $b ]] || { echo "watcom: no APPLYx.BAT in $archive" >&2; exit 1; }
+	b=${b%.BAT}
+	rm -f -- "$w/$b.TXT"
+	timeout -k 10 600 "$REPO/tools/dosrun" -n -q -d "$w" -c 'config -set cpu_cycles=max' \
+		-c "mount d \"$t\"" -c 'd:' -c "command /c $b C:\\WATCOM -p > C:\\$b.TXT" > "$t.log" 2>&1 || true
+	[[ -s $w/$b.TXT ]] || { echo "watcom: $archive: $b.BAT ran none of its steps, see $t.log" >&2; exit 1; }
+	if tr -d '\r' < "$w/$b.TXT" | grep -v -E -e '^$' -e '^(Patching|Creating) ' -e '^ [A-Z0-9_]+\.[A-Z]$' \
+		-e '^ +[0-9]+ File\(s\) copied\.$' -e '^(WATCOM Library Manager|WATCOM is a trademark|Copyright by WATCOM) ' >&2; then
+		echo "watcom: $archive: the patch failed, see $w/$b.TXT" >&2
+		exit 1
+	fi
+	rm -rf -- "$t" "$t.log"
+	echo "watcom: $archive applied"
+}
+
+# install10 archive: 10.0a's CD out of archive, its library CLIB3R.LIB
+# and its DOS-hosted linker copied out of the CD's image
+install10() {
+	local archive=$1 iso
+	local w=$LBATMP/tools/w100a
+	local t=$LBATMP/tools/w100a.cd
+	rm -rf -- "$w" "$t"
+	mkdir -p "$w/WATCOM/LIB386/DOS" "$w/WATCOM/BIN" "$w/WATCOM/BINB" "$t"
+	7z x -y -o"$t" "$archive" > /dev/null
+	iso=$(find "$t" -iname '*.iso' -print -quit)
+	[[ -n $iso ]] || { echo "watcom: no CD image in $archive" >&2; exit 1; }
+	python3 -I "$REPO/tools/isocat.py" -o "$w/WATCOM/LIB386/DOS" "$iso" WATCOM/LIB386/DOS/CLIB3R.LIB
+	python3 -I "$REPO/tools/isocat.py" -o "$w/WATCOM/BIN" "$iso" WATCOM/BIN/WLINK.EXE WATCOM/BIN/WLINK.LNK \
+		WATCOM/BIN/DOS4GW.EXE
+	python3 -I "$REPO/tools/isocat.py" -o "$w/WATCOM/BINB" "$iso" WATCOM/BINB/WLSYSTEM.LNK
+	rm -rf -- "$t"
+	[[ -s $w/WATCOM/LIB386/DOS/CLIB3R.LIB ]] || { echo "watcom: no CLIB3R.LIB on 10.0a's CD" >&2; exit 1; }
+	[[ -s $w/WATCOM/BIN/WLINK.EXE ]] || { echo "watcom: no WLINK.EXE on 10.0a's CD" >&2; exit 1; }
+	echo "watcom: installed in $w/WATCOM"
+}
+
+# installml archive: MASM 6.11's ML.EXE, its messages and DOSXNT.EXE,
+# expanded from its first floppy by the floppy's DECOMP.EXE in DOSBox
+installml() {
+	local archive=$1 img
+	local m=$LBATMP/tools/masm
+	local t=$LBATMP/tools/masm.disks
+	rm -rf -- "$m" "$t"
+	mkdir -p "$m" "$t/disk1"
+	7z x -y -o"$t" "$archive" > /dev/null
+	img=$(find "$t" -iname 'disk1.img' -print -quit)
+	[[ -n $img ]] || { echo "watcom: no first floppy in $archive" >&2; exit 1; }
+	7z x -y -o"$t/disk1" "$img" > /dev/null
+	cp -- "$t/disk1/BIN/ML.EX\$" "$t/disk1/BIN/ML.ER\$" "$t/disk1/BIN/DOSXNT.EX\$" "$t/disk1/DECOMP.EXE" "$m/"
+	rm -rf -- "$t"
+	timeout -k 10 300 "$REPO/tools/dosrun" -n -q -d "$m" -c 'decomp ML.EX$ ML.EXE' \
+		-c 'decomp ML.ER$ ML.ERR' -c 'decomp DOSXNT.EX$ DOSXNT.EXE' > "$m/dosbox.log" 2>&1 || true
+	rm -f -- "$m/ML.EX\$" "$m/ML.ER\$" "$m/DOSXNT.EX\$" "$m/DECOMP.EXE"
+	[[ -s $m/ML.EXE && -s $m/DOSXNT.EXE ]] || { echo "watcom: MASM 6.11's install failed, see $m/dosbox.log" >&2; exit 1; }
+	echo "watcom: installed in $m"
+}
+
+# installtasm archive: Turbo Assembler 3.1's TASM.EXE, from the ZIP that
+# Borland C++ 3.1's seventh and ninth floppies split in two, TASM.CA1 and
+# TASM.CA2, each behind a header of 5 bytes
+installtasm() {
+	local archive=$1 d7 d9
+	local m=$LBATMP/tools/tasm
+	local t=$LBATMP/tools/tasm.disks
+	rm -rf -- "$m" "$t"
+	mkdir -p "$m" "$t/d7" "$t/d9"
+	7z x -y -o"$t" "$archive" > /dev/null
+	d7=$(find "$t" -iname 'disk07.img' -print -quit)
+	d9=$(find "$t" -iname 'disk09.img' -print -quit)
+	[[ -n $d7 && -n $d9 ]] || { echo "watcom: no seventh and ninth floppies in $archive" >&2; exit 1; }
+	7z x -y -o"$t/d7" "$d7" > /dev/null
+	7z x -y -o"$t/d9" "$d9" > /dev/null
+	{ tail -c +6 "$t/d7/TASM.CA1" && tail -c +6 "$t/d9/TASM.CA2"; } > "$t/tasm.zip"
+	7z x -y -o"$m" "$t/tasm.zip" TASM.EXE > /dev/null
+	rm -rf -- "$t"
+	[[ -s $m/TASM.EXE ]] || { echo "watcom: no TASM.EXE in $archive" >&2; exit 1; }
+	echo "watcom: installed in $m"
+}
+
+# a path as DOS writes it
+dosname() {
+	printf '%s' "${1//\//\\}"
+}
+
+# the environment of the compiler installed on drive $1
+compiler() {
+	printf 'set path=%s\\watcom\\bin;%s\\watcom\\binb\r\n' "$1" "$1"
+	printf 'set watcom=%s\\watcom\r\n' "$1"
+	printf 'set include=d:\\lib386\\lib_midi\\ail32;%s\\watcom\\h\r\n' "$1"
+}
+
+# failed what: the batch's line that notes a step's failure in FAILED.TXT,
+# which ends the build, so that the objects of a run before go unlinked.
+# DOSBox makes the file whatever the test says: it fails when it holds a line.
+failed() {
+	printf 'if errorlevel 1 echo %s >> c:\\failed.txt\r\n' "$(dosname "$1")"
+}
+
+build() {
+	local dir=$1 m l v n
+	local -a mods
+	for v in W901 W95 MASM TASM DOSML DOSTASM DOSGAME DOSSYS DOSSVGA DOS3D DOSMIX DOSWAVE DOSMIDI DOSCD; do
+		[[ -n ${!v:-} ]] || { echo "watcom: no $v; run make OS=dos ARCH=386 CC=watcom" >&2; exit 1; }
+	done
+	for v in "$W901" "$W95"; do
+		[[ -f $v/WATCOM/BIN/WCC386P.EXE ]] || { echo "watcom: no compiler in $v; run make fetch OS=dos ARCH=386 CC=watcom" >&2; exit 1; }
+	done
+	[[ -f $MASM/ML.EXE ]] || { echo "watcom: no ML.EXE in $MASM; run make fetch OS=dos ARCH=386 CC=watcom" >&2; exit 1; }
+	[[ -f $TASM/TASM.EXE ]] || { echo "watcom: no TASM.EXE in $TASM; run make fetch OS=dos ARCH=386 CC=watcom" >&2; exit 1; }
+	local c=$dir/dos
+	rm -rf -- "$c" "$dir/LBA0.EXE" "$dir/LBA0.MAP" "$dir/lba0.exe" "$dir/lba0.map"
+	for m in $DOSML $DOSTASM; do
+		n=${m##*/}
+		rm -f -- "$dir/$m.obj" "$dir/${m%/*}/${n^^}.OBJ"
+	done
+	mkdir -p "$c"
+	# libraries: name and list
+	local -a libs=(lib_sys:DOSSYS lib_svga:DOSSVGA lib_3d:DOS3D lib_mix:DOSMIX
+		lib_wave:DOSWAVE lib_midi:DOSMIDI lib_cd:DOSCD)
+	{
+		# ML 6.11 assembles from the tree on I:, AIL/32 with a32wr.mak's
+		# flags, the others with the 1994 makefiles'
+		printf 'set tmp=e:\\\r\ni:\r\n'
+		for m in $DOSML; do
+			if [[ $m == */ail32 ]]; then
+				printf 'set ml=/c /W0 /Cp /Zd /DDPMI\r\n'
+			else
+				printf 'set ml=/Cx /Zm /c /W0 /Sa /DNoLanguage=SYSCALL /Djumps=%s\r\n' "${DOSMLDEFS:+ $DOSMLDEFS}"
+			fi
+			printf 'cd \\%s\r\nh:\\ml /Foe:\\%s.obj %s.asm >> c:\\ml.txt\r\n' \
+				"$(dosname "$(dirname -- "$m")")" "$(dosname "$m")" "$(basename -- "$m")"
+			failed "$m.obj"
+		done
+		# TASM 3.1 assembles the modules of DOSTASM from the tree, with
+		# lib_cd.mak's flags
+		for m in $DOSTASM; do
+			printf 'cd \\%s\r\nj:\\tasm /m2 /mx /q /p /z /t /jMASM51 /jQUIRKS%s %s.asm, e:\\%s.obj >> c:\\tasm.txt\r\n' \
+				"$(dosname "$(dirname -- "$m")")" "${DOSTASMDEFS:+ $DOSTASMDEFS}" "$(basename -- "$m")" "$(dosname "$m")"
+			failed "$m.obj"
+		done
+		compiler f:
+		printf 'set wcc386=-oeaxt -zp2 -4s -zq -s -dWATCOM9 -dCDROM=1%s -fi=d:\\dos\\compat.h\r\n' "${DOSDEFS:+ $DOSDEFS}"
+		printf 'd:\r\n'
+		for m in $DOSGAME $DOSSYS $DOSSVGA $DOS3D $DOSMIX $DOSWAVE $DOSMIDI $DOSCD; do
+			[[ " ${DOSASM:-} " == *" $m "* ]] && continue
+			mkdir -p "$dir/$(dirname -- "$m")"
+			if [[ " ${DOS95:-} " == *" $m "* ]]; then
+				compiler g:
+				printf 'cd \\%s\r\nwcc386 %s.c -fo=e:\\%s.obj >> c:\\cc.txt\r\n' \
+					"$(dosname "$(dirname -- "$m")")" "$(basename -- "$m")" "$(dosname "$m")"
+				failed "$m"
+				compiler f:
+			else
+				printf 'cd \\%s\r\nwcc386p %s.c -fo=e:\\%s.obj >> c:\\cc.txt\r\n' \
+					"$(dosname "$(dirname -- "$m")")" "$(basename -- "$m")" "$(dosname "$m")"
+				failed "$m"
+			fi
+		done
+		printf 'c:\r\n'
+		for l in "${libs[@]}"; do
+			n=${l%%:*} v=${l#*:}
+			read -ra mods <<< "${!v}"
+			for m in "${mods[@]}"; do
+				printf '+e:\\%s.obj\r\n' "$(dosname "$m")"
+			done > "$c/$n.rsp"
+			printf 'wlib -q -b -n -c e:\\%s.lib @c:\\%s.rsp >> c:\\lib.txt\r\n' "$n" "$n"
+			failed "$n.lib"
+		done
+		printf 'wlink @c:\\link.lnk > c:\\link.txt\r\n'
+		failed lba0.exe
+	} > "$c/build.bat"
+	[[ -s $dir/qsort10.obj ]] || { echo "watcom: no $dir/qsort10.obj; run make OS=dos ARCH=386 CC=watcom" >&2; exit 1; }
+	{
+		printf 'system dos4g\r\nname e:\\lba0.exe\r\noption quiet, caseexact, stack=7000, map=e:\\lba0.map\r\n'
+		printf 'file e:\\qsort10.obj\r\n'
+		for m in $DOSGAME; do
+			printf 'file e:\\%s.obj\r\n' "$(dosname "$m")"
+		done
+		for l in "${libs[@]}"; do
+			printf 'library e:\\%s.lib\r\n' "${l%%:*}"
+		done
+	} > "$c/link.lnk"
+	timeout -k 10 1800 "$REPO/tools/dosrun" -n -q -d "$c" -c "mount d \"$dir/src\"" -c "mount e \"$dir\"" \
+		-c "mount f \"$W901\"" -c "mount g \"$W95\"" -c "mount h \"$MASM\"" -c "mount i \"$REPO\"" \
+		-c "mount j \"$TASM\"" -c 'call build.bat' > "$c/dosbox.log" 2>&1 || true
+	if [[ ! -f $dir/LBA0.EXE || -s $c/FAILED.TXT ]]; then
+		echo "watcom: no lba0.exe, failed: $(tr -d '\r' < "$c/FAILED.TXT" 2>/dev/null | tr '\n' ' ')" >&2
+		cat "$c"/ML.TXT "$c"/TASM.TXT "$c"/CC.TXT "$c"/LIB.TXT "$c"/LINK.TXT 2>/dev/null | tr -d '\r' |
+			grep -i -E 'error|undefined' >&2 || true
+		exit 1
+	fi
+	# DOSBox dates its files by its own clock
+	mv -- "$dir/LBA0.EXE" "$dir/lba0.exe"
+	touch -- "$dir/lba0.exe"
+	tr -d '\r' < "$dir/LBA0.MAP" > "$dir/lba0.map"
+	rm -- "$dir/LBA0.MAP"
+}
+
+dll() {
+	local dir=$1 c=$1/dll d v
+	[[ -n ${DOSDLL:-} ]] || { echo "watcom: no DOSDLL; run make OS=dos ARCH=386 CC=watcom" >&2; exit 1; }
+	[[ -f ${W100A:-}/WATCOM/BIN/WLINK.EXE ]] || { echo "watcom: no linker in ${W100A:-W100A}; run make fetch OS=dos ARCH=386 CC=watcom" >&2; exit 1; }
+	[[ -f ${MASM:-}/ML.EXE ]] || { echo "watcom: no ML.EXE in ${MASM:-MASM}; run make fetch OS=dos ARCH=386 CC=watcom" >&2; exit 1; }
+	rm -rf -- "$c"
+	mkdir -p "$c"
+	{
+		# ML 6.11 assembles each driver from the tree on I:, its card's
+		# defines from make (w_sb_DEFS, ...)
+		printf 'set ml=/Cx /Zm /c /W0 /Sa /DNoLanguage=SYSCALL /Djumps=%s\r\ni:\r\ncd \\lib386\\lib_samp\r\n' \
+			"${DOSMLDEFS:+ $DOSMLDEFS}"
+		for d in $DOSDLL; do
+			v=${d}_DEFS
+			[[ -n ${!v:-} ]] || { echo "watcom: no $v; run make OS=dos ARCH=386 CC=watcom" >&2; exit 1; }
+			rm -f -- "$dir/lib386/lib_samp/$d.obj" "$dir/lib386/lib_samp/${d^^}.OBJ"
+			printf 'h:\\ml %s /Foe:\\lib386\\lib_samp\\%s.obj wave_a.asm >> c:\\ml.txt\r\n' "${!v}" "$d"
+		done
+		# 10.0a's wlink names the module after the file, its name in the
+		# case given: lower, as on the CD
+		compiler g:
+		for d in $DOSDLL; do
+			# DOSBox writes into a file of the name whatever its case
+			rm -f -- "$dir/$d.dll" "$dir/${d^^}.DLL" "$dir/$d.map" "$dir/${d^^}.MAP"
+			printf 'wlink name e:\\%s.dll file e:\\lib386\\lib_samp\\%s.obj format os2 lx dll option map=e:\\%s.map >> c:\\link.txt\r\n' "$d" "$d" "$d"
+		done
+	} > "$c/dll.bat"
+	timeout -k 10 300 "$REPO/tools/dosrun" -n -q -d "$c" -c "mount e \"$dir\"" -c "mount g \"$W100A\"" \
+		-c "mount h \"$MASM\"" -c "mount i \"$REPO\"" -c 'call dll.bat' > "$c/dosbox.log" 2>&1 || true
+	for d in $DOSDLL; do
+		if [[ ! -f $dir/${d^^}.DLL ]]; then
+			echo "watcom: no $d.dll" >&2
+			cat "$c/ML.TXT" "$c/LINK.TXT" 2>/dev/null | tr -d '\r' | grep -i -E 'error|warning' >&2 || true
+			exit 1
+		fi
+		mv -- "$dir/${d^^}.DLL" "$dir/$d.dll"
+		touch -- "$dir/$d.dll"
+		tr -d '\r' < "$dir/${d^^}.MAP" > "$dir/$d.map"
+		rm -- "$dir/${d^^}.MAP"
+	done
+}
+
+case ${1:-}:$# in
+install:1) usage ;;
+install:*) shift && install "$@" ;;
+build:2) build "$2" ;;
+dll:2) dll "$2" ;;
+*) usage ;;
+esac

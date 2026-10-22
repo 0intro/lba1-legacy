@@ -601,6 +601,7 @@ WORD	SearchFla( UBYTE *name_anim, UBYTE *ptrtxt, LONG maxsize, UBYTE *ptrlist )
 
 /*──────────────────────────────────────────────────────────────────────────*/
 
+// les images comme LBA.EXE les montre (0x25e80)
 void	PlayDiskFla( UBYTE *name_anim )
 {
 	UBYTE	*ptrtxt ;
@@ -612,7 +613,7 @@ void	PlayDiskFla( UBYTE *name_anim )
 	CHECK_MEMORY
 	if( !ptrtxt )
 	{
-		Message( "Not Enough Memory for fla_gif list", TRUE ) ;
+		Message( "Not Enough Memory for fla_pcx list", TRUE ) ;
 		return ;
 	}
 	strcpy( string, name_anim ) ;
@@ -640,52 +641,17 @@ void	PlayDiskFla( UBYTE *name_anim )
 			Load_HQR( PATH_RESSOURCE"ress.hqr", PalettePcx, RESS_TWINSUN_PAL ) ;
 			break ;
 
-		case 202:
-			Load_HQR( PATH_RESSOURCE"ress.hqr", Screen, RESS_INTRO_2_PCR ) ;
-			CopyScreen( Screen, Log ) ;
-			Load_HQR( PATH_RESSOURCE"ress.hqr", PalettePcx, RESS_INTRO_2_PAL ) ;
-			break ;
-
 		default:
-/*                      // methode avec PCX raw format
+			// methode avec PCX raw format
 			Load_HQR( PATH_RESSOURCE"fla_pcx.hqr", Screen, listindex[n]+1 ) ;
 			CopyScreen( Screen, Log ) ;
 			Load_HQR( PATH_RESSOURCE"fla_pcx.hqr", PalettePcx, listindex[n] ) ;
-*/
-			{
-				LONG		handle ;
-				UWORD		nbbloc ;
-				ULONG		buffer ;
-				ULONG		seekindex ;
-				T_HEADER	header ;
-
-				// entete hqr
-				handle = OpenRead( PATH_RESSOURCE"fla_gif.hqr" ) ;
-				if( !handle )	break ;
-				Read( handle, &buffer, 4L ) ;
-				nbbloc = (UWORD)(buffer / 4L) ;
-				if( listindex[n] >= nbbloc )
-				{
-					Close( handle ) ;
-					break ;
-				}
-				Seek( handle, listindex[n] * 4L, SEEK_START ) ;
-				Read( handle, &seekindex, 4L ) ;
-				Seek( handle, seekindex, SEEK_START ) ;
-				Read( handle, &header, sizeof( header ) ) ;
-				// methode de compression: stored
-
-				// lit un gif normal
-				Read_Gif( handle, Log, PalettePcx, BufSpeak ) ;
-
-				Close( handle ) ;
-			}
 			break;
 		}
 		Flip() ;
 		FadeToPal( PalettePcx ) ;
 
-		timer = TimerRef + 4 * 50 ;
+		timer = TimerRef + 2 * 50 ;
 		while( TimerRef < timer ) if( Key == K_ESC ) break ;
 
 		if( Key == K_ESC ) break ;

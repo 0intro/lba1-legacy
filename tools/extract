@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+#
+# extract: the files of the game's discs where the tests read them.
+#
+#     tools/extract [pc]
+#
+# pc is the PC CD, its data track little_big_adventure_1.iso in $LBAISO
+# (../iso by default): its files go into $LBATMP/pc as the CD holds them,
+# LBA.EXE into $LBATMP/elf/lba.elf as tools/le2elf.py makes it, its
+# 6901 fixups checked, and each of the CD's drivers into
+# $LBATMP/elf/dll, with the names and regions of its map in re/ where it
+# has one (re/*.dll.sym).
+# By default extract makes pc.
+
+set -Eeuo pipefail
+
+TOOLS=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPO=$(cd -- "$TOOLS/.." && pwd)
+TOP=$(cd -- "$REPO/.." && pwd)
+LBATMP=${LBATMP:-$TOP/lba1-tmp}
+ISO=${LBAISO:-$TOP/iso}
+PCISO=$ISO/little_big_adventure_1.iso
+
+usage() {
+	echo 'usage: extract [pc]' >&2
+	exit 2
+}
+
+fail() {
+	echo "extract: $*" >&2
+	exit 1
+}
+
+pc() {
+	local f b
+	local -a map
+
+	[[ -f $PCISO ]] || fail "no $PCISO"
+	rm -rf -- "$LBATMP/pc.new"
+	mkdir -p "$LBATMP/pc.new" "$LBATMP/elf/dll"
+	bsdtar -xf "$PCISO" -C "$LBATMP/pc.new"
+	chmod -R u+w "$LBATMP/pc.new"
+	[[ -s $LBATMP/pc.new/LBA/LBA.EXE ]] || fail "$PCISO: no LBA/LBA.EXE"
+	rm -rf -- "$LBATMP/pc"
+	mv -- "$LBATMP/pc.new" "$LBATMP/pc"
+	python3 -I "$TOOLS/le2elf.py" -v -f "$LBATMP/elf/lba.fix" -o "$LBATMP/elf/lba.elf" \
+		"$LBATMP/pc/LBA/LBA.EXE" 2> "$LBATMP/elf/lba.txt"
+	grep -q 'fixups 6901 02/00=3 07/00=5586 07/10=1312 split=5' "$LBATMP/elf/lba.txt" ||
+		fail "LBA.EXE's fixups are not its 6901 (see $LBATMP/elf/lba.txt)"
+	for f in "$LBATMP"/pc/LBA/*.DLL; do
+		b=${f##*/}
+		b=${b%.DLL}
+		b=${b,,}
+		map=()
+		[[ -s $REPO/re/$b.dll.sym ]] && map=(-s "$REPO/re/$b.dll.sym")
+		python3 -I "$TOOLS/le2elf.py" -x 1 "${map[@]}" -f "$LBATMP/elf/dll/$b.fix" \
+			-o "$LBATMP/elf/dll/$b.elf" "$f"
+	done
+}
+
+(( $# )) || set -- pc
+for d; do
+	case $d in
+	pc) pc ;;
+	*) usage ;;
+	esac
+done

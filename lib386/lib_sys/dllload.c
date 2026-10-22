@@ -29,8 +29,8 @@
 #include <dos.h>
 #include <io.h>
 #include <stdio.h>
-#include <sys\types.h>
-#include <sys\stat.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <malloc.h>
@@ -38,6 +38,7 @@
 
 #include "adeline.h"
 #include "lib_sys.h"
+#include "dll.h"
 
 //
 // Entry table types
