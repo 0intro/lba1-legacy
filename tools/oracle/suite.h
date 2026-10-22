@@ -15,6 +15,8 @@ struct Scenario
 /* suite.c */
 extern int	indll;
 extern Synth	*synthc;
+extern uint64_t	made;
+extern uint32_t	rcrc;
 extern uint32_t	seed;
 void	crcinit(void);
 uint32_t	crc(uint32_t, const uint8_t*, size_t);

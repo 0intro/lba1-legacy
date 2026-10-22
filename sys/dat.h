@@ -30,7 +30,6 @@ extern volatile uint32_t	TimerRef;	/* the game's time, in the PIT's ticks of 50 
 extern int32_t	Wave_Driver_Enable;	/* the samples' driver loaded (wave.c) */
 extern int32_t	PlayRate;	/* the samples' rate, in Hz */
 extern int16_t	Midi_Driver_Enable;	/* the music's driver loaded (midi.c) */
-extern char	MidiFM;	/* MidiType FM: MIDI_SB.HQR's tunes, the OPL3's (sys.c) */
 
 enum
 {
@@ -98,4 +97,139 @@ struct Synth
 };
 
 extern Synth	opl3;	/* the OPL3's synthesizer (yamaha.c) */
+extern Synth	awe32;	/* the AWE32's (awe.c) */
 
+/*
+ * A32GFX.DLL's library, Creative's for the AWE32, its records laid out
+ * as its Watcom /zp1 did, its data where the DLL holds it.
+ */
+enum
+{
+	/* a preset's tags, their values the layer's from Ttune on */
+	Tstart, Tloopstart, Tloopend,
+	Ttune, Tlfo1pitch, Tlfo2pitch, Tenvpitch, Tcutoff, Tq, Tlfo1cutoff,
+	Tenvcutoff, T11, Tlfo1vol, T13, Tchorus, Treverb, Tpan, T17, T18,
+	T19, Tlfo1delay, Tlfo1freq, Tlfo2delay, Tlfo2freq, Tmoddelay,
+	Tmodattack, Tmodhold, Tmoddecay, Tmodsustain, Tmodrelease,
+	Tvoldelay, Tvolattack, Tvolhold, Tvoldecay, Tvolsustain,
+	Tvolrelease, Tkeyhold, Tkeydecay, T38, T39, Tkeys, Tvels, T42, Tkey,
+	Tvel, Tatten, T46, T47, Tcoarse, Tfine, Tend, Tmodes, Troot, Tscale,
+	T54, Tzone, Tinstr, Tback,
+
+	Awevoices = 30,
+};
+
+typedef struct Awevoice Awevoice;
+typedef struct Awechan Awechan;
+typedef struct Awestate Awestate;
+typedef struct Layer Layer;
+typedef struct Aweparse Aweparse;
+typedef struct Awemod Awemod;
+typedef struct Awedir Awedir;
+
+#pragma pack(push, 1)
+struct Awevoice
+{
+	uint16_t	chan;		/* 0xffff: free since initvoices */
+	uint16_t	key;		/* chan<<8 | key, 0xff free */
+	uint16_t	unused0;
+	uint16_t	vel;
+	uint16_t	atten;
+	uint16_t	unused1[4];
+	uint16_t	release;	/* DCYSUSV's on a release, less its bit 15 */
+	uint16_t	modrelease;	/* DCYSUS's */
+	uint32_t	pitch;		/* IP before the bend */
+};
+
+struct Awechan
+{
+	uint16_t	preset;		/* 0x80: the drum kit */
+	uint16_t	unused;
+	uint16_t	reverb;
+	uint16_t	chorus;
+	uint16_t	pan;
+	uint16_t	aux;
+	uint16_t	sustain;
+	uint16_t	volume;
+	uint16_t	modulation;
+	uint16_t	rpndata;	/* RPN 0's, the bend's range in semitones above */
+	uint16_t	bank;
+	uint16_t	banksel;
+	int32_t	bend;		/* IP's units */
+	uint16_t	dataentry;
+};
+
+/* the region at 0x11fc6 */
+struct Awestate
+{
+	uint16_t	rover;
+	uint16_t	voice;		/* the last given */
+	uint16_t	key;
+	uint8_t	pad[4];
+	Awevoice	voices[Awevoices];
+	Awechan	chans[16];
+	uint16_t	unused[4];
+};
+
+/* a zone's parameters: the addresses, then a word a tag from Ttune */
+struct Layer
+{
+	uint32_t	addr[3];
+	int16_t	p[52];
+};
+
+/* the region at 0x13472 */
+struct Aweparse
+{
+	uint16_t	cursor;
+	uint16_t	finetune;
+	uint16_t	coarsetune;
+	uint16_t	rpn;
+	uint16_t	nrpn;
+	uint16_t	pad;
+	Layer	layers[4];
+	Layer	cur;
+};
+
+struct Awemod
+{
+	uint8_t	tag;
+	uint32_t	val;
+};
+
+struct Awedir
+{
+	uint16_t	size;		/* its low 15 bits read */
+	uint16_t	off;
+	uint32_t	program;
+};
+#pragma pack(pop)
+
+extern Drvrdesc	aweddt;	/* the AWE32 driver's descriptor (awedata.c) */
+extern char	awenames[0x1e];	/* the devices it names */
+extern uint32_t	awemixaddr;	/* yamaha32.inc's ports for SBPRO2, which set_IO_parms sets */
+extern uint32_t	awemixdata;
+extern uint32_t	awedataout;
+extern uint32_t	aweaddrstat;
+extern uint16_t	aweports[8];	/* the EMU8000's ports */
+extern uint16_t	aweinits[4][4][32];	/* the INIT arrays' four sets */
+extern Awestate	awestate;	/* the voices and the channels */
+extern uint8_t	aweeqlevels[2];	/* the equalizer's levels, the treble's and the bass's */
+extern uint16_t	aweeq[12][8];	/* its words by level */
+extern uint8_t	aweunref[132];	/* a dead table */
+extern uint16_t	awesearchtab[128];	/* the dead search's table */
+extern uint16_t	awedecaytab[128];	/* the decay times by code, descending */
+extern Aweparse	aweparse;	/* the parser's state */
+extern Layer	awedeflayer;	/* the layer every zone starts from */
+extern uint8_t	awedeflayerpad[6];	/* the six bytes after it */
+extern uint8_t	awetagsize[58];	/* the bytes of each tag's value */
+extern Awemod	awemods[48];	/* the zone's modifiers */
+extern uint16_t	aweatten[384];	/* the attenuation a velocity and a volume give */
+extern Awedir	awedir[136];	/* the presets, a program each and the drum kit last */
+extern uint8_t	awepresets[0x49d7];	/* the presets' zones, tagged records */
+
+/* emu8ktab.c: the EMU8000's tables (tools/emu8ktab.py) */
+extern uint32_t	emu8kexp2[4097];
+extern uint16_t	emu8klog2[4097];
+extern int16_t	emu8kkernel[257][4];
+extern int32_t	emu8kfilter[16][256][3];

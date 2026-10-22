@@ -1,0 +1,33 @@
+# Outside the prison with the samples and the music on, on the AWE32
+# (fixtures/soundawe: the outside save of holomap.keys, an lba.cfg as the
+# CD's SETUP sets a Sound Blaster AWE32, MidiDriver A32GFX.DLL and
+# MidiType Midi, and the sound ROM, awe32.raw): ambience.keys's walk, the
+# logo's jingle and the scene's tune from MIDI_MI.HQR on the EMU8000.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 15
+shot outside
+down Left
+sleep 2
+up Left
+key p
+sleep 3
+shot pause
+key y
+sleep 3
+key F5
+sleep 3
+shot zoom
+key F5
+sleep 3
+shot unzoom
+down Up
+sleep 2
+up Up
+sleep 3
+shot walked

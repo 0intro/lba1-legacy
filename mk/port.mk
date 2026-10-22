@@ -67,6 +67,7 @@ HOSTPATH=$(HOSTPATH_$(OS))
 
 # TESTS lists the unit tests.
 TESTS=\
+	emu8ktest\
 	cfgtest\
 	clocktest\
 	filestest\
@@ -134,6 +135,9 @@ $(O)/sys/%.res.o: sys/%.rc sys/lba.manifest | $(DIRS)
 
 # The console programs: the unit tests.
 LINK=$(COMPILE) $(LD) -o $@ $^
+
+$(O)/emu8ktest$(EXE): $(addprefix $(O)/,$(EMU8KTEST)) $(MANIFEST)
+	$(LINK) -lm
 
 $(O)/cfgtest$(EXE): $(addprefix $(O)/,$(CFGTEST)) $(MANIFEST)
 	$(LINK)

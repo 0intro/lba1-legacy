@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include "dat.h"
@@ -43,7 +44,7 @@
  * IRQ 0 calls AIL's handler at each of its counts, the driver served at
  * each, the BIOS's handler chained to as AIL's counter for it carries.
  *
- * sys/midi.c is given the same keys,
+ * sys/midi.c is given A32SP2FM.DLL for MidiDriver and the same keys,
  * and its clock passes each of those periods in turn (miditick). Each
  * side runs in a process of its own, and the driver's descriptor after
  * the start (its base, IRQ, DMA and DRQ), the OPL3's register writes,
@@ -197,8 +198,9 @@ static uint64_t t1start, t2start;
 static uint8_t mixidx, mixer[256];
 static uint32_t pitcount, pitlow;
 
-/* the rest of the program's, for sys/midi.c: the configuration, the files, SDL, the records and the OPL3 */
+/* the rest of the program's, for sys/midi.c: the configuration, the files, SDL, the records, the AWE32 and the OPL3 */
 char	PathConfigFile[] = "LBA.CFG";
+Synth	awe32;
 
 static void
 record(uint32_t reg, uint32_t val)
@@ -213,7 +215,16 @@ record(uint32_t reg, uint32_t val)
 	r->val = val;
 }
 
-/* The configuration: the part's keys. */
+/* The configuration: A32SP2FM.DLL for MidiDriver, and the part's keys. */
+unsigned char*
+Def_ReadString(unsigned char *path, unsigned char *key)
+{
+	USED(path);
+	if (strcmp((char*)key, "MidiDriver") == 0)
+		return (unsigned char*)"A32SP2FM.DLL";
+	return NULL;
+}
+
 int32_t
 Def_ReadValue2(unsigned char *path, unsigned char *key, int32_t *v)
 {
@@ -254,6 +265,21 @@ Load(char *name, void *buf)
 	return n;
 }
 
+int
+readpath(char *name, char *path, int n)
+{
+	USED(name);
+	USED(path);
+	USED(n);
+	return -1;
+}
+
+int
+watcomstricmp(const char *a, const char *b)
+{
+	return strcasecmp(a, b);
+}
+
 void
 sdlmidi(int16_t *buf, int n, int hz)
 {
@@ -263,11 +289,50 @@ sdlmidi(int16_t *buf, int n, int hz)
 }
 
 void
+sdlmidigain(float g)
+{
+	USED(g);
+}
+
+void
 summedmidi(uint64_t t, int16_t *buf, int n)
 {
 	USED(t);
 	USED(buf);
 	USED(n);
+}
+
+void
+emu8kreset(uint16_t *rom, void (*fn)(int32_t*, int))
+{
+	USED(rom);
+	USED(fn);
+}
+
+void
+emu8kout(uint32_t port, uint32_t v)
+{
+	USED(port);
+	USED(v);
+}
+
+uint32_t
+emu8kin(uint32_t port)
+{
+	USED(port);
+	return 0;
+}
+
+void
+emu8krun(uint64_t t)
+{
+	USED(t);
+}
+
+uint64_t
+emu8kmade(void)
+{
+	return 0;
 }
 
 void

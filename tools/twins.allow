@@ -211,20 +211,20 @@ sys/replay.c writebmp apart	game: mode 13h's screens in LBA1, 320x200 and the mo
 sys/sdl.c lastw lba2	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, LBA2's one mode, its texture made again at each width
 sys/sdl.c main apart	game: each program's start, LBA1's in InitAdelineSystem, LBA2's display, wide screen and clock in main before the 1997 game's parameters, and LBA1's music written raw by -m, beside the sound by -w in both
 sys/sdl.c maketexture lba2	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, LBA2's one mode, its texture made again at each width
-sys/sdl.c midigain lba1	game: the music's chip, the OPL3
-sys/sdl.c midilead lba1	game: the music's chip, the OPL3
-sys/sdl.c midiquiet lba1	game: the music's chip, the OPL3
-sys/sdl.c midistream lba1	game: the music's chip, the OPL3
-sys/sdl.c nomidi lba1	game: the music's chip, the OPL3
+sys/sdl.c midigain lba1	game: the music's chip, the OPL3 or the EMU8000
+sys/sdl.c midilead lba1	game: the music's chip, the OPL3 or the EMU8000
+sys/sdl.c midiquiet lba1	game: the music's chip, the OPL3 or the EMU8000
+sys/sdl.c midistream lba1	game: the music's chip, the OPL3 or the EMU8000
+sys/sdl.c nomidi lba1	game: the music's chip, the OPL3 or the EMU8000
 sys/sdl.c prefapp apart	game: the preferences' names
 sys/sdl.c prefapp#2 apart	game: the preferences' names
-sys/sdl.c quiet lba1	game: the music's chip, the OPL3
+sys/sdl.c quiet lba1	game: the music's chip, the OPL3 or the EMU8000
 sys/sdl.c sdlcdgain apart	game: LBA1's stream of the music chip, and its samples' volume as the wave stream's gain, LBA2's MSS mixing its own
 sys/sdl.c sdlclose apart	game: LBA1's ClearAdelineSystem, the 1994 code's end, closes SDL first, LBA2's 1997 code ends through exit alone
 sys/sdl.c sdlinit apart	game: each program's name
 sys/sdl.c sdllate apart	game: LBA1's stream of the music chip, and its samples' volume as the wave stream's gain, LBA2's MSS mixing its own
-sys/sdl.c sdlmidi lba1	game: the music's chip, the OPL3
-sys/sdl.c sdlmidigain lba1	game: the music's chip, the OPL3
+sys/sdl.c sdlmidi lba1	game: the music's chip, the OPL3 or the EMU8000
+sys/sdl.c sdlmidigain lba1	game: the music's chip, the OPL3 or the EMU8000
 sys/sdl.c sdlpoll apart	game: LBA2's mouse, which the 1997 code reads in its editor
 sys/sdl.c sdlshow apart	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, LBA2's one mode, its texture made again at each width
 sys/sdl.c sdlwave apart	game: LBA1's stream of the music chip, and its samples' volume as the wave stream's gain, LBA2's MSS mixing its own

@@ -8,17 +8,18 @@
 # A replay runs as fast as it goes, and the records sum the frames
 # before SDL takes them: how the sound reaches the device in play is
 # this test's. It plays the start in real time, with SDL's dummy video
-# and audio, the logo's jingle (tune 31, XMIDI) on the OPL3, from the
-# fixture soundout. The preload test/livemusic.c (livemusic.so beside
-# exe) is the music's device: it pulls 1024 frames a period on the
-# port's clock, and logs what the port puts and reads queued and what
-# each pull lacked. It stalls the game 80 ms at 1.5, 3.0 and 4.5 s and
-# 250 ms at 5.5 s, in the jingle, and 250 ms at 9.5 s, in quiet, the
-# long ones longer than the lag the clock catches up after, and ends the
-# run at 11 s. tools/livemusic.py checks that the stream ran short only
-# in the long stalls, that the port kept its lead through the short ones
-# and filled it again after the long ones, and that every loud frame the
-# chip made (-m) reached it, in order.
+# and audio, the logo's jingle (tune 31, XMIDI) on the AWE32, from the
+# fixture soundawe with its ROM, and on the OPL3, from soundout. The
+# preload test/livemusic.c (livemusic.so beside exe) is the music's
+# device: it pulls 1024 frames a period on the port's clock, and logs
+# what the port puts and reads queued and what each pull lacked. It
+# stalls the game 80 ms at 1.5, 3.0 and 4.5 s and 250 ms at 5.5 s, in
+# the jingle, and 250 ms at 9.5 s, in quiet, the long ones longer than
+# the lag the clock catches up after, and ends the run at 11 s.
+# tools/livemusic.py checks that the stream ran short only in the long
+# stalls, that the port kept its lead through the short ones and filled
+# it again after the long ones, and that every loud frame the chip made
+# (-m) reached it, in order.
 #
 # The game's files are $LBATMP/pc's, the fixtures $E2E/fixtures's ($E2E
 # is $LBATMP/e2e by default), and the runs go to $LBATMP/livemusic.
@@ -35,7 +36,7 @@ E2E=${E2E:-$LBATMP/e2e}
 RUN=$LBATMP/livemusic
 STALLS=1.5:80,3.0:80,4.5:80,5.5:250,9.5:250
 # each chip played: its name, the fixture whose lba.cfg chooses it, its rate
-CHIPS=(opl3:soundout:49716)
+CHIPS=(awe:soundawe:44100 opl3:soundout:49716)
 END=11
 
 usage() {

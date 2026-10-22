@@ -5,12 +5,13 @@
 #include "fns.h"
 
 /*
- * The sequencer of the CD's XMIDI driver, AIL/32's xmidi32.asm, in
- * A32SP2FM.DLL (the OPL3's, yamaha.c), assembled with yamaha32.inc's
- * equates for SBPRO2. The driver's procedures keep their names, without
- * the underscores, and mostly their order. Its registers' widths, wraps
- * and signs are kept where they decide a result. The synthesizer the
- * driver includes is a Synth, given to initdriver.
+ * The sequencer of the CD's XMIDI drivers, AIL/32's xmidi32.asm, the
+ * same bytes in A32SP2FM.DLL (the OPL3's, yamaha.c) and A32GFX.DLL (the
+ * AWE32's, awe.c), each assembled with yamaha32.inc's equates for
+ * SBPRO2. The driver's procedures keep their names, without the
+ * underscores, and mostly their order. Its registers' widths, wraps and
+ * signs are kept where they decide a result. The synthesizer the driver
+ * includes is a Synth, given to initdriver.
  *
  * The sequencer reads a sequence's events at 120 intervals a second
  * (servedriver): a byte below 128 waits that many intervals, a note on
@@ -883,7 +884,7 @@ putle(uint8_t *p, uint32_t v, int n)
 
 /*
  * xmidistate: the sequencer's variables into p as the drivers lay them
- * out (A32SP2FM.DLL from 0x12c7b), 0x22b bytes,
+ * out (A32SP2FM.DLL from 0x12c7b, A32GFX.DLL from 0x10358), 0x22b bytes,
  * its pointers as 32 bits, for the oracles, which compare them with the
  * DLL's.
  */

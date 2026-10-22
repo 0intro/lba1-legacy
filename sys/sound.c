@@ -13,9 +13,10 @@
  * none. WaveDriver gives the samples (wave.c) at WaveRate, which
  * W_SB16.DLL kept between 12000 and 22000. A rate the original had to
  * be given is its own 22000 here, and the base it had to be given is
- * nothing. MidiDriver gives the music (midi.c), whatever driver it
- * names the OPL3's, A32SP2FM.DLL, so MIDI_SB.HQR's tunes whatever
- * MidiType says. MixerDriver gives the mixer, as M_SB16.DLL drove it:
+ * nothing. MidiDriver gives the music (midi.c): A32GFX.DLL the AWE32's,
+ * any other driver the OPL3's, A32SP2FM.DLL. MidiType chooses the
+ * tunes, MIDI_SB.HQR's for FM, else MIDI_MI.HQR's, as the game chose
+ * them (sys.c). MixerDriver gives the mixer, as M_SB16.DLL drove it:
  * every volume adjustable, 0 to 255 being 2 dB a step of 8 below the
  * top, read back to its step, the music's read from the samples' (a
  * slip of M_SB16.DLL's), its registers at first the chip's own after a
@@ -59,7 +60,7 @@ gains(void)
 {
 	sdlwavegain(gain(volumes[Vwave]) * gain(volumes[Vmaster]));
 	sdlcdgain(gain(volumes[Vcd]) * gain(volumes[Vmaster]));
-	sdlmidigain(gain(volumes[Vmidi]) * gain(volumes[Vmaster]));
+	midimix(volumes[Vmidi], volumes[Vmaster], gain(volumes[Vmidi]) * gain(volumes[Vmaster]));
 }
 
 void
@@ -78,8 +79,6 @@ soundinit(void)
 			PlayRate = 22000;
 	}
 	Midi_Driver_Enable = driver("MidiDriver", "NoMidi") && midiinit();
-	if (Midi_Driver_Enable)
-		MidiFM = 1;
 	mixer = driver("MixerDriver", "NoMixer");
 	if (mixer)
 		gains();

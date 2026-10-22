@@ -5,7 +5,8 @@
 # code, R read-only data, W variables) cut the object exactly. Then come
 # the functions (T), data (D, sized) and unreachable blocks (U). The
 # data's places are those of JWasm's listing of the source, which lays
-# them out as the CD's driver.
+# them out as the CD's driver, and the sequencer is A32GFX.DLL's at its
+# addresses plus 0x2923.
 0x10000 R index 0x163
 0x10163 W ddt 0x56
 0x101b9 R tables 0x532

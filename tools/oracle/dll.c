@@ -17,7 +17,7 @@
  * 32-bit process (dllmap). An AIL/32 driver's procedures are found in
  * its index, as AIL/32 found them (dllload), and called through
  * dllcall, which keeps EBX, ESI, EDI and EBP whatever the callee does
- * with them. Its port I/O and its CLI
+ * with them, for the C convention or Pascal's. Its port I/O and its CLI
  * and STI fault here: a SIGSEGV handler decodes each (IN and OUT of a
  * byte, a word or a doubleword, at DX or at an immediate port) and does
  * it through the functions the oracle gives, and anything else is
@@ -183,8 +183,9 @@ dllproc(int n)
 }
 
 /*
- * dllcall(fn, n, args): fn called with the n arguments, pushed from the
- * last, its address in EAX as AIL's call_driver jumped to it, its result EAX. The stack and the registers
+ * dllcall(fn, pascal, n, args): fn called with the n arguments, pushed
+ * from the last (C) or the first (Pascal), its address in EAX as AIL's
+ * call_driver jumped to it, its result EAX. The stack and the registers
  * C keeps are put back whatever fn did.
  */
 __asm__(
@@ -197,12 +198,20 @@ __asm__(
 	"	pushl %ebx\n"
 	"	pushl %esi\n"
 	"	pushl %edi\n"
-	"	movl 12(%ebp), %ecx\n"
-	"	movl 16(%ebp), %edx\n"
+	"	movl 16(%ebp), %ecx\n"
+	"	movl 20(%ebp), %edx\n"
+	"	cmpl $0, 12(%ebp)\n"
+	"	jne 2f\n"
 	"1:	decl %ecx\n"
 	"	js 3f\n"
 	"	pushl (%edx,%ecx,4)\n"
 	"	jmp 1b\n"
+	"2:	xorl %eax, %eax\n"
+	"4:	cmpl %ecx, %eax\n"
+	"	jge 3f\n"
+	"	pushl (%edx,%eax,4)\n"
+	"	incl %eax\n"
+	"	jmp 4b\n"
 	"3:	movl 8(%ebp), %eax\n"
 	"	call *%eax\n"
 	"	leal -12(%ebp), %esp\n"

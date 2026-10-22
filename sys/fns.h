@@ -140,6 +140,30 @@ void	xmidiseqstate(int32_t, uint8_t*);
 /* yamaha.c */
 void	yamahastate(uint8_t*);
 
+/* awe.c: A32GFX.DLL's dead functions */
+void	aweoutpw(uint32_t, uint32_t);
+uint32_t	aweinpw(uint32_t);
+uint32_t	awe32detect(uint32_t);
+void	aweseteq(void);
+void	aweinitfm(void);
+void	awereleaseall(void);
+uint32_t	awenoteoff(uint32_t, uint32_t);
+uint32_t	aweclamp16(uint32_t, uint32_t, uint32_t);
+uint32_t	aweclamp127(uint32_t);
+uint32_t	awesearch(uint32_t);
+
+/* emu8k.c */
+void	emu8kreset(uint16_t*, void (*)(int32_t*, int));
+void	emu8kout(uint32_t, uint32_t);
+uint32_t	emu8kin(uint32_t);
+void	emu8krun(uint64_t);
+uint64_t	emu8kmade(void);
+
+/* emu8kfx.c */
+void	emu8kfxreset(void);
+void	emu8kfxinit(uint16_t (*)[32], uint32_t);
+void	emu8kfx(int32_t, int32_t, int32_t*, int32_t*);
+
 /* oplio.c */
 void	oplioreset(uint32_t);
 void	oplportout(uint32_t, uint32_t);
@@ -149,7 +173,10 @@ uint32_t	oplportin(uint32_t);
 void	oplwrite(uint32_t, uint32_t);
 void	oplout(uint32_t, uint32_t);
 uint32_t	oplin(uint32_t);
+void	aweout(uint32_t, uint32_t);
+uint32_t	awein(uint32_t);
 int	midiinit(void);
+void	midimix(int32_t, int32_t, float);
 void	ClearMidi(void);
 void	miditick(uint64_t);
 

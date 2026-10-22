@@ -541,13 +541,14 @@ sdlcdgain(float g)
 }
 
 /*
- * The music's chip, at its rate (the OPL3's 49716 Hz), to a stream of
- * its own. Its frames come only as the clock passes them, so that its
- * lead (leadof) is silence put at the start. A chunk all within Quiet
- * of 0 is silence (Nuked OPL3 gives a dozen below). After a tenth of a
- * second of it the lead is held in place of the chunk, so that a rest
- * within a tune keeps its time. A chunk is dropped when more than half
- * a second waits, the clock having run ahead (a replay).
+ * The music's chip, at its rate (the OPL3's 49716 Hz, the EMU8000's
+ * 44100), to a stream of its own. Its frames come only as the clock
+ * passes them, so that its lead (leadof) is silence put at the start. A
+ * chunk all within Quiet of 0 is silence (the EMU8000 gives 0 there,
+ * Nuked OPL3 a dozen below). After a tenth of a second of it the lead
+ * is held in place of the chunk, so that a rest within a tune keeps its
+ * time. A chunk is dropped when more than half a second waits, the
+ * clock having run ahead (a replay).
  */
 static SDL_AudioStream *midistream;
 static int nomidi;

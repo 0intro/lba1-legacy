@@ -15,16 +15,17 @@
 #include "suite.h"
 
 /*
- * The scenarios of the driver oracle (fmoracle.c). A scenario runs
- * twice, in two processes forked from the oracle, once on the DLL
- * (indll) and once on its decompilation, each streaming what it does:
- * the I/O the oracle sees (emitio) and, at the end of each step (a
- * procedure called, an interval served), its result and the CRC of the
- * driver's writable data (the oracle's statecrc). The oracle compares the two streams item
+ * The scenarios of the driver oracles (aweoracle.c, fmoracle.c). A
+ * scenario runs twice, in two processes forked from the oracle, once on
+ * the DLL (indll) and once on its decompilation, each streaming what it
+ * does: the I/O the oracle sees (emitio) and, at the end of each step
+ * (a procedure called, an interval served), its result, the CRC of the
+ * driver's writable data (the oracle's statecrc) and the chip's samples
+ * made since, with their CRC. The oracle compares the two streams item
  * by item and reports the first that differs. A run whose step takes
  * more than 30 seconds (a decompilation, or a mutant of it, that loops)
- * is ended. Blocks of the DLL can each carry an INT3, their runs
- * counted in memory both processes share.
+ * is ended. Blocks of the DLL can each carry an INT3, their runs counted
+ * in memory both processes share.
  *
  * The XMIDI sequences the sequencer's scenario plays are made here: a
  * file of every event the sequencer reads, XMIDI's controllers among
@@ -62,6 +63,8 @@ struct Item
 struct Stepitem
 {
 	Item	h;
+	uint32_t	made;
+	uint32_t	rcrc;
 	char	label[40];
 };
 
@@ -74,6 +77,8 @@ struct Buf
 
 int indll;
 Synth *synthc;
+uint64_t made;
+uint32_t rcrc;
 uint32_t seed;
 
 static uint32_t crctab[256];
@@ -154,6 +159,9 @@ step(char *fmt, ...)
 	s.h.a = nstep++;
 	alarm(Watchdog);
 	s.h.c = statecrc();
+	s.made = made;
+	s.rcrc = rcrc;
+	rcrc = 0;
 	emit(&s, sizeof s);
 }
 
@@ -198,8 +206,8 @@ show(char *who, Stepitem *s)
 	if (s->h.kind == Iio)
 		printf("\t%s: %08x %08x %08x\n", who, s->h.a, s->h.b, s->h.c);
 	else if (s->h.kind == Istep)
-		printf("\t%s: step %u \"%s\": result %08x, data %08x\n", who,
-			s->h.a, s->label, s->h.b, s->h.c);
+		printf("\t%s: step %u \"%s\": result %08x, data %08x, %u samples made, %08x\n", who,
+			s->h.a, s->label, s->h.b, s->h.c, s->made, s->rcrc);
 	else
 		printf("\t%s: the end\n", who);
 }
@@ -317,7 +325,7 @@ api(int n, int na, ...)
 	if (indll) {
 		x[0] = 0;
 		memcpy(x + 1, a, na * sizeof a[0]);
-		return dllcall(dllproc(n), na + 1, x);
+		return dllcall(dllproc(n), 0, na + 1, x);
 	}
 	switch (n) {
 	case 100: return (uint32_t)(uintptr_t)synthc->desc;

@@ -35,7 +35,8 @@
  *		of five volumes, the option menu's (a bar moved by 4 from 0
  *		to 255 for one of them, each other at 0 or 128) and any
  *		at random, -1 for one left as it is, each followed by
- *		MixerGetInfo and MixerGetVolume: the same answers
+ *		MixerGetInfo and MixerGetVolume: the same answers, and the
+ *		MIDI register's step the one the port gives its music
  *
  * The driver's calls must keep the registers C keeps. What the port
  * does otherwise on purpose is let pass: the right channels, which the
@@ -79,13 +80,13 @@ static int mixreg;	/* the register 224h chose */
 
 static uint8_t *dll;	/* M_SB16.DLL's bytes */
 static long ndll;
+static int32_t pmidi = -1;	/* the MIDI volume the port gave its music */
 
 /* def_file.c's, midi.c's, sys.c's, wave.c's and sdl.c's, for sys/sound.c */
 char	PathConfigFile[1];
 int32_t	PlayRate = 22000;
 int32_t	Wave_Driver_Enable;
 int16_t	Midi_Driver_Enable;
-char	MidiFM;
 
 /* The configuration: M_SB16.DLL for the mixer, NoWave and NoMidi. */
 unsigned char*
@@ -114,10 +115,13 @@ midiinit(void)
 	return 0;
 }
 
+/* The music's volumes, from the MIDI register and the master. */
 void
-sdlmidigain(float g)
+midimix(int32_t midi, int32_t master, float g)
 {
+	USED(master);
 	USED(g);
+	pmidi = midi;
 }
 
 void
@@ -232,6 +236,9 @@ same(void)
 		fail("MixerGetVolume: the assembly's %d %d %d %d %d, ours %d %d %d %d %d",
 			a[0], a[1], a[2], a[3], a[4], p[0], p[1], p[2], p[3], p[4]);
 		return;
+	}
+	if ((reg[0x34] & 0xf8) != (pmidi & 0xf8)) {
+		fail("the MIDI register %02x, the port's music given %02x", reg[0x34], pmidi & 0xff);
 	}
 }
 

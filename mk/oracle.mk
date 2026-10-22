@@ -2,8 +2,9 @@
 # address, what they run mapped below them: oracle, LBA.EXE's own
 # functions against ours (oracle.c), fmoracle, the CD's XMIDI driver
 # for the OPL3 against sys/xmidi.c and sys/yamaha.c (fmoracle.c),
-# waveoracle, its samples' driver for the Sound Blaster 16 against
-# sys/wave.c, and the other cards' on checks of their own
+# aweoracle, its driver for the AWE32 against sys/xmidi.c and sys/awe.c
+# (aweoracle.c), waveoracle, its samples' driver for the Sound Blaster
+# 16 against sys/wave.c, and the other cards' on checks of their own
 # (waveoracle.c), the drivers' C built as the port builds it, cdoracle,
 # a DOS build's cdrom.asm on a model of MSCDEX against sys/cd.c on the
 # same discs (cdoracle.c), keyoracle, its keyboard.asm's interrupt
@@ -45,6 +46,18 @@ FMSRC=\
 	sys/xmidi.c\
 	sys/yamaha.c\
 	sys/oplio.c\
+	lib386/lib_sys/expand.c\
+
+AWESRC=\
+	tools/oracle/aweoracle.c\
+	tools/oracle/dll.c\
+	tools/oracle/suite.c\
+	sys/xmidi.c\
+	sys/awe.c\
+	sys/awedata.c\
+	sys/emu8k.c\
+	sys/emu8kfx.c\
+	sys/emu8ktab.c\
 	lib386/lib_sys/expand.c\
 
 WAVESRC=\
@@ -172,7 +185,7 @@ ASMSRC=\
 ORACLEHDR=$(wildcard sources/*.h sources/*.def sys/*.h sys/nuked/*.h lib386/*/*.h tools/oracle/*.h)
 
 # oracles builds the oracles.
-oracles: $(ORACLE)/oracle $(ORACLE)/fmoracle $(ORACLE)/waveoracle\
+oracles: $(ORACLE)/oracle $(ORACLE)/fmoracle $(ORACLE)/aweoracle $(ORACLE)/waveoracle\
 	$(ORACLE)/cdoracle $(ORACLE)/keyoracle $(ORACLE)/timeoracle $(ORACLE)/vgaoracle\
 	$(ORACLE)/fileoracle $(ORACLE)/mixoracle $(ORACLE)/memoracle $(ORACLE)/ailoracle\
 	$(ORACLE)/asmoracle
@@ -187,6 +200,10 @@ $(ORACLE)/oracle: $(ORACLESRC) $(ORACLEHDR)
 $(ORACLE)/fmoracle: $(FMSRC) $(ORACLEHDR)
 	mkdir -p $(ORACLE)
 	$(ORACLECC) $(ORACLECFLAGS) $(ORACLEPORTFLAGS) $(ORACLELDFLAGS) -o $@ $(FMSRC)
+
+$(ORACLE)/aweoracle: $(AWESRC) $(ORACLEHDR)
+	mkdir -p $(ORACLE)
+	$(ORACLECC) $(ORACLECFLAGS) $(ORACLEPORTFLAGS) $(ORACLELDFLAGS) -o $@ $(AWESRC)
 
 $(ORACLE)/waveoracle: $(WAVESRC) $(ORACLEHDR)
 	mkdir -p $(ORACLE)
@@ -251,9 +268,22 @@ $(ORACLE)/asmoracle-asan: $(ASANOBJ)
 
 # oraclecheck runs the oracles on the game's files in LBATMP: LBA.EXE's
 # image and the CD's drivers as tools/extract writes them.
-oraclecheck: $(ORACLE)/oracle $(ORACLE)/fmoracle $(ORACLE)/waveoracle
+oraclecheck: $(ORACLE)/oracle $(ORACLE)/fmoracle $(ORACLE)/aweoracle $(ORACLE)/waveoracle
 	$(ORACLE)/oracle $(LBATMP)/elf/lba.elf re/lba.exe.sym
 	$(ORACLE)/fmoracle $(LBATMP)/elf/dll/a32sp2fm.elf $(LBATMP)/pc/LBA/MIDI_SB.HQR $(LBATMP)/pc/LBA/SAMPLE.OPL
+	$(ORACLE)/aweoracle $(LBATMP)/elf/dll/a32gfx.elf $(LBATMP)/pc/LBA/MIDI_MI.HQR $(LBATMP)/pc/LBA/MIDI_SB.HQR -
 	$(ORACLE)/waveoracle -g $(LBATMP)/pc/LBA $(LBATMP)/elf/dll/w_sb16.elf re/w_sb16.dll.sym
+
+# emu8kdiff: our EMU8000 against 86Box's, built from its sources in
+# $(LBATMP)/downloads/86box (commit 9ce8877f) with
+# tools/emu8kdiff/inc/86box's stand-ins for the headers it includes.
+EMU8KSRC=$(LBATMP)/downloads/86box
+
+$(ORACLE)/emu8kdiff/inc/86box/snd_emu8k.h: $(EMU8KSRC)/snd_emu8k.h $(wildcard tools/emu8kdiff/inc/86box/*.h)
+	mkdir -p $(@D)
+	cp tools/emu8kdiff/inc/86box/*.h $(EMU8KSRC)/snd_emu8k.h $(@D)/
+
+$(ORACLE)/emu8kdiff/emu8kdiff: tools/emu8kdiff/emu8kdiff.c $(EMU8KSRC)/snd_emu8k.c $(ORACLE)/emu8kdiff/inc/86box/snd_emu8k.h
+	$(ORACLECC) -std=gnu11 -O2 -g -w -I$(ORACLE)/emu8kdiff/inc -o $@ tools/emu8kdiff/emu8kdiff.c $(EMU8KSRC)/snd_emu8k.c -lm
 
 -include $(ASMOBJ:.o=.d) $(ASANOBJ:.o=.d)

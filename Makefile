@@ -80,7 +80,7 @@ DATE=1994-10-14T10:43:15Z
 unexport OS ARCH CC FIXES SANITIZE
 
 .DELETE_ON_ERROR:
-.PHONY: usage fetch all dist test check oracles asan oraclecheck lint defs clean
+.PHONY: usage fetch all dist test check oracles asan oraclecheck lint defs tables clean
 
 # usage lists the goals.
 usage::
@@ -106,6 +106,7 @@ usage::
 	@echo "  oraclecheck  run the oracles on the game's files"
 	@echo "  lint         check the tree's rules a program can"
 	@echo "  defs         make the game's .def files again (tools/defs)"
+	@echo "  tables       make the EMU8000's tables again (tools/emu8ktab.py)"
 	@echo '  clean        remove build/ and dist/'
 
 # The port's lists of objects, in their link order. GAME and LIBS are
@@ -176,8 +177,13 @@ NEW=\
 	sources/textfix.o\
 
 PORT=\
+	sys/awe.o\
+	sys/awedata.o\
 	sys/cd.o\
 	sys/compat.o\
+	sys/emu8k.o\
+	sys/emu8kfx.o\
+	sys/emu8ktab.o\
 	sys/files.o\
 	sys/keyb.o\
 	sys/mem.o\
@@ -204,6 +210,13 @@ ARRAYS=\
 	sys/lbacfg.o\
 
 # The unit tests' objects, each list the test's own first.
+
+# emu8ktest: the EMU8000 against its documents (test/emu8ktest.c).
+EMU8KTEST=\
+	test/emu8ktest.o\
+	sys/emu8k.o\
+	sys/emu8kfx.o\
+	sys/emu8ktab.o\
 
 # cfgtest: lba.cfg's reading and writing, through the port's files.
 CFGTEST=\
@@ -266,7 +279,7 @@ lint:
 	shellcheck -S warning $$(git grep -l --untracked '^#!/usr/bin/env bash')
 	python3 -I tools/lint.py\
 		-c $(NEW:.o=.c) $(PORT:.o=.c) $(wildcard sys/*.h dos/*.h test/*.c)\
-			$(wildcard tools/oracle/*.c tools/oracle/*.h)\
+			$(wildcard tools/oracle/*.c tools/oracle/*.h tools/emu8kdiff/*.c)\
 		-p $$(git ls-files -co --exclude-standard '*.py')\
 		-- $$(git ls-files -co --exclude-standard)
 	if [ -d ../lba2 ]; then python3 -I tools/twins.py ../lba2; fi
@@ -275,6 +288,13 @@ lint:
 # it defines (tools/defs, tools/mkdefs.py), into build/defs first.
 defs:
 	tools/defs -o build/defs $(DEFS)
+
+# tables makes sys/emu8ktab.c again with tools/emu8ktab.py and, where it
+# changed, puts the new one in its place and stops make with an error.
+tables:
+	mkdir -p build && python3 -I tools/emu8ktab.py >build/emu8ktab.c
+	cmp -s build/emu8ktab.c sys/emu8ktab.c ||\
+		{ cp build/emu8ktab.c sys/emu8ktab.c && echo sys/emu8ktab.c changed && exit 1; }
 
 # clean removes what make built.
 clean:

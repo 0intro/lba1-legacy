@@ -1,0 +1,6 @@
+# The start on the AWE32 (fixtures/soundawe): the driver's
+# initialisation, the logo's jingle (tune 31, XMIDI) on the EMU8000, and
+# the main menu, whose tune is the CD's.
+
+sleep 40
+shot menu
