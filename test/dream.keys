@@ -1,0 +1,33 @@
+# A new game with the music on and the PlayStation's tracks on the CD
+# (fixtures/dream: the lba.cfg of soundout, MidiDriver A32SP2FM.DLL,
+# with MusicJingles: PlayStation, and the CD psmusic): the name, the
+# introduction's text for a while, then cut, the movie with tune 1's
+# recording for a while, then cut, and the cell, its tune 18 as J08MID,
+# walked about.
+
+sleep 40
+shot menu
+key Return
+sleep 4
+key a b c
+sleep 1
+key Return
+sleep 20
+shot text
+key Escape
+sleep 15
+shot movie
+key Escape
+sleep 10
+shot scene
+down Up
+sleep 2
+up Up
+down Left
+sleep 1
+up Left
+down Up
+sleep 2
+up Up
+sleep 3
+shot walked

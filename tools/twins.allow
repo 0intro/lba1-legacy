@@ -3,8 +3,12 @@
 sys/cd.c * apart	game: LBA1's cdrom.asm's CD in C, LBA2's MSS redbook from track files
 sys/cd.c * lba1	game: LBA1's cdrom.asm's CD in C, LBA2's MSS redbook from track files
 sys/cd.c * lba2	game: LBA1's cdrom.asm's CD in C, LBA2's MSS redbook from track files
-sys/cdimage.c imagesound lba1	game: an image's audio tracks, read as sounds named TRACKnn.WAV for LBA1's cd.c
-sys/cdimage.c struct Image apart	game: LBA2's audio tracks decoded from the MP3 or OGG files a cue sheet names
+sys/cdimage.c imagesound lba1	game: the PlayStation's tunes in its audio tracks
+sys/cdimage.c inaudio lba1	game: the PlayStation's tunes in its audio tracks
+sys/cdimage.c settle apart	game: the PlayStation's image, whose root names its tunes TRACKn.WAV and whose tracks LBA1's cd.c plays at their places
+sys/cdimage.c struct Image apart	game: the PlayStation's image, whose root names its tunes TRACKn.WAV and whose tracks LBA1's cd.c plays at their places
+sys/cdimage.c struct Itrack apart	game: the PlayStation's image, whose root names its tunes TRACKn.WAV and whose tracks LBA1's cd.c plays at their places
+sys/cdimage.c trackat lba1	game: the PlayStation's tunes in its audio tracks
 sys/compat.c #else lba1	game: the C library calls each game makes
 sys/compat.c #endif lba1	game: the C library calls each game makes
 sys/compat.c #ifdef _WIN32 lba1	game: the C library calls each game makes
@@ -223,11 +227,12 @@ sys/replay.c duevk lba1	game: the keys outside XT, which LBA1's Classic input re
 sys/replay.c keyboard lba1	game: the keys outside XT, which LBA1's Classic input reads
 sys/replay.c keyin apart	game: LBA1's Classic input, its keys outside XT in v lines and a k line's virtual key, and its GamePad's gate on the pad's lines
 sys/replay.c music lba1	game: LBA1's music chip's frames, written raw by -m
-sys/replay.c musicto lba1	game: LBA1's music chip
+sys/replay.c musicto lba1	game: LBA1's PlayStation tracks and music chip
 sys/replay.c next apart	game: LBA1's Classic input, its keys outside XT in v lines and a k line's virtual key, and its GamePad's gate on the pad's lines
 sys/replay.c replay apart	game: LBA1's Classic input, its keys outside XT in v lines and a k line's virtual key, and its GamePad's gate on the pad's lines
 sys/replay.c summed apart	game: mode 13h's screens in LBA1, 320x200 and the mode summed
-sys/replay.c summedmidi lba1	game: LBA1's music chip
+sys/replay.c summedmidi lba1	game: LBA1's PlayStation tracks and music chip
+sys/replay.c summedpstrack lba1	game: the PlayStation's tracks
 sys/replay.c vkin lba1	game: the keys outside XT, which LBA1's Classic input reads
 sys/replay.c writebmp apart	game: mode 13h's screens in LBA1, 320x200 and the mode summed
 sys/sdl.c actionkey lba1	game: LbaWinSettings' 4, W on AZERTY
@@ -245,19 +250,23 @@ sys/sdl.c midistream lba1	game: the music's chip, the OPL3 or the EMU8000
 sys/sdl.c nomidi lba1	game: the music's chip, the OPL3 or the EMU8000
 sys/sdl.c prefapp apart	game: the preferences' names
 sys/sdl.c prefapp#2 apart	game: the preferences' names
+sys/sdl.c psstart lba1	game: the PlayStation's tracks
+sys/sdl.c psstream lba1	game: the PlayStation's tracks
 sys/sdl.c quiet lba1	game: the music's chip, the OPL3 or the EMU8000
-sys/sdl.c sdlcdgain apart	game: LBA1's stream of the music chip, and its samples' volume as the wave stream's gain, LBA2's MSS mixing its own
+sys/sdl.c sdlcdgain apart	game: LBA1's streams of the PlayStation's tracks and the music chip, and its samples' volume as the wave stream's gain, LBA2's MSS mixing its own
 sys/sdl.c sdlclose apart	game: LBA1's ClearAdelineSystem, the 1994 code's end, closes SDL first, LBA2's 1997 code ends through exit alone
 sys/sdl.c sdlinit apart	game: each program's name
 sys/sdl.c sdlkeytovk lba1	game: LBA1's Classic input, which reads virtual keys
-sys/sdl.c sdllate apart	game: LBA1's stream of the music chip, and its samples' volume as the wave stream's gain, LBA2's MSS mixing its own
+sys/sdl.c sdllate apart	game: LBA1's streams of the PlayStation's tracks and the music chip, and its samples' volume as the wave stream's gain, LBA2's MSS mixing its own
 sys/sdl.c sdlmidi lba1	game: the music's chip, the OPL3 or the EMU8000
 sys/sdl.c sdlmidigain lba1	game: the music's chip, the OPL3 or the EMU8000
 sys/sdl.c sdlpoll apart	game: LBA2's mouse, which the 1997 code reads in its editor, and LBA1's keys' virtual codes for the Classic's input
+sys/sdl.c sdlpstrack lba1	game: the PlayStation's tracks
+sys/sdl.c sdlpstrackstop lba1	game: the PlayStation's tracks
 sys/sdl.c sdlscreen apart	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, its texture's border column and row for the filter at either mode's edge, LBA2's one mode, its texture made again at each width
 sys/sdl.c sdlshow apart	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, its texture's border column and row for the filter at either mode's edge, LBA2's one mode, its texture made again at each width
 sys/sdl.c sdlsize apart	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, its texture's border column and row for the filter at either mode's edge, LBA2's one mode, its texture made again at each width
-sys/sdl.c sdlwave apart	game: LBA1's stream of the music chip, and its samples' volume as the wave stream's gain, LBA2's MSS mixing its own
+sys/sdl.c sdlwave apart	game: LBA1's streams of the PlayStation's tracks and the music chip, and its samples' volume as the wave stream's gain, LBA2's MSS mixing its own
 sys/sdl.c sdlwavegain lba1	game: LBA1's mixer chip's gains
 sys/sdl.c usage apart	game: each program's start, LBA1's in InitAdelineSystem, LBA2's display, wide screen and clock in main before the 1997 game's parameters, and LBA1's music written raw by -m, beside the sound by -w in both
 sys/sdl.c wavegain lba1	game: LBA1's mixer chip's gains
@@ -455,12 +464,15 @@ test/cdimagetest.c gamedir apart	game: each game's CD, its files, its volume and
 test/cdimagetest.c made apart	game: each game's CD, its files, its volume and its date
 test/cdimagetest.c makebin apart	game: a data track's subheader of MODE2/2352, the PlayStation's in LBA1, the EU CD's in LBA2
 test/cdimagetest.c makeiso apart	game: each game's CD, its files, its volume and its date
+test/cdimagetest.c named lba1	game: LBA1's PlayStation's tunes, named in its root and read as sounds, against LBA2's tracks as the port's WAV files
 test/cdimagetest.c own apart	game: each game's CD, its files, its volume and its date
 test/cdimagetest.c port apart	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
 test/cdimagetest.c readall apart	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
-test/cdimagetest.c sound lba1	game: LBA1's audio tracks read as sounds, against LBA2's tracks as the port's WAV files
+test/cdimagetest.c rootlisted lba1	game: LBA1's PlayStation's tunes, named in its root and read as sounds, against LBA2's tracks as the port's WAV files
+test/cdimagetest.c sound lba1	game: LBA1's PlayStation's tunes, named in its root and read as sounds, against LBA2's tracks as the port's WAV files
+test/cdimagetest.c sounds lba1	game: LBA1's PlayStation's tunes, named in its root and read as sounds, against LBA2's tracks as the port's WAV files
 test/cdimagetest.c track lba2	game: LBA2's port gives the CD's tracks as WAV files, decoded where the sheet names MP3 or OGG files
-test/cdimagetest.c tracks apart	game: LBA1's audio tracks read as sounds, against LBA2's tracks as the port's WAV files
+test/cdimagetest.c tracks apart	game: LBA1's PlayStation's tunes, named in its root and read as sounds, against LBA2's tracks as the port's WAV files
 test/cdimagetest.c walkdir apart	game: LBA1's trees hold the directories the 1994 game reads, LBA2's the whole CD
 test/cdimagetest.c walked apart	game: LBA1's CD_LBA, a name without extension whose last dot a copied tree keeps, and GOG's tree of the CD's files by their base names
 test/cdimagetest.c windows lba1	game: LBA1's CD_LBA, a name without extension whose last dot a copied tree keeps, and GOG's tree of the CD's files by their base names

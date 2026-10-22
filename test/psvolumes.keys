@@ -1,0 +1,30 @@
+# The PlayStation's track without a MIDI driver (fixtures/psvolumes: the
+# lba.cfg of sound, MidiDriver NoMidi, with MusicJingles: PlayStation,
+# and the outside save, on the CD psmusic). The save loads and its
+# scene's tune 19 plays as J09MID. F6 opens the option menu, whose CD
+# tune fades the recording, and Volume settings plays tune 9 from the
+# CD, which stops it as it stops the XMIDI. Return to previous menu,
+# then Return to game, one entry up as the menu keeps its choice, and
+# the scene's tune plays again.
+hold 0.05
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 10
+shot playing
+hold 0.05
+key F6
+sleep 3
+shot options
+key Down Return
+sleep 4
+shot volumes
+key Return
+sleep 3
+shot options2
+key Up Return
+sleep 5
+shot back

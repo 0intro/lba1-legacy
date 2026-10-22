@@ -1341,6 +1341,15 @@ void	DoLife( WORD numobj )
 
 			case LM_PLAY_CD_TRACK:
 #ifdef	CDROM
+#ifndef	DOS
+				/*
+				 * FEATURE: with MusicTracks: Midi, the script's
+				 * track is passed by, as in the disk version. Taken
+				 * from the disk version.
+				 */
+				if( MusicTracks == TRACKS_MIDI )	PtrPrg++ ;
+				else
+#endif
 				PlayCdTrack( *PtrPrg++ ) ;
 #else
 				PtrPrg++ ;

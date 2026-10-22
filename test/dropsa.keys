@@ -1,0 +1,16 @@
+# A load landing in a zone that changes scene, the XMIDI playing,
+# SaveAnywhere: ON (fixtures/dropsa: the sweep's save of scene 96, its
+# tune 9, with Twinsen put in its zone 0 to scene 15, whose tune is 10:
+# SceneStartX, Y, Z at bytes 270-275, 31744 256 10240, and soundout's
+# lba.cfg with MusicTracks: Midi and SaveAnywhere: ON). LBA2's main
+# menu plays tune 9 from the XMIDI and loads the save from its list.
+# The load's first frame leaves scene 96 before it is drawn, scene 15's
+# change fades tune 9, and tune 10 starts once scene 15's first frame
+# is saved.
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 15
+shot scene

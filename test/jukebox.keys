@@ -1,0 +1,22 @@
+# The café's jukebox on the PlayStation's tracks (fixtures/jukebox: the
+# sweep's save of scene 76 with Twinsen in the zone that leads to the
+# café, scene 80, the game's flag 90 set, and the lba.cfg of soundout
+# with MusicJingles: PlayStation, on the CD psmusic). Scene 76 plays its
+# tune 13 as J03MID, which plays on into the café, whose tune is the
+# same, until the jukebox's script turns the music off and plays the
+# CD's track 9. F6 then opens the option menu, and Return to game plays
+# track 9 again.
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 15
+shot cafe
+hold 0.05
+key F6
+sleep 3
+shot options
+key Return
+sleep 5
+shot back

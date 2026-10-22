@@ -211,10 +211,11 @@ LIVEMUSIC_linux=test/livemusic -x $(O)/lba
 
 # check runs lint and test, then the tests on the game's files in
 # LBATMP: the oracles, cfgtest on the CD's LBA.CFG, cdimagetest on the
-# CDs' images, the proofs of the tables the C holds (the cells and the
-# texts of the data's fixes, sources/gridfix.c and sources/textfix.c,
-# and the places the scripts rewrite, sources/patch.c) and the records
-# (test/e2e check).
+# CDs' images, the proofs of the tables the C holds (the PlayStation's
+# tracks of the tunes, sources/psmusic.c, the cells and the texts of
+# the data's fixes, sources/gridfix.c and sources/textfix.c, and the
+# places the scripts rewrite, sources/patch.c) and the records (test/e2e
+# check).
 check: lint test oraclecheck $(CHECKDEPS_$(OS))
 	rm -rf $(O)/run/cfg && mkdir -p $(O)/run/cfg
 	$(RUN) $(O)/cfgtest$(EXE) $(call HOSTPATH,$(O)/run/cfg) $(call HOSTPATH,$(LBATMP)/pc/LBA)
@@ -223,7 +224,9 @@ check: lint test oraclecheck $(CHECKDEPS_$(OS))
 		$(call HOSTPATH,$(LBAISO)/little_big_adventure_1.iso) $(call HOSTPATH,$(LBATMP)/pc) $(call HOSTPATH,$(LBATMP)/pc)\
 		$(call HOSTPATH,$(LBATMP)/iso/adeline/ADELINE.CUE) $(call HOSTPATH,$(LBATMP)/pc) $(call HOSTPATH,$(LBATMP)/music/eu)\
 		$(call HOSTPATH,$(LBATMP)/gog/lba1/Speedrun/Windows/LBA.DAT) $(call HOSTPATH,$(LBATMP)/gog/cd)\
-		$(call HOSTPATH,$(LBATMP)/gog/cdtracks)
+		$(call HOSTPATH,$(LBATMP)/gog/cdtracks)\
+		$(call HOSTPATH,$(LBATMP)/iso/ps/ps.cue) $(call HOSTPATH,$(LBATMP)/ps) $(call HOSTPATH,$(LBATMP)/psmusic)
+	python3 -I tools/psmusic.py -c sources/psmusic.c
 	python3 -I tools/grids.py -c sources/gridfix.c $(LBATMP)/pc/LBA/LBA_GRI.HQR\
 		$(LBATMP)/gog/cd/LBA_GRI.HQR $(LBATMP)/gog/lba1/Speedrun/Windows/LBA_GRI.HQR
 	python3 -I tools/patches.py -g $(LBATMP)/pc/LBA -p $(LBATMP)/ps -c sources/patch.c

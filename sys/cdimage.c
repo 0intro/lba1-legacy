@@ -35,7 +35,14 @@
  * tools/cdtracks.py cuts it: the next track's PREGAP among it as
  * silence, before that track's INDEX 00, else its INDEX 01. A track that
  * ends its file runs on through the next file's frames before the next
- * track's INDEX 01, as the disc plays them (imagetrackread). Every
+ * track's INDEX 01, as the disc plays them (imagetrackread). A file of
+ * the directory whose extent lies in an audio track, as the
+ * PlayStation's disc places its jingles, is read as that track's
+ * frames, a frame for each 2048 bytes of its size (imagesound), as
+ * tools/isocat.py copies it. A disc whose root names its tunes,
+ * TRACK1.WAV at an audio track's INDEX 01 as on the PlayStation's,
+ * gives TRACKnn.WAV as the track its TRACKn.WAV for tune nn-1 starts,
+ * the PC CD's track for that tune. Every
  * number read is checked against the bytes that hold it: a malformed cue
  * sheet or volume is refused, and a malformed directory record fails the
  * lookup that reads it.
@@ -110,6 +117,7 @@ struct Itrack
 	int	idx0file;	/* its INDEX 00's file's index */
 	uint32_t	idx0;	/* its INDEX 00, in that file's sectors, else UINT32_MAX */
 	uint32_t	gap;	/* its PREGAP's sectors of silence */
+	uint32_t	lba;	/* its INDEX 01 among the volume's sectors, UINT32_MAX before the data track */
 };
 
 struct Image
@@ -130,6 +138,7 @@ struct Image
 	uint32_t	rootsize;	/* its bytes */
 	char	label[33];	/* the volume's identifier */
 	int	swap;	/* the BINARY files' samples big-endian */
+	int	named;	/* its root names its tunes TRACKn.WAV, the PlayStation's */
 };
 
 /* the sync that starts each data sector of a raw image */
@@ -726,26 +735,83 @@ imageaudio(Image *m, int32_t num)
 	return i < 0 ? 0 : frames(m, i);
 }
 
+/* The index of the audio track whose INDEX 01 is the volume's sector s, or -1. */
+static int
+trackat(Image *m, uint32_t s)
+{
+	int i;
+
+	for (i = 0; i < m->nt; i++)
+		if (m->t[i].audio && m->t[i].lba == s)
+			return i;
+	return -1;
+}
+
+/*
+ * The audio track whose frames hold the extent at s of size bytes, a
+ * frame for each sector: its index, the extent's first frame of it into
+ * *first and its frames into *n, or -1.
+ */
+static int
+inaudio(Image *m, uint32_t s, uint32_t size, uint32_t *first, uint32_t *n)
+{
+	uint32_t k, f;
+	Itrack *t;
+	int i;
+
+	k = (size + (uint64_t)Sector-1) / Sector;
+	if (k == 0)
+		return -1;
+	for (i = 0; i < m->nt; i++) {
+		t = &m->t[i];
+		if (!t->audio || t->lba == UINT32_MAX || s < t->lba)
+			continue;
+		f = frames(m, i);
+		if (s - t->lba < f && k <= f - (s - t->lba)) {
+			*first = s - t->lba;
+			*n = k;
+			return i;
+		}
+	}
+	return -1;
+}
+
 /*
  * imagesound: the sound rel names in the image, as a player reads it,
  * its audio track's number into *num, the track's frame it starts at
  * into *first and its frames into *n: 0, or -1 for none. TRACKnn.WAV at
- * the root is the track nn, whole.
+ * the root is the track nn, whole, or on a disc that names its tunes the
+ * track TRACKn.WAV starts, n one less, whole, and any other file of the
+ * directory whose extent lies in an audio track that extent.
  */
 int
 imagesound(Image *m, char *rel, int32_t *num, uint32_t *first, uint32_t *n)
 {
-	uint32_t k;
+	char name[16];
+	uint32_t s, size, k, f;
 	int32_t t;
+	int i, dir;
 
 	t = tracknum(rel);
-	if (t == 0)
+	if (t != 0 && m->named) {
+		snprintf(name, sizeof name, "TRACK%d.WAV", (int)t - 1);
+		if (walk(m, name, &s, &size, &dir) < 0 || dir || (i = trackat(m, s)) < 0)
+			return -1;
+		t = m->t[i].num;
+	}
+	if (t != 0) {
+		k = imageaudio(m, t);
+		if (k == 0)
+			return -1;
+		*num = t;
+		*first = 0;
+		*n = k;
+		return 0;
+	}
+	if (walk(m, rel, &s, &size, &dir) < 0 || dir || (i = inaudio(m, s, size, &f, &k)) < 0)
 		return -1;
-	k = imageaudio(m, t);
-	if (k == 0)
-		return -1;
-	*num = t;
-	*first = 0;
+	*num = m->t[i].num;
+	*first = f;
 	*n = k;
 	return 0;
 }
@@ -934,8 +1000,10 @@ static int
 settle(Image *m, char *err, int nerr)
 {
 	uint8_t b[Sector];
+	uint64_t at, lba[Ntrack];
+	uint32_t s, size;
 	Itrack *t, *p;
-	int i, n;
+	int i, n, f, dir;
 
 	if (m->nt == 0) {
 		seterr(err, nerr, "no track");
@@ -976,6 +1044,22 @@ settle(Image *m, char *err, int nerr)
 		return -1;
 	}
 	m->ndata = trackspan(m, m->data);
+	/* each track's INDEX 01 after the files before its own and the PREGAPs' silences, counted from the data track's */
+	at = 0;
+	f = 0;
+	for (i = 0; i < m->nt; i++) {
+		t = &m->t[i];
+		for (; f < t->file; f++)
+			at += m->nsec[f];
+		at += t->gap;
+		lba[i] = at + t->start;
+	}
+	for (i = 0; i < m->nt; i++) {
+		if (lba[i] < lba[m->data] || lba[i] - lba[m->data] >= UINT32_MAX)
+			m->t[i].lba = UINT32_MAX;
+		else
+			m->t[i].lba = lba[i] - lba[m->data];
+	}
 	if (datasector(m, Pvd, b) < 0 || b[0] != 1 || memcmp(b+1, "CD001", 5) != 0 || b[6] != 1) {
 		seterr(err, nerr, "no ISO 9660 volume in its data track");
 		return -1;
@@ -991,6 +1075,7 @@ settle(Image *m, char *err, int nerr)
 		;
 	m->label[n] = '\0';
 	m->swap = bigendian(m);
+	m->named = walk(m, "TRACK1.WAV", &s, &size, &dir) == 0 && !dir && trackat(m, s) >= 0;
 	return 0;
 }
 

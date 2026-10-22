@@ -622,6 +622,18 @@ startloop:
 	if( FlagCredits )
 	{
 #ifdef	CDROM
+#ifndef	DOS
+		/*
+		 * FEATURE: with MusicTracks: Midi, the credits play tune 9 from
+		 * the XMIDI once the tune before has ended, as in the disk
+		 * version. Taken from the disk version.
+		 */
+		if( MusicTracks == TRACKS_MIDI )
+		{
+			if( !IsMidiPlaying() )	PlayMidiFile( 9 ) ;
+		}
+		else
+#endif
 		if( GetMusicCD() != 8 )	PlayCdTrack( 8 ) ;
 #else
 		if( !IsMidiPlaying() )	PlayMidiFile( 9 ) ;
@@ -834,6 +846,14 @@ startloop:
 				if( ListFlagGame[90] == 1 )
 				{
 #ifdef	CDROM
+#ifndef	DOS
+					/*
+					 * FEATURE: with MusicTracks: Midi, the café
+					 * leaves the music as it is, as in the disk
+					 * version. Taken from the disk version.
+					 */
+					if( MusicTracks != TRACKS_MIDI )
+#endif
 					PlayCdTrack( 8 ) ;	// funkyrock
 #endif
 				}

@@ -803,14 +803,31 @@ void	PlayMusic( WORD num )
 
 void	PlayMidiFile( WORD num )
 {
-#ifndef	DOS
+#ifdef	DOS
+	if( !Midi_Driver_Enable )	return ;// hum si on peut
+#else
+	char	*track ;
+
 	/*
 	 * FEATURE: with SaveAnywhere, a tune the scene holds for its save
 	 * starts first, as LBA.EXE had it playing by then. The port's own.
 	 */
 	RestartCubeMusic() ;
+	/*
+	 * FEATURE: with MusicJingles: PlayStation, the PlayStation's
+	 * recording of the tune, its track on the CD (GetPsTrackFile), plays
+	 * in place of the XMIDI when the CD holds it, at the CD's volume,
+	 * with or without a MIDI driver, as the CD's tracks play. Taken from
+	 * the PlayStation.
+	 */
+	track = NULL ;
+	if( MusicJingles == JINGLES_PLAYSTATION )
+	{
+		track = GetPsTrackFile( num ) ;
+		if( (track != NULL) AND (!pstracklength( track )) )	track = NULL ;
+	}
+	if( !Midi_Driver_Enable AND (track == NULL) )	return ;
 #endif
-	if( !Midi_Driver_Enable )	return ;// hum si on peut
 
 #ifdef	CDROM
 	StopMusicCD() ;
@@ -821,6 +838,15 @@ void	PlayMidiFile( WORD num )
 	{
 		StopMusicMidi() ;
 //		HQR_Reset_Ressource( HQR_Midi ) ;
+#ifndef	DOS
+		if( track != NULL )
+		{
+			NumXmi = num ;
+			pstrackplay( track ) ;
+			VolumeMidi( 100 ) ;
+			return ;
+		}
+#endif
 		PtrXmi = HQR_Get( HQR_Midi, num ) ;
 		NumXmi = num ;
 		PlayMidi( PtrXmi ) ;
@@ -848,6 +874,17 @@ void	PlayCdTrack( WORD num )
 	 * starts first, as LBA.EXE had it playing by then. The port's own.
 	 */
 	RestartCubeMusic() ;
+	/*
+	 * FEATURE: with MusicTracks: Midi, a tune asked of the CD plays from
+	 * the XMIDI, as the disk version, LBA.EXE's source built without
+	 * CDROM, plays the scenes' and the menus' tunes. Taken from the disk
+	 * version.
+	 */
+	if( MusicTracks == TRACKS_MIDI )
+	{
+		PlayMidiFile( num ) ;
+		return ;
+	}
 #endif
 	SaveTimer() ;
 
@@ -870,6 +907,23 @@ void	PlayCdTrack( WORD num )
 
 void	PlayAllMusic( WORD num )
 {
+#ifndef	DOS
+	/*
+	 * FEATURE: with MusicTracks: Midi, the volumes' tune plays from the
+	 * XMIDI alone, as in the disk version. Taken from the disk version.
+	 */
+	if( MusicTracks == TRACKS_MIDI )
+	{
+		PlayMidiFile( num ) ;
+		return ;
+	}
+	/*
+	 * FEATURE: the PlayStation's track playing in the XMIDI's place
+	 * stops for the tune of the volumes, as the XMIDI does, with a MIDI
+	 * driver or without. Taken from the PlayStation.
+	 */
+	if( pstrackplaying() )	StopMusicMidi() ;
+#endif
 	if( Midi_Driver_Enable )
 	{
 		if( (num != NumXmi)
@@ -951,10 +1005,10 @@ void	ResumeMusic( void )
 	if( PausedXmi != -1 )
 	{
 		/*
-		 * FEATURE: where the volumes' page took the XMIDI from the game's
-		 * tune, that tune plays again from its start, as the PlayStation's
-		 * pause menu asks for the scene's tune again on its exit. Taken
-		 * from the PlayStation.
+		 * FEATURE: where a menu's tune took the XMIDI from the game's
+		 * tune (MusicTracks: Midi, or the volumes' page), that tune plays
+		 * again from its start, as the PlayStation's pause menu asks for
+		 * the scene's tune again on its exit. Taken from the PlayStation.
 		 */
 		if( StoppedXmi )
 		{

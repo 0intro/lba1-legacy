@@ -198,7 +198,7 @@ static uint64_t t1start, t2start;
 static uint8_t mixidx, mixer[256];
 static uint32_t pitcount, pitlow;
 
-/* the rest of the program's, for sys/midi.c: the configuration, the files, SDL, the records, the AWE32 and the OPL3 */
+/* the rest of the program's, for sys/midi.c: the configuration, the files, the features' streams, SDL, the records, the AWE32 and the OPL3 */
 char	PathConfigFile[] = "LBA.CFG";
 Synth	awe32;
 
@@ -278,6 +278,39 @@ int
 watcomstricmp(const char *a, const char *b)
 {
 	return strcasecmp(a, b);
+}
+
+void
+pstrackstop(void)
+{
+}
+
+int
+pstrackplaying(void)
+{
+	return 0;
+}
+
+void
+pstrackvolume(int32_t v)
+{
+	USED(v);
+}
+
+void
+pstrackfade(uint32_t ms)
+{
+	USED(ms);
+}
+
+void
+pstrackpause(void)
+{
+}
+
+void
+pstrackresume(void)
+{
 }
 
 void

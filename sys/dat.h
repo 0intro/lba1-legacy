@@ -44,6 +44,31 @@ extern int32_t	Wave_Driver_Enable;	/* the samples' driver loaded (wave.c) */
 extern int32_t	PlayRate;	/* the samples' rate, in Hz */
 extern int16_t	Midi_Driver_Enable;	/* the music's driver loaded (midi.c) */
 
+/*
+ * The music's sources: MusicTracks for the tunes the game asks of the
+ * CD, MusicJingles for those it asks of the XMIDI, each the index of its
+ * value among tracknames or jinglenames (modes.c), Auto's taken among
+ * the others at the start
+ */
+enum
+{
+	Tcd,		/* the CD's tracks */
+	Tmidi,		/* the XMIDI, as the disk version */
+	Tauto,		/* the first of them the CD's directory holds */
+};
+
+enum
+{
+	Jmidi,		/* the XMIDI */
+	Jplaystation,	/* the PlayStation's recordings on the CD */
+	Jauto,		/* the first of them the CD's directory holds */
+};
+
+extern int32_t	MusicTracks;	/* the CD's tunes' source, a T value (modes.c) */
+extern int32_t	MusicJingles;	/* the XMIDI's tunes' source, a J value */
+extern char	*tracknames[];	/* MusicTracks' values' names, NULL last */
+extern char	*jinglenames[];	/* MusicJingles' */
+
 enum
 {
 	Ngame = 8,	/* the game's directories at most, -g's (sdl.c) */

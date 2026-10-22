@@ -26,22 +26,29 @@
  * lines ended by LF or CR alone, a key written among them keeping the
  * lines after it, and lines longer than DefString, a key read past them
  * and a value kept to its first 255 bytes. Then LbaWin's settings, as
- * lib386/lib_sys/settings.c reads, forces and writes them, and the
+ * lib386/lib_sys/settings.c reads, forces and writes them, the
  * switches WideScreen, SmoothScaling, IntegerScaling, DisplaySync
- * and GamePad, each with its default, and DesiredDisplayNum. First,
- * the port's keys as readplatform reads them, and the game's own
- * switches, SaveAnywhere and SkipLogo, as gamekey reads them for
- * sources/perso.c, from sys/lba.cfg, shipped beside the program and
- * held as its text, each named there, and from the CD's LBA.CFG, which
- * leaves them out: the same values, the code's defaults being the
- * shipped file's.
+ * and GamePad, each with its default, DesiredDisplayNum, and the
+ * music's sources, MusicTracks and MusicJingles, as sys/modes.c reads
+ * them, Auto's taken among the files a CD's directory holds, the
+ * preferences' own here, and on a CD's image of its own, whose audio
+ * tracks alone count. First, the port's keys as readplatform reads
+ * them, and the game's own switches, SaveAnywhere and SkipLogo, as
+ * gamekey reads them for sources/perso.c, from sys/lba.cfg, shipped
+ * beside the program and held as its text, each named there, and from
+ * the CD's LBA.CFG, which leaves them out: the same values, the code's
+ * defaults being the shipped file's, the music's again on a CD whose
+ * tracks make Auto another source.
  */
 
 void	setdirs(char*, char**, int, char**, int);
 int	bindtext(int, char*, const char*, char*, int);
+int	readmode(char*, char*, char**);
 int	readswitch(char*, char*, int);
+int32_t	automode(char*);
 void	readplatform(char*, int*);
 char*	gamekeyname(int);
+int32_t	musicmode(char*, char*);
 
 
 char	PathConfigFile[260];	/* sys/sys.c's, which cfgtest leaves out */
@@ -52,6 +59,41 @@ static int32_t	smooth;	/* SmoothScaling, as readplatform gave it */
 
 static char *pref;
 static int fails;
+
+/*
+ * A line of lba.cfg, the key read and its names, and the mode readmode
+ * gives: the first for a missing key or an empty value, -1 for a value
+ * none of the names
+ */
+static struct {
+	char	*line;
+	char	*key;
+	char	**names;
+	int	m;
+} modes[] = {
+	{"MusicTracks: CD\r\n", "MusicTracks", tracknames, 0},
+	{"MusicTracks: Midi\r\n", "MusicTracks", tracknames, 1},
+	{"musictracks: cd\r\n", "MusicTracks", tracknames, 0},
+	{"MusicTracks: MIDI  \r\n", "MusicTracks", tracknames, 1},
+	{"MusicTracks:\r\n", "MusicTracks", tracknames, 0},
+	{"MusicTracks: \r\n", "MusicTracks", tracknames, 0},
+	{"MusicTracks: Mid\r\n", "MusicTracks", tracknames, -1},
+	{"MusicTracks: Midis\r\n", "MusicTracks", tracknames, -1},
+	{"MusicTracks: CD Midi\r\n", "MusicTracks", tracknames, -1},
+	{"MusicTracks: PlayStation\r\n", "MusicTracks", tracknames, -1},
+	{"MusicJingles: Midi\r\n", "MusicTracks", tracknames, 0},	/* missing */
+	{"MusicJingles: Midi\r\n", "MusicJingles", jinglenames, 0},
+	{"MusicJingles: PlayStation\r\n", "MusicJingles", jinglenames, 1},
+	{"MusicJingles: playstation\r\n", "MusicJingles", jinglenames, 1},
+	{"MusicJingles:\r\n", "MusicJingles", jinglenames, 0},
+	{"MusicJingles: PS\r\n", "MusicJingles", jinglenames, -1},
+	{"MusicJingles: CD\r\n", "MusicJingles", jinglenames, -1},
+	{"MusicTracks: Midi\r\n", "MusicJingles", jinglenames, 0},
+	{"MusicTracks: Auto\r\n", "MusicTracks", tracknames, 2},
+	{"MusicTracks: auto\r\n", "MusicTracks", tracknames, 2},
+	{"MusicJingles: AUTO\r\n", "MusicJingles", jinglenames, 2},
+	{"MusicJingles: Automatic\r\n", "MusicJingles", jinglenames, -1},
+};
 
 /*
  * A line of lba.cfg, the switch read and its default, and what
@@ -96,6 +138,20 @@ static struct {
 	{"DisplaySync: ON\r\n", "GamePad", 1, 1},	/* missing */
 	{"GamePad:\r\n", "GamePad", 1, 1},
 	{"GamePad: pad\r\n", "GamePad", 1, -1},
+};
+
+/*
+ * The files a CD's directory holds and the modes Auto takes there for the
+ * tracks and the jingles: the CD's tracks, the PlayStation's recordings,
+ * the XMIDI, in that order
+ */
+static struct {
+	char	*files[4];
+	int32_t	tracks, jingles;
+} autos[] = {
+	{{NULL}, 1, 0},	/* none: the XMIDI */
+	{{"TRACK02.WAV"}, 0, 0},	/* the CD's track 2 alone */
+	{{"JINGLES\\J08MID.WAV"}, 1, 1},	/* the PlayStation's recordings */
 };
 
 /* SetSmoothScaling is sys/video.c's: here the flag kept. */
@@ -195,6 +251,20 @@ text(char *name, char *want)
 }
 
 static void
+mode(int i)
+{
+	int m;
+
+	put("M.CFG", modes[i].line);
+	m = readmode("M.CFG", modes[i].key, modes[i].names);
+	if (m == modes[i].m)
+		return;
+	fprintf(stderr, "cfgtest: %s in \"%.*s\": %d where %d was due\n", modes[i].key,
+		(int)strcspn(modes[i].line, "\r\n"), modes[i].line, m, modes[i].m);
+	fails++;
+}
+
+static void
 onoff(int i)
 {
 	int v;
@@ -205,6 +275,169 @@ onoff(int i)
 		return;
 	fprintf(stderr, "cfgtest: %s in \"%.*s\": %d where %d was due\n", switches[i].key,
 		(int)strcspn(switches[i].line, "\r\n"), switches[i].line, v, switches[i].v);
+	fails++;
+}
+
+/* name, a file of the CD's directory, made of a byte, or empty for a name led by -, or removed */
+static void
+cdfile(char *name, int make)
+{
+	LONG h;
+
+	if (!make) {
+		Delete(name);
+		return;
+	}
+	h = OpenWrite(name);
+	if (h == 0 || Write(h, "x", 1) != 1)
+		fatal("cannot write %s", name);
+	Close(h);
+}
+
+static void
+autocase(int i)
+{
+	int32_t t, j;
+	int k, n;
+
+	n = (int)(sizeof autos[i].files / sizeof autos[i].files[0]);
+	for (k = 0; k < n && autos[i].files[k] != NULL; k++)
+		cdfile(autos[i].files[k], 1);
+	t = automode("MusicTracks");
+	j = automode("MusicJingles");
+	for (k = 0; k < n && autos[i].files[k] != NULL; k++)
+		cdfile(autos[i].files[k], 0);
+	if (t == autos[i].tracks && j == autos[i].jingles)
+		return;
+	fprintf(stderr, "cfgtest: Auto on");
+	for (k = 0; k < n && autos[i].files[k] != NULL; k++)
+		fprintf(stderr, " %s", autos[i].files[k]);
+	fprintf(stderr, ": tracks %ld, jingles %ld where %ld, %ld was due\n",
+		(long)t, (long)j, (long)autos[i].tracks, (long)autos[i].jingles);
+	fails++;
+}
+
+enum
+{
+	Sector = 2048,
+	Raw = 2352,
+	Nauto = 24,	/* the sectors of autoimage's data track */
+};
+
+static void
+le32(uint8_t *p, uint32_t v)
+{
+	p[0] = v;
+	p[1] = v>>8;
+	p[2] = v>>16;
+	p[3] = v>>24;
+}
+
+/* A directory record at p, of the extent at s of size bytes, a directory with dir: its length. */
+static int
+record(uint8_t *p, uint32_t s, uint32_t size, int dir, char *name, int namelen)
+{
+	int len;
+
+	len = 33 + namelen;
+	len += len & 1;
+	memset(p, 0, len);
+	p[0] = len;
+	le32(p+2, s);
+	le32(p+10, size);
+	p[25] = dir ? 2 : 0;
+	p[32] = namelen;
+	memcpy(p+33, name, namelen);
+	return len;
+}
+
+/*
+ * A CD's image in the preferences, its path given back: a data track
+ * holding JINGLES\J08MID.WAV, the file of the first tune of the
+ * PlayStation's recordings (the volume at sector 16, the root at 18,
+ * JINGLES at 21, the file at 23), as auto.iso, or
+ * with audio 1 or 2 as auto.cue over auto.bin, the data track's raw
+ * sectors then audio track 2 alone, of 20 frames, and with audio 2
+ * J08MID.WAV two of them from its second, as the PlayStation's disc
+ * places its jingles in its audio tracks.
+ */
+static char*
+autoimage(int audio)
+{
+	static uint8_t iso[Nauto*Sector];
+	static char path[1024];
+	char bin[1024];
+	uint8_t raw[Raw], *p;
+	FILE *f;
+	int s;
+
+	memset(iso, 0, sizeof iso);
+	p = iso + 16*Sector;
+	p[0] = 1;
+	memcpy(p+1, "CD001", 5);
+	p[6] = 1;
+	record(p+156, 18, Sector, 1, "\0", 1);
+	record(iso + 18*Sector, 21, Sector, 1, "JINGLES", 7);
+	if (audio == 2)
+		record(iso + 21*Sector, Nauto+1, 2*Sector, 0, "J08MID.WAV;1", 12);
+	else
+		record(iso + 21*Sector, 23, 1, 0, "J08MID.WAV;1", 12);
+	iso[23*Sector] = 'x';
+	snprintf(path, sizeof path, "%s/auto.iso", pref);
+	if (!audio) {
+		f = fopen(path, "wb");
+		if (f == NULL || fwrite(iso, 1, sizeof iso, f) != sizeof iso || fclose(f) != 0)
+			fatal("cannot write %s", path);
+		return path;
+	}
+	snprintf(bin, sizeof bin, "%s/auto.bin", pref);
+	f = fopen(bin, "wb");
+	if (f == NULL)
+		fatal("cannot write %s", bin);
+	memset(raw, 0, sizeof raw);
+	for (s = 0; s < Nauto+20; s++) {
+		if (s < Nauto)
+			memcpy(raw+16, iso + s*Sector, Sector);
+		else
+			memset(raw, 0, sizeof raw);
+		if (fwrite(raw, 1, Raw, f) != Raw)
+			fatal("cannot write %s", bin);
+	}
+	if (fclose(f) != 0)
+		fatal("cannot write %s", bin);
+	snprintf(path, sizeof path, "%s/auto.cue", pref);
+	f = fopen(path, "wb");
+	if (f == NULL || fprintf(f, "FILE \"auto.bin\" BINARY\n  TRACK 01 MODE1/2352\n    INDEX 01 00:00:00\n"
+		"  TRACK 02 AUDIO\n    INDEX 01 00:00:%02d\n", Nauto) < 0
+	|| fclose(f) != 0)
+		fatal("cannot write %s", path);
+	return path;
+}
+
+/*
+ * Auto on the image autoimage writes as the CD: the modes due for the
+ * tracks and the jingles, its sounds taken, its audio tracks and the
+ * files its directory places in them, and its data track's files passed
+ * over, which no player of the music reads.
+ */
+static void
+autoimagecase(char **game, int audio, int32_t tracks, int32_t jingles)
+{
+	char *path, bin[1024];
+	int32_t t, j;
+
+	path = autoimage(audio);
+	setdirs(pref, game, 1, &path, 1);
+	t = automode("MusicTracks");
+	j = automode("MusicJingles");
+	setdirs(pref, game, 1, &pref, 1);
+	snprintf(bin, sizeof bin, "%s/auto.bin", pref);
+	remove(path);
+	remove(bin);
+	if (t == tracks && j == jingles)
+		return;
+	fprintf(stderr, "cfgtest: Auto on %s: tracks %ld, jingles %ld where %ld, %ld was due\n",
+		path, (long)t, (long)j, (long)tracks, (long)jingles);
 	fails++;
 }
 
@@ -241,7 +474,7 @@ longcase(void)
 /* The port's keys, in readplatform's order */
 static char *names[] = {
 	"LbaWinSettings", "LbaWinFullScreen", "WideScreen", "DesiredDisplayNum",
-	"SmoothScaling", "IntegerScaling", "DisplaySync", "GamePad",
+	"MusicTracks", "MusicJingles", "SmoothScaling", "IntegerScaling", "DisplaySync", "GamePad",
 };
 
 /* readplatform's values for the configuration file name into v, in names' order */
@@ -256,10 +489,12 @@ platform(char *name, int32_t *v)
 	v[1] = FlagFullScreen;
 	v[2] = FlagWideScreen;
 	v[3] = DesiredDisplayNum;
-	v[4] = smooth;
-	v[5] = FlagIntegerScaling;
-	v[6] = sync;
-	v[7] = FlagGamePad;
+	v[4] = MusicTracks;
+	v[5] = MusicJingles;
+	v[6] = smooth;
+	v[7] = FlagIntegerScaling;
+	v[8] = sync;
+	v[9] = FlagGamePad;
 }
 
 /* key named in sys/lba.cfg, and its value a where the CD's LBA.CFG leaves it out the same as b, sys/lba.cfg's */
@@ -301,6 +536,29 @@ defaults(void)
 		shipped(key, gamekey("LBA.CFG", key), gamekey("SHIPPED.CFG", key));
 }
 
+/*
+ * The music's sources of sys/lba.cfg and of the CD's LBA.CFG on a CD
+ * whose track 2 makes Auto the CD's tracks: the same.
+ */
+static void
+musicdefaults(void)
+{
+	char err[256];
+	int32_t t, j;
+
+	cdfile("TRACK02.WAV", 1);
+	if (bindtext(0, "SHIPPED.CFG", (char*)lbacfg, err, sizeof err) < 0)
+		fatal("SHIPPED.CFG: %s", err);
+	t = musicmode("LBA.CFG", "MusicTracks");
+	j = musicmode("LBA.CFG", "MusicJingles");
+	if (t != musicmode("SHIPPED.CFG", "MusicTracks") || j != musicmode("SHIPPED.CFG", "MusicJingles")) {
+		fprintf(stderr, "cfgtest: the music's sources left out, on the CD's tracks: %ld and %ld where sys/lba.cfg gives others\n",
+			(long)t, (long)j);
+		fails++;
+	}
+	cdfile("TRACK02.WAV", 0);
+}
+
 static void
 setting(LONG want)
 {
@@ -329,6 +587,8 @@ main(int argc, char **argv)
 	str("LBA.CFG", "MidiDriver", "NoMidi");
 	str("LBA.CFG", "MidiBase", "");
 	val("LBA.CFG", "LbaWinSettings", 0, 0);
+	str("LBA.CFG", "MusicTracks", NULL);
+	str("LBA.CFG", "MusicJingles", NULL);
 	val("LBA.CFG", "WaveRate", 1, 0);	/* empty: the next line's first word, read as 0 */
 
 	put("T.CFG",
@@ -448,8 +708,21 @@ main(int argc, char **argv)
 	val("D.CFG", "DesiredDisplayNum", 1, 1);
 	val("LBA.CFG", "DesiredDisplayNum", 0, 0);	/* the CD's: SDL's primary */
 
+	for (i = 0; i < (int)(sizeof modes / sizeof modes[0]); i++)
+		mode(i);
 	for (i = 0; i < (int)(sizeof switches / sizeof switches[0]); i++)
 		onoff(i);
+
+	/* the CD's directory the preferences, which the cases fill and empty */
+	setdirs(argv[1], &argv[2], 1, &argv[1], 1);
+	for (i = 0; i < (int)(sizeof autos / sizeof autos[0]); i++)
+		autocase(i);
+	/* the CD an image, as an ISO, then with audio track 2, then with J08MID.WAV in it */
+	autoimagecase(&argv[2], 0, 1, 0);
+	autoimagecase(&argv[2], 1, 0, 0);
+	autoimagecase(&argv[2], 2, 0, 1);
+	setdirs(argv[1], &argv[2], 1, &argv[1], 1);
+	musicdefaults();
 
 	if (fails != 0)
 		return 1;

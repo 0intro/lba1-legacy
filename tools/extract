@@ -14,10 +14,13 @@
 # disc is the PC CD's whole image, the Internet Archive's item
 # adeline_202401 in $LBAISO: ADELINE.BIN and its cue sheet go into
 # $LBATMP/iso/adeline, where make check reads it as the CD. ps is the
-# PlayStation's disc, SLES-00698, the Redump image in $LBAISO: its texts
-# (TEXT.HQR) and its scenes (GAME.HQR, SCENES.BLK) go into $LBATMP/ps,
-# where make check reads the texts and tools/patches.py the scenes. By
-# default extract makes pc.
+# PlayStation's disc, SLES-00698, the Redump image in $LBAISO: the nine
+# files of its root's data, its executable and SYSTEM.CNF, its texts
+# (TEXT.HQR) and its scenes (GAME.HQR, SCENES.BLK) among them, go into
+# $LBATMP/ps, where make check reads the texts, tools/patches.py the
+# scenes and cdimagetest the whole root, and its cue sheet is linked as
+# $LBATMP/iso/ps/ps.cue beside links to its BIN files, a name make
+# passes whole. By default extract makes pc.
 
 set -Eeuo pipefail
 
@@ -26,7 +29,10 @@ REPO=$(cd -- "$TOOLS/.." && pwd)
 TOP=$(cd -- "$REPO/.." && pwd)
 LBATMP=${LBATMP:-$TOP/lba1-tmp}
 ISO=${LBAISO:-$TOP/iso}
+# absolute: the PlayStation's links take their targets from it
+[[ -d $ISO ]] && ISO=$(cd -- "$ISO" && pwd)
 PCISO=$ISO/little_big_adventure_1.iso
+PSCUE="$ISO/Little Big Adventure (Europe) (En,Fr,De,Es,It).cue"
 PSBIN="$ISO/Little Big Adventure (Europe) (En,Fr,De,Es,It) (Track 01).bin"
 DISCZIP=$ISO/adeline_202401.zip
 
@@ -81,14 +87,22 @@ ps() {
 	local f
 
 	[[ -f $PSBIN ]] || fail "no $PSBIN"
+	[[ -f $PSCUE ]] || fail "no $PSCUE"
 	rm -rf -- "$LBATMP/ps.new"
 	mkdir -p "$LBATMP/ps.new"
-	python3 -I "$TOOLS/isocat.py" -o "$LBATMP/ps.new" "$PSBIN" /TEXT.HQR /GAME.HQR /SCENES.BLK
-	for f in TEXT.HQR GAME.HQR SCENES.BLK; do
+	python3 -I "$TOOLS/isocat.py" -o "$LBATMP/ps.new" "$PSBIN" /SLES_006.98 /SYSTEM.CNF \
+		/TEXT.HQR /GAME.HQR /SCENES.BLK /BUMPER.HQR /CREDITS.HQR /HOLOMAP.HQR /WARNING.BIN
+	for f in SLES_006.98 SYSTEM.CNF TEXT.HQR GAME.HQR SCENES.BLK BUMPER.HQR CREDITS.HQR HOLOMAP.HQR WARNING.BIN; do
 		[[ -s $LBATMP/ps.new/$f ]] || fail "$PSBIN: no $f"
 	done
 	rm -rf -- "$LBATMP/ps"
 	mv -- "$LBATMP/ps.new" "$LBATMP/ps"
+	rm -rf -- "$LBATMP/iso/ps"
+	mkdir -p "$LBATMP/iso/ps"
+	ln -s -- "$PSCUE" "$LBATMP/iso/ps/ps.cue"
+	for f in "${PSCUE%.cue}"*.bin; do
+		ln -s -- "$f" "$LBATMP/iso/ps/"
+	done
 }
 
 (( $# )) || set -- pc

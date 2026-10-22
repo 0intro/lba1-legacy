@@ -34,9 +34,10 @@
  * the sum of its frames. When the CD plays, it adds a line per frame of
  * its audio handed on: c, its number, its sum. When the music's driver
  * is on, it adds a line per period of its timer: m, the chip's samples
- * made so far, the sum of the period's. The halves can be written too,
- * raw, 16-bit stereo at the samples' rate, and the chip's samples, at
- * its rate.
+ * made so far, the sum of the period's. A PlayStation's track playing
+ * in the XMIDI's place adds a line per frame of it handed on: r, its
+ * number, its sum. The halves can be written too, raw, 16-bit stereo at
+ * the samples' rate, and the chip's samples, at its rate.
  */
 
 static FILE *rec;
@@ -396,6 +397,14 @@ summedcd(uint64_t n, const uint8_t *buf, int len)
 {
 	if (sums != NULL)
 		fprintf(sums, "c %" PRIu64 " %08" PRIx32 "\n", n, crc(0, buf, (size_t)len));
+}
+
+/* The PlayStation's track's frame n, handed on at its volume: its sum. */
+void
+summedpstrack(uint64_t n, uint8_t *buf, int len)
+{
+	if (sums != NULL)
+		fprintf(sums, "r %" PRIu64 " %08" PRIx32 "\n", n, crc(0, buf, (size_t)len));
 }
 
 void

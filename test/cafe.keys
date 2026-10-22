@@ -1,0 +1,18 @@
+# The café's tune walked out of on the PlayStation's tracks
+# (fixtures/cafe: the sweep's save of scene 80, the game's flag 90
+# clear, and the lba.cfg of soundout with MusicJingles: PlayStation, on
+# the CD psmusic). The café plays its tune 13 as J03MID. Twinsen walks
+# out from the café's start into scene 76, whose tune is the same, and
+# J03MID plays on.
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 12
+shot cafe
+down Up
+sleep 2
+up Up
+sleep 8
+shot out

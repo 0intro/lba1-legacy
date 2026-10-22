@@ -891,10 +891,13 @@ sdlwavegain(float g)
  * stops.
  */
 static SDL_AudioStream *cdstream;
+/* FEATURE: the PlayStation's track in the XMIDI's place goes to one more such stream, at the CD's gain. Taken from the PlayStation. */
+static SDL_AudioStream *psstream;
 static int nocd;
 static float cdgain = 1;
 static int cdlead;	/* bytes */
 static int cdstart = 1;	/* the CD's next frame a play's first */
+static int psstart = 1;	/* the PlayStation's track's */
 
 /* n bytes of the CD's audio, a frame, to stream *s, opened if need be, *start set where it begins a play. */
 static void
@@ -944,13 +947,29 @@ sdlcdstop(void)
 	cdstart = 1;
 }
 
-/* The mixer chip's gain on the CD. */
+void
+sdlpstrack(const void *buf, int n)
+{
+	cdput(&psstream, &psstart, buf, n);
+}
+
+void
+sdlpstrackstop(void)
+{
+	if (psstream != NULL)
+		SDL_ClearAudioStream(psstream);
+	psstart = 1;
+}
+
+/* The mixer chip's gain on the CD, the PlayStation's tracks' too. */
 void
 sdlcdgain(float g)
 {
 	cdgain = g;
 	if (cdstream != NULL)
 		SDL_SetAudioStreamGain(cdstream, g);
+	if (psstream != NULL)
+		SDL_SetAudioStreamGain(psstream, g);
 }
 
 /*
@@ -1039,6 +1058,8 @@ sdllate(void)
 		fill(wavestream, wavelead);
 	if (cdstream != NULL)
 		fill(cdstream, cdlead);
+	if (psstream != NULL)
+		fill(psstream, cdlead);
 	if (midistream != NULL)
 		fill(midistream, midilead);
 }

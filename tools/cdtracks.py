@@ -16,13 +16,23 @@ appends the gaps). The samples are raw CD audio, 2352 bytes a frame,
 little-endian as BINARY says, unless they step less than a quarter as
 much read big-endian, from each sample to the next of its channel, at 16
 places of each audio track, as the port reads them (sys/cdimage.c's
-bigendian): each sample's bytes are then swapped as written. Prints each
-file written and its length in frames.
+bigendian): each sample's bytes, the sounds' too, are then swapped as
+written. Prints each file written and its length in frames.
+
+Given no track, a disc whose first file starts with its data track in
+sectors of 2352 bytes and whose root names its tunes, TRACK1.WAV at an
+audio track's INDEX 01 as on the PlayStation's, is written as the port
+reads it as a CD: the track of each TRACKn.WAV as trackNN.wav, NN = n+1,
+the PC CD's number of tune n, and every other file of its directory
+whose extent lies in an audio track at its own path, JINGLES/J01MID.WAV
+and the rest, as tools/isocat.py copies it: the entry's extent, a frame
+of samples for each 2048 bytes of its size. Such a disc holds no PREGAP.
 
 The PC CD's music is its tracks 2 to 10. The PlayStation's disc carries
-the same tunes as its tracks 2 to 9 and 27:
+the same tunes as its tracks 2 to 9 and 27, with its recordings of the
+jingles:
 
-    cdtracks.py "Little Big Adventure (Europe) (En,Fr,De,Es,It).cue" ../lba1-tmp/pcmusic 2 3 4 5 6 7 8 9 27=10
+    cdtracks.py "Little Big Adventure (Europe) (En,Fr,De,Es,It).cue" ../lba1-tmp/psmusic
 """
 import importlib.util
 import os
@@ -34,8 +44,8 @@ FRAME = 2352
 NPROBE = 16
 PROBE = 4
 
-# tools/isocat.py, the reader of the cue sheet, loaded by its path, as
-# python3 -I leaves the tools out of the path
+# tools/isocat.py, the reader of the disc's directory, loaded by its
+# path, as python3 -I leaves the tools out of the path
 _spec = importlib.util.spec_from_file_location(
     "isocat", os.path.join(os.path.dirname(os.path.abspath(__file__)), "isocat.py"))
 isocat = importlib.util.module_from_spec(_spec)
@@ -53,9 +63,11 @@ def msf(s):
 
 
 def parse(cue):
-    """The sheet's tracks: (number, audio, INDEX 01's file, INDEX 01, INDEX 00 or None, PREGAP, INDEX 00's file), in frames."""
+    """The sheet's tracks: (number, audio, INDEX 01's file, INDEX 01, INDEX 00 or None, PREGAP, INDEX 00's file, kind), in frames,
+    and its files in order."""
     base = os.path.dirname(cue)
     tracks = []
+    files = []
     path = None
     for w in isocat.cuelines(cue):
         m = isocat.cuefileline(w)
@@ -63,12 +75,14 @@ def parse(cue):
             if m.group(2).upper() != "BINARY":
                 fail("%s: only BINARY files" % m.group(1))
             path = isocat.cuefile(base, m.group(1))
+            files.append(path)
             continue
         m = re.match(r"TRACK\s+(\d+)\s+(\S+)$", w, re.I)
         if m:
             if path is None:
                 fail("a TRACK before any FILE")
-            tracks.append([int(m.group(1)), m.group(2).upper() == "AUDIO", None, None, None, 0, None])
+            kind = m.group(2).upper()
+            tracks.append([int(m.group(1)), kind == "AUDIO", None, None, None, 0, None, kind])
             continue
         m = re.match(r"PREGAP\s+(\d+:\d+:\d+)$", w, re.I)
         if m:
@@ -87,7 +101,7 @@ def parse(cue):
     for t in tracks:
         if t[3] is None:
             fail("track %d: no INDEX 01" % t[0])
-    return tracks
+    return tracks, files
 
 
 def extent(tracks, i):
@@ -109,6 +123,54 @@ def extent(tracks, i):
     else:
         fail("track %d: its INDEX 00 in neither its file nor the file of the track before" % nxt[0])
     return [p for p in pieces if p[2] > 0]
+
+
+def addresses(tracks):
+    """Each track's INDEX 01 among the disc's sectors: the frames of the files
+    before its own, its INDEX 01 in its file and the PREGAPs so far."""
+    base, seen, gaps, out = {}, 0, 0, []
+    for t in tracks:
+        for p in (t[6], t[2]):
+            if p is not None and p not in base:
+                base[p] = seen
+                seen += os.path.getsize(p) // FRAME
+        gaps += t[5]
+        out.append(base[t[2]] + t[3] + gaps)
+    return out
+
+
+def tunes(cue, tracks, files):
+    """The disc's tunes as its root names them and its other sounds: the
+    tracks' indexes by tune, and the entries whose extents lie in an audio
+    track, or None where its first file starts with no data track of 2352
+    bytes a sector, which tools/isocat.py reads, or its TRACK1.WAV starts
+    no audio track."""
+    t = tracks[0]
+    if t[1] or t[7] not in ("MODE1/2352", "MODE2/2352") or t[2] != files[0] or t[3] != 0:
+        return None
+    img = isocat.Image(cue)
+    data = [i for i, t in enumerate(tracks) if not t[1]]
+    addr = addresses(tracks)
+    at, span = {}, []
+    for i, t in enumerate(tracks):
+        if t[1]:
+            at[addr[i] - addr[data[0]]] = i
+            span.append((addr[i] - addr[data[0]], sum(p[2] for p in extent(tracks, i))))
+    named, sounds = {}, []
+    for e in isocat.files(img):
+        path, lba, size, when = e
+        m = re.match(r"/TRACK(\d+)\.WAV$", path, re.I)
+        if m and lba in at:
+            named[int(m.group(1))] = at[lba]
+            continue
+        n = (size + isocat.COOKED - 1) // isocat.COOKED
+        if n > 0 and any(s <= lba and lba + n <= s + k for s, k in span):
+            sounds.append(e)
+    if 1 not in named:
+        return None
+    if any(t[5] for t in tracks):
+        fail("a disc that names its tunes with a PREGAP")
+    return img, named, sounds
 
 
 def step(a, b):
@@ -188,7 +250,7 @@ def write(pieces, out, swap):
 def main(args):
     if len(args) < 2:
         fail("usage: cdtracks.py image.cue dir [track[=as]...]")
-    tracks = parse(args[0])
+    tracks, files = parse(args[0])
     swap = bigendian(tracks)
     want = {}
     for a in args[2:]:
@@ -196,6 +258,22 @@ def main(args):
         if not m:
             fail("bad track %s" % a)
         want[int(m.group(1))] = int(m.group(2) or m.group(1))
+    disc = None if want else tunes(args[0], tracks, files)
+    if disc is not None:
+        img, named, sounds = disc
+        for n, i in sorted(named.items()):
+            out = os.path.join(args[1], "track%02d.wav" % (n + 1))
+            print("%s\t%d frames" % (out, write(extent(tracks, i), out, swap)))
+        for e in sounds:
+            out = os.path.join(args[1], *e[0].strip("/").split("/"))
+            os.makedirs(os.path.dirname(out), exist_ok=True)
+            b = isocat.content(img, e)
+            if swap:
+                b = bytearray(b)
+                b[44::2], b[45::2] = b[45::2], b[44::2]
+            put(out, lambda w: w.write(b))
+            print("%s\t%d frames" % (out, (len(b) - 44) // FRAME))
+        return
     for i, t in enumerate(tracks):
         if not t[1] or (want and t[0] not in want):
             continue

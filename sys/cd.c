@@ -13,11 +13,20 @@
  * directory, drive D:, and a file's sectors are its own 2048 bytes from
  * a start of ours, or a CD's image (cdimage.c), its sectors the
  * image's. A track is a file beside them, trackNN.wav as made from a
- * CD's image by tools/cdtracks.py, or the image's track: 16-bit stereo
+ * CD's image by tools/cdtracks.py, or the image's sound, its track or a
+ * file its directory places in one (cdimage.c's imagesound): 16-bit stereo
  * at 44100 Hz, its length its frames of 2352 bytes, 75 a second, as the
  * CD's table of contents gave it. One plays from its start to its end.
  * The port's clock takes its frames as it passes them, a few ahead
  * (cdtick), and hands them to their own stream.
+ *
+ * FEATURE: the PlayStation's track of a tune, a file on the CD, plays on
+ * the music's channel in place of its XMIDI (PlayMidiFile, midi.c), as
+ * the PlayStation plays its tunes from its disc: once, from its start to
+ * its end, its frames taken as the clock passes them, Ahead more,
+ * scaled by its volume, a percent that the music's calls set at once or
+ * ramp down along the clock, and handed to a stream of their own at the
+ * CD's gain. Taken from the PlayStation.
  */
 
 enum
@@ -42,6 +51,22 @@ struct Track
 	uint64_t	at;	/* the byte of the track read next */
 };
 
+typedef struct Pstrack Pstrack;
+
+/* the PlayStation's track in the XMIDI's place */
+struct Pstrack
+{
+	Track	t;
+	char	file[300];	/* on the CD */
+	int	on;	/* asked for, not stopped since */
+	int	paused;
+	uint64_t	pausedframe;	/* the clock's, when paused */
+	int32_t	from;	/* the volume at fadestart, a percent */
+	int32_t	to;	/* the volume from fadeend */
+	uint64_t	fadestart;	/* ns */
+	uint64_t	fadeend;	/* ns */
+};
+
 int16_t	DriveCDR = -2;	/* cdrom.asm's, -2 for no drive */
 int32_t	FileCD_Start;
 int32_t	FileCD_Sect;
@@ -56,6 +81,8 @@ static uint64_t now;
 static uint64_t played;	/* frames, every track's */
 static int32_t pausedtrack;	/* LBA2's PausedTrack: the track PauseCD stopped, 0 for none */
 static uint64_t pausedframe;	/* LBA2's Cur: the frame it stopped at */
+static Pstrack ps;
+static uint64_t psplayed;	/* frames, every PlayStation track's */
 
 /*
  * InitCDR is cdrom.asm's: whether the CD's root holds the file name, the
@@ -308,10 +335,43 @@ due(Track *t, uint64_t ns)
 	return n > t->n ? t->n : n;
 }
 
+/* The PlayStation's track's volume at time t, a percent. */
+static int32_t
+psvolume(uint64_t t)
+{
+	if (t >= ps.fadeend)
+		return ps.to;
+	if (t <= ps.fadestart)
+		return ps.from;
+	return ps.from + (int64_t)(ps.to - ps.from) * (int64_t)(t - ps.fadestart)
+		/ (int64_t)(ps.fadeend - ps.fadestart);
+}
+
+/* A frame's samples, 16-bit little-endian, scaled to v percent. */
+static void
+scale(uint8_t *buf, int32_t v)
+{
+	int32_t s;
+	uint16_t u;
+	int i;
+
+	if (v == 100)
+		return;
+	for (i = 0; i < Frame; i += 2) {
+		s = buf[i] | buf[i+1]<<8;
+		if (s >= 0x8000)
+			s -= 0x10000;
+		u = (uint16_t)(s * v / 100);
+		buf[i] = u & 0xff;
+		buf[i+1] = u >> 8;
+	}
+}
+
 /*
  * cdtick: the frames of the track playing that the clock has passed,
  * and Ahead more, read and handed on, each summed in a record. At its
- * end it stops.
+ * end it stops. So too the PlayStation's track, its frames scaled by
+ * its volume at their time.
  */
 void
 cdtick(uint64_t ns)
@@ -329,6 +389,145 @@ cdtick(uint64_t ns)
 		if (track.fed == track.n)
 			trackclose(&track);
 	}
+	if (trackon(&ps.t)) {
+		for (n = due(&ps.t, ns); ps.t.fed < n; ps.t.fed++) {
+			trackread(&ps.t, buf, Frame);
+			scale(buf, psvolume(ps.t.start + ps.t.fed*1000000000/75));
+			sdlpstrack(buf, Frame);
+			summedpstrack(++psplayed, buf, Frame);
+		}
+		if (ps.t.fed == ps.t.n)
+			trackclose(&ps.t);
+	}
+}
+
+/*
+ * pstracklength: the length in frames of name, the file of a
+ * PlayStation track on the CD, or 0 if the CD lacks it.
+ */
+int32_t
+pstracklength(char *name)
+{
+	char file[300];
+	Track t;
+
+	snprintf(file, sizeof file, "D:\\%s", name);
+	if (audioopen(file, &t) < 0)
+		return 0;
+	trackclose(&t);
+	return t.n;
+}
+
+/* pstrackstop: the PlayStation's track stopped, what waits of it dropped. */
+void
+pstrackstop(void)
+{
+	trackclose(&ps.t);
+	ps.on = 0;
+	ps.paused = 0;
+	sdlpstrackstop();
+}
+
+/*
+ * The file of the PlayStation's track opened at frame, its clock set so
+ * that the frame plays now. 0 if it cannot be.
+ */
+static int
+psopen(uint64_t frame)
+{
+	Track t;
+
+	if (audioopen(ps.file, &t) < 0)
+		return 0;
+	if (frame >= t.n || trackseek(&t, frame*Frame) != 0) {
+		trackclose(&t);
+		return 0;
+	}
+	ps.t = t;
+	ps.t.fed = frame;
+	ps.t.start = now - (frame*1000000000 + 74) / 75;
+	return 1;
+}
+
+/*
+ * pstrackplay: name, the file of a PlayStation track on the CD, played
+ * from its start at full volume.
+ */
+void
+pstrackplay(char *name)
+{
+	pstrackstop();
+	snprintf(ps.file, sizeof ps.file, "D:\\%s", name);
+	ps.from = ps.to = 100;
+	ps.fadestart = ps.fadeend = now;
+	ps.on = psopen(0);
+}
+
+/* The frame of the PlayStation's track the clock has reached. */
+static uint64_t
+psframe(void)
+{
+	return (now - ps.t.start) * 75 / 1000000000;
+}
+
+/*
+ * pstrackplaying: whether the PlayStation's track plays, the clock short
+ * of its end.
+ */
+int
+pstrackplaying(void)
+{
+	return ps.on && !ps.paused && psframe() < ps.t.n;
+}
+
+/* pstrackvolume: its volume, a percent of 0 to 100, at once. */
+void
+pstrackvolume(int32_t v)
+{
+	if (v < 0)
+		v = 0;
+	if (v > 100)
+		v = 100;
+	ps.from = ps.to = v;
+	ps.fadestart = ps.fadeend = now;
+}
+
+/* pstrackfade: its volume ramped from what it is to 0 over ms. */
+void
+pstrackfade(uint32_t ms)
+{
+	ps.from = psvolume(now);
+	ps.to = 0;
+	ps.fadestart = now;
+	ps.fadeend = now + (uint64_t)ms*1000000;
+}
+
+/*
+ * pstrackpause: the PlayStation's track stopped, the frame the clock
+ * had reached kept.
+ */
+void
+pstrackpause(void)
+{
+	if (!pstrackplaying())
+		return;
+	ps.pausedframe = psframe();
+	ps.paused = 1;
+	trackclose(&ps.t);
+	sdlpstrackstop();
+}
+
+/*
+ * pstrackresume: the PlayStation's track played on from the frame it
+ * was paused at.
+ */
+void
+pstrackresume(void)
+{
+	if (!ps.on || !ps.paused)
+		return;
+	ps.paused = 0;
+	ps.on = psopen(ps.pausedframe);
 }
 
 /*

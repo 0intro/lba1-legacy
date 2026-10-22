@@ -322,7 +322,27 @@ sdlcdstop(void)
 }
 
 void
+sdlpstrack(const void *buf, int n)
+{
+	USED(buf);
+	USED(n);
+}
+
+void
+sdlpstrackstop(void)
+{
+}
+
+void
 summedcd(uint64_t n, const uint8_t *buf, int nb)
+{
+	USED(n);
+	USED(buf);
+	USED(nb);
+}
+
+void
+summedpstrack(uint64_t n, uint8_t *buf, int nb)
 {
 	USED(n);
 	USED(buf);

@@ -46,6 +46,23 @@ void    ResumeCDR( void )               ;
 //      there. Taken from LBA2.
 void    PauseCD( void )                 ;
 void    ResumeCD( void )                ;
+
+//      FEATURE: the PlayStation's track of a tune, a file on the CD, its
+//      length in frames, 0 if the CD lacks it, played in place of the
+//      XMIDI, and whether it plays. Taken from the PlayStation.
+LONG    pstracklength( char *file )     ;
+void    pstrackplay( char *file )       ;
+int     pstrackplaying( void )          ;
+
+//      FEATURE: the music's sources, lba.cfg's MusicTracks for the tunes
+//      asked of the CD and MusicJingles for those asked of the XMIDI.
+//      The port's own.
+#define TRACKS_CD               0       // the CD's tracks
+#define TRACKS_MIDI             1       // the XMIDI, as the disk version
+#define JINGLES_MIDI            0       // the XMIDI
+#define JINGLES_PLAYSTATION     1       // the PlayStation's recordings
+extern  LONG    MusicTracks     ;
+extern  LONG    MusicJingles    ;
 #endif
 
 //-------------------------------------- Fonction bas niveau

@@ -4198,6 +4198,14 @@ void	VolumeOptions()
 			case 1000: // <ESC>
 #endif
 #ifdef	CDROM
+#ifndef	DOS
+				/*
+				 * FEATURE: with MusicTracks: Midi the volumes' tune
+				 * is the menu's, from the XMIDI alone, and plays on,
+				 * as in the disk version. Taken from the disk version.
+				 */
+				if( MusicTracks != TRACKS_MIDI )
+#endif
 				FadeMusicMidi( 1 ) ;
 #endif
 				SetVolumes(MusicVolume, SampleVolume, LineVolume, CDVolume, MasterVolume ) ;

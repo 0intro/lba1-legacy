@@ -1,0 +1,23 @@
+# A load landing in a zone that changes scene, SaveAnywhere: ON
+# (fixtures/jukeboxsa: jukebox's save of scene 76, Twinsen in the zone to
+# the café, scene 80, the game's flag 90 set, and jukebox's lba.cfg with
+# MusicJingles: PlayStation and SaveAnywhere: ON, on the CD psmusic).
+# LBA2's main menu loads the save from its list, and the load's first
+# frame leaves scene 76 for the café before it is drawn: the café fades
+# in, saved into autosave.lba and current.lba. The jukebox's script turns
+# the music off and plays the CD's track 9. F6 then opens the option
+# menu, and Return to game plays track 9 again.
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 15
+shot cafe
+hold 0.05
+key F6
+sleep 3
+shot options
+key Return
+sleep 5
+shot back

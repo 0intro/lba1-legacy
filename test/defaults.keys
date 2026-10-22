@@ -1,0 +1,47 @@
+# The defaults, sys/lba.cfg's values where lba.cfg leaves the port's
+# keys out (fixtures/defaults: sys/lba.cfg's 1994 keys alone, recorded
+# with -D 1920x1080). Escape in the logo's fade from white cuts it
+# (SkipLogo), and the main menu is LBA2's (SaveAnywhere). A new game
+# named abc, its text and movie cut short, comes in the cell on the
+# wide screen of 852x480 (WideScreen), the tunes from the XMIDI, as
+# Auto takes it on this CD (MusicTracks, MusicJingles). Sporty (F2),
+# Twinsen runs into the cell's wall and on along it, Hit walls off
+# (LbaWinSettings 212), and Escape opens LBA2's menu over the game,
+# whose first entry gives it back. shipped derives from this record
+# with each of the port's keys set as sys/lba.cfg sets it, the same
+# screens.
+
+sleep 5.1
+key Escape
+sleep 0.5
+shot cut
+sleep 35
+shot menu
+key Return
+sleep 4
+shot name
+key a b c
+sleep 1
+key Return
+sleep 6
+shot text
+key Escape
+sleep 8
+shot movie
+key Escape
+sleep 10
+shot cell
+key F2
+sleep 1
+down Up
+sleep 4
+up Up
+shot ran
+sleep 2
+shot after
+key Escape
+sleep 3
+shot lba2menu
+key Return
+sleep 3
+shot resumed

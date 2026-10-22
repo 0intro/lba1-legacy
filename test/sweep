@@ -20,7 +20,7 @@
 # at -1, the scene's own, and beside them the CD's LBA.CFG, no sound,
 # each port's preferences given the values the sweep was made under
 # where the CD's file leaves them out: LbaWinSettings 210, SaveAnywhere
-# OFF and WideScreen OFF.
+# OFF, MusicTracks CD, MusicJingles Midi and WideScreen OFF.
 # record plays the loading of a save on the port in our Xephyr
 # (tools/xkeys): the main menu, Continue saved game, the save, then a
 # hundred seconds. It keeps its input (port.in). A record counts its
@@ -157,7 +157,7 @@ saves() {
 # pins dir value: the values the sweep was made under added to dir's
 # lba.cfg, value WideScreen's
 pins() {
-	printf 'LbaWinSettings: 210\r\nWideScreen: %s\r\n' "$2" >> "$1/lba.cfg"
+	printf 'LbaWinSettings: 210\r\nMusicTracks: CD\r\nMusicJingles: Midi\r\nWideScreen: %s\r\n' "$2" >> "$1/lba.cfg"
 }
 
 # pref dir scene: the port's preferences for a scene's save, the wide

@@ -28,6 +28,7 @@
 #include	"playfla.def"
 #ifndef	DOS
 #include	"porttext.def"
+#include	"psmusic.def"
 #include	"savegame.def"
 #endif
 

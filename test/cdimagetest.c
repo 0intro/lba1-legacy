@@ -36,9 +36,9 @@
  * Then for each image named, a cue sheet or an ISO, every file of its
  * directories must have the bytes of the file of its name in tree, at
  * its path or else at its base name, every file of tree must be in the
- * image, and every trackNN.wav of tracks ("-" for none) must have the
- * samples of the image's sound of its name (sys/cdimage.c's
- * imagesound).
+ * image, and every trackNN.wav of tracks ("-" for none), and every file
+ * of its JINGLES, must have the samples of the image's sound of its
+ * name (sys/cdimage.c's imagesound).
  */
 
 enum
@@ -212,10 +212,16 @@ record(uint8_t *p, uint32_t s, uint32_t size, int dir, char *name, int namelen)
 /*
  * The ISO written here: the volume at sector 16, the root at 18 with
  * CD_LBA. and LBA, LBA at 19 with README.TXT, CD_LBA's 22 bytes at 20
- * and README's 3000 at 21.
+ * and README's 3000 at 21. Its root names three files past its sectors,
+ * where a cue sheet's image places track 2 at 32: SONG.WAV, track 2's
+ * frames 2 to 11, LONG.WAV, from its frame 2 past its end, and SPAN.WAV,
+ * from sector 30 across the data track's end. With names 1 it names its
+ * tunes as the PlayStation's root does, TRACK1.WAV track 3 at 72 and
+ * TRACK2.WAV track 2, and with names 2 its TRACK1.WAV starts a sector
+ * into track 3, at no track's start.
  */
 static void
-makeiso(void)
+makeiso(int names)
 {
 	uint8_t *p;
 	int i;
@@ -240,7 +246,14 @@ makeiso(void)
 	p[25] = 4;
 	p += i;
 	p += record(p, 20, 22, 0, "CD_LBA.;1", 9);
-	record(p, 19, Sector, 1, "LBA", 3);
+	p += record(p, 19, Sector, 1, "LBA", 3);
+	p += record(p, Nimage+2, 10*Sector, 0, "SONG.WAV;1", 10);
+	p += record(p, Nimage+2, (Nframe-1)*Sector, 0, "LONG.WAV;1", 10);
+	p += record(p, Nimage-2, 4*Sector, 0, "SPAN.WAV;1", 10);
+	if (names > 0) {
+		p += record(p, Nimage+Nframe + (names == 2), Nframe*Sector, 0, "TRACK1.WAV;1", 12);
+		record(p, Nimage, Nframe*Sector, 0, "TRACK2.WAV;1", 12);
+	}
 	p = iso + 19*Sector;
 	p += record(p, 19, Sector, 1, "\0", 1);
 	p += record(p, 18, Sector, 1, "\1", 1);
@@ -617,6 +630,99 @@ port(char *cue)
 		fail("the port: the directory alone, D:\\CD_LBA of %ld bytes, want its 15", k);
 }
 
+/* The listing of the root: the file CD_LBA and the directory LBA, the files past the data track left to the players. */
+static void
+rootlisted(void *arg, char *name, int dir, uint32_t size, uint16_t date, uint16_t time)
+{
+	(void)arg;
+	(void)size;
+	(void)date;
+	(void)time;
+	nlisted++;
+	if (strcmp(name, dir ? "LBA" : "CD_LBA") != 0)
+		fail("listing the root: %s%s", name, dir ? ", a directory" : "");
+}
+
+/*
+ * The files the root places past the data track, on an image whose
+ * track 2 starts at sector 32 and runs 40 frames: SONG.WAV, track 2's
+ * frames 2 to 11 as a sound, LONG.WAV, which runs past track 2, and
+ * SPAN.WAV, across the data track's end, refused as a sound and as a
+ * file.
+ */
+static void
+sounds(char *what, Image *m)
+{
+	uint32_t first, n, s, size, k;
+	int32_t num;
+
+	if (imagesound(m, "song.wav", &num, &first, &n) != 0 || num != 2 || first != 2 || n != 10)
+		fail("%s: SONG.WAV: track %d from %u, %u frames, want track 2 from 2, 10", what, (int)num, first, n);
+	else
+		for (k = 0; k < n; k++)
+			if (!trackframe(m, num, first+k, 2, 2+k)) {
+				fail("%s: SONG.WAV's frame %u", what, k);
+				break;
+			}
+	if (imagefile(m, "SONG.WAV", &s, &size) == 0)
+		fail("%s: SONG.WAV taken for a file of the data track", what);
+	if (imagesound(m, "LONG.WAV", &num, &first, &n) == 0)
+		fail("%s: LONG.WAV, past track 2's end, taken for a sound", what);
+	if (imagesound(m, "SPAN.WAV", &num, &first, &n) == 0 || imagefile(m, "SPAN.WAV", &s, &size) == 0)
+		fail("%s: SPAN.WAV, across the data track's end, taken for a sound or a file", what);
+	if (imagesound(m, "TRACK02.WAV", &num, &first, &n) != 0 || num != 2 || first != 0 || n != Nframe)
+		fail("%s: TRACK02.WAV: track %d from %u, %u frames, want track 2 whole", what, (int)num, first, n);
+	nlisted = 0;
+	if (imagelist(m, "", rootlisted, NULL) != 0 || nlisted != 2)
+		fail("%s: listing the root: %d entries, want 2", what, nlisted);
+}
+
+/*
+ * The image whose root names its tunes as makeiso's names gives, a cue
+ * sheet of one file, its TRACKnn.WAV against the tracks due: 1,
+ * TRACK1.WAV at track 3's start, TRACK02.WAV track 3 and TRACK03.WAV
+ * track 2, tune 3's TRACK04.WAV refused, 2, TRACK1.WAV a sector into
+ * track 3, the tracks by number.
+ */
+static void
+named(int names)
+{
+	char bin[Npath], cue[Npath], text[Npath], *what;
+	uint32_t first, n;
+	int32_t num, want;
+	Image *m;
+
+	what = names == 1 ? "a root naming its tunes" : "a TRACK1.WAV at no track's start";
+	makeiso(names);
+	join(bin, sizeof bin, top, "named.bin");
+	makebin(bin, 0, 1, 0);
+	join(cue, sizeof cue, top, "named.cue");
+	snprintf(text, sizeof text,
+		"FILE \"named.bin\" BINARY\n  TRACK 01 MODE1/2352\n    INDEX 01 00:00:00\n"
+		"  TRACK 02 AUDIO\n    INDEX 01 00:00:%02d\n"
+		"  TRACK 03 AUDIO\n    INDEX 01 00:00:%02d\n",
+		Nimage, Nimage+Nframe);
+	put(cue, (uint8_t*)text, strlen(text));
+	m = open1(cue, what);
+	if (m == NULL)
+		return;
+	want = names == 1 ? 3 : 2;
+	num = 0;
+	n = 0;
+	if (imagesound(m, "TRACK02.WAV", &num, &first, &n) != 0 || num != want || first != 0 || n != Nframe)
+		fail("%s: TRACK02.WAV: track %d, %u frames, want track %d whole", what, (int)num, n, (int)want);
+	else if (!trackframe(m, num, 0, want, 0) || !trackframe(m, num, Nframe-1, want, Nframe-1))
+		fail("%s: TRACK02.WAV's frames", what);
+	want = names == 1 ? 2 : 3;
+	num = 0;
+	n = 0;
+	if (imagesound(m, "TRACK03.WAV", &num, &first, &n) != 0 || num != want || first != 0 || n != Nframe)
+		fail("%s: TRACK03.WAV: track %d, %u frames, want track %d whole", what, (int)num, n, (int)want);
+	if (names == 1 && imagesound(m, "TRACK04.WAV", &num, &first, &n) == 0)
+		fail("%s: TRACK04.WAV found, where the root names tunes 1 and 2", what);
+	imageclose(m);
+}
+
 /*
  * A WAVE file of track 2's Nframe frames into path, its data chunk
  * saying dlen bytes, after a junk chunk's header alone saying jlen bytes
@@ -757,7 +863,7 @@ own(void)
 	Case *c;
 	int k;
 
-	makeiso();
+	makeiso(0);
 	join(path, sizeof path, top, "disc.iso");
 	put(path, iso, sizeof iso);
 	m = open1(path, "the ISO");
@@ -801,6 +907,7 @@ own(void)
 	m = open1(cue, "the cue sheet of one file named from the root");
 	if (m != NULL) {
 		check("the cue sheet of one file named from the root", m, 1);
+		sounds("the cue sheet of one file named from the root", m);
 		imageclose(m);
 	}
 	port(cue);
@@ -982,6 +1089,8 @@ own(void)
 		if (m != NULL)
 			imageclose(m);
 	}
+	named(1);
+	named(2);
 }
 
 /* Whether path names a directory. */
@@ -1150,14 +1259,16 @@ sound(Image *m, char *name, char *path)
 }
 
 /*
- * The sounds of dir, each trackNN.wav, against the image's at path of
- * their names, as the players name them: the count of them, an audio
- * track wanting one.
+ * The sounds of dir, each trackNN.wav and each file of its JINGLES,
+ * against the image's at path of their names, as the players name
+ * them: the count of them, an audio track wanting one.
  */
 static int
 tracks(Image *m, char *path, char *dir)
 {
-	char file[Npath], name[Npath];
+	char file[Npath], name[Npath], jingles[Npath];
+	struct dirent *e;
+	DIR *d;
 	int t, n;
 
 	n = 0;
@@ -1167,6 +1278,17 @@ tracks(Image *m, char *path, char *dir)
 			sound(m, name, file);
 			n++;
 		}
+	}
+	if (findhost(dir, "JINGLES", jingles, sizeof jingles) == 0 && (d = opendir(jingles)) != NULL) {
+		while ((e = readdir(d)) != NULL) {
+			if (e->d_name[0] == '.')
+				continue;
+			join(name, sizeof name, "JINGLES", e->d_name);
+			join(file, sizeof file, jingles, e->d_name);
+			sound(m, name, file);
+			n++;
+		}
+		closedir(d);
 	}
 	for (t = 1; t <= 99 && imageaudio(m, t) == 0; t++)
 		;

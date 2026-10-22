@@ -186,6 +186,7 @@ NEW=\
 	sources/mcga.o\
 	sources/patch.o\
 	sources/porttext.o\
+	sources/psmusic.o\
 	sources/textfix.o\
 
 CARRIED=\
@@ -239,7 +240,7 @@ EMU8KTEST=\
 	sys/emu8ktab.o\
 
 # cfgtest: lba.cfg's reading and writing, through the port's files, its
-# switches and LbaWin's settings.
+# switches, LbaWin's settings and the music's sources it asks for.
 CFGTEST=\
 	test/cfgtest.o\
 	lib386/lib_sys/def_file.o\
@@ -317,6 +318,7 @@ NEWDEFS=\
 	input\
 	lba2text\
 	porttext\
+	psmusic\
 	savegame\
 
 DEFS=\

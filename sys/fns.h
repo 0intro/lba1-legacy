@@ -120,6 +120,7 @@ void	shotat(uint32_t, uint32_t, uint32_t);
 void	summed(uint32_t, uint64_t);
 void	summedwave(uint64_t, const uint32_t*, int);
 void	summedcd(uint64_t, const uint8_t*, int);
+void	summedpstrack(uint64_t, uint8_t*, int);
 void	summedmidi(uint64_t, int16_t*, int);
 void	waveto(char*);
 void	musicto(char*);
@@ -130,6 +131,8 @@ int32_t	screenwidth(int, int);
 /* modes.c */
 int	readmode(char*, char*, char**);
 int	readswitch(char*, char*, int);
+int32_t	automode(char*);
+int32_t	musicmode(char*, char*);
 void	readplatform(char*, int*);
 int32_t	gamekey(char*, char*);
 char*	gamekeyname(int);
@@ -153,6 +156,12 @@ void	wavestate(uint8_t*);
 
 /* cd.c */
 void	cdtick(uint64_t);
+void	pstrackstop(void);
+int	pstrackplaying(void);
+void	pstrackvolume(int32_t);
+void	pstrackfade(uint32_t);
+void	pstrackpause(void);
+void	pstrackresume(void);
 
 /* xmidi.c */
 uint32_t	uldivide(uint32_t, uint32_t);
@@ -253,6 +262,8 @@ void	sdlwavegain(float);
 void	sdlcd(const void*, int);
 void	sdlcdstop(void);
 void	sdlcdgain(float);
+void	sdlpstrack(const void*, int);
+void	sdlpstrackstop(void);
 void	sdlmidi(int16_t*, int, int);
 void	sdlmidigain(float);
 void	sdllate(void);

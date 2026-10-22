@@ -30,6 +30,15 @@
  * stream, the AWE32's to its 32-bit sum before it is cut to 16 bits.
  * The driver's memory is the C library's, as midi.c's was, not the
  * game's.
+ *
+ * FEATURE: the music's channel holds, in place of a sequence, the
+ * PlayStation's track of a tune (cd.c, PlayMidiFile), and each call on
+ * the music acts on it as on the sequence, whatever Midi_Driver_Enable
+ * says: a sequence started or stopped stops it, IsMidiPlaying answers
+ * for it, FadeMidiDown ramps its volume to 0 over the same time,
+ * VolumeMidi sets it (the percent alone, MaxVolume being the music's),
+ * PauseMidi and ResumeMidi keep its frame. DoLoopMidi acts on the
+ * sequence alone: a track plays once. Taken from the PlayStation.
  */
 
 enum
@@ -329,6 +338,7 @@ PlayMidi(unsigned char *xmi)
 	uint32_t treq;
 	uint8_t *t;
 
+	pstrackstop();
 	if (!Midi_Driver_Enable)
 		return;
 	midipaused = 0;
@@ -353,6 +363,7 @@ void
 StopMidi(void)
 {
 	midipaused = 0;
+	pstrackstop();
 	if (hseq != -1) {
 		stopseq(hseq);
 		releaseseqhandle(hseq);
@@ -368,12 +379,13 @@ StopMidi(void)
 void
 PauseMidi(void)
 {
-	if (!Midi_Driver_Enable)
-		return;
 	if (midipaused == 0) {
-		if (hseq == -1 || seqstatus(hseq) != 1)
+		if (pstrackplaying())
+			pstrackpause();
+		else if (Midi_Driver_Enable && hseq != -1 && seqstatus(hseq) == 1)
+			stopseq(hseq);
+		else
 			return;
-		stopseq(hseq);
 	}
 	midipaused++;
 }
@@ -386,9 +398,10 @@ PauseMidi(void)
 void
 ResumeMidi(void)
 {
-	if (!Midi_Driver_Enable || midipaused == 0)
+	if (midipaused == 0 || --midipaused != 0)
 		return;
-	if (--midipaused == 0)
+	pstrackresume();
+	if (Midi_Driver_Enable && hseq != -1)
 		resumeseq(hseq);
 }
 
@@ -396,13 +409,14 @@ ResumeMidi(void)
 int32_t
 IsMidiPlaying(void)
 {
-	return hseq != -1 && seqstatus(hseq) == 1;
+	return pstrackplaying() || (hseq != -1 && seqstatus(hseq) == 1);
 }
 
 /* FadeMidiDown is midi.c's: the first sequence's volume to 0 over nbsec seconds. */
 void
 FadeMidiDown(int16_t nbsec)
 {
+	pstrackfade(1000 * nbsec);
 	if (hseq != -1)
 		setrelvolume(0, 0, 1000 * nbsec);
 }
@@ -411,6 +425,7 @@ FadeMidiDown(int16_t nbsec)
 void
 VolumeMidi(int16_t volume)
 {
+	pstrackvolume(volume);
 	if (hseq != -1)
 		setrelvolume(0, (volume*MaxVolume)/100, 0);
 }
