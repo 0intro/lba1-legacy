@@ -73,7 +73,7 @@ TESTS=\
 	cdimagetest\
 
 # The objects, the game's in their link order, and their directories.
-OFILES=$(addprefix $(O)/,$(GAME) $(LIBS) $(NEW) $(PORT) $(ARRAYS))
+OFILES=$(addprefix $(O)/,$(GAME) $(LIBS) $(NEW) $(PORT) $(OPL3) $(ARRAYS))
 NEWOFILES=$(addprefix $(O)/,$(NEW) $(TESTS:%=test/%.o))
 DIRS=$(patsubst %/,%,$(sort $(dir $(OFILES) $(NEWOFILES))))
 
@@ -86,9 +86,10 @@ all: $(O)/lba$(EXE) $(O)/lba.cfg $(DLL_$(OS))\
 # The game comes last, its file the folder's.
 SDLLICENCE_windows=$(SDLDIR)/$(MINGW_$(ARCH))/share/licenses/SDL3/LICENSE.txt
 $(D)/lba$(EXE): $(O)/lba$(EXE) $(O)/lba.cfg $(DLL_$(OS)) $(SDLDEP_$(OS)) LICENSE\
-	lib386/lib_midi/ail32/license
+	sys/nuked/LICENSE lib386/lib_midi/ail32/license
 	rm -rf $(D) && mkdir -p $(D)
 	cp $(O)/lba.cfg $(DLL_$(OS)) LICENSE $(D)/
+	cp sys/nuked/LICENSE $(D)/LICENSE.nuked
 	cp lib386/lib_midi/ail32/license $(D)/LICENSE.ail32
 	$(if $(SDLLICENCE_$(OS)),cp $(SDLLICENCE_$(OS)) $(D)/LICENSE.SDL3)
 	cp $(O)/lba$(EXE) $@
@@ -146,6 +147,12 @@ $(O)/filestest$(EXE): $(addprefix $(O)/,$(FILESTEST)) $(MANIFEST)
 $(O)/cdimagetest$(EXE): $(addprefix $(O)/,$(CDIMAGETEST)) $(MANIFEST)
 	$(LINK)
 
+# livemusic.so: test/livemusic's preload, which watches the music's
+# stream in play and stalls the game, on Linux alone, as Wine's builds
+# refuse a preload.
+$(O)/livemusic.so: test/livemusic.c | $(DIRS)
+	$(COMPILE) $(CFLAGS) $(NEWFLAGS) $(SDLCFLAGS) -fPIC -shared -o $@ $< $(SDLLIBS) -ldl
+
 # GAME and LIBS, the 1994 code.
 $(addprefix $(O)/,$(GAME) $(LIBS)): $(O)/%.o: %.c | $(DIRS)
 	$(COMPILE) $(CFLAGS) $(OLDFLAGS) -c -o $@ $<
@@ -158,6 +165,10 @@ $(NEWOFILES): $(O)/%.o: %.c | $(DIRS)
 $(addprefix $(O)/,$(PORT)): $(O)/%.o: %.c $(SDLDEP_$(OS)) | $(DIRS)
 	$(COMPILE) $(CFLAGS) $(NEWFLAGS) $(SDLCFLAGS) -c -o $@ $<
 
+# Nuked OPL3 as published.
+$(addprefix $(O)/,$(OPL3)): $(O)/%.o: %.c | $(DIRS)
+	$(COMPILE) $(CFLAGS) -w -c -o $@ $<
+
 $(addprefix $(O)/,$(ARRAYS)): $(O)/%.o: $(O)/%.c
 	$(COMPILE) $(CFLAGS) $(NEWFLAGS) -c -o $@ $<
 
@@ -169,12 +180,18 @@ test: all
 	test/unit $(O)
 	test/nodata -x $(O)/lba$(EXE)
 
+# The part of check that a Linux target alone runs: the start in real
+# time with the music's stream watched and the game stalled, whose
+# preload Wine's builds refuse.
+CHECKDEPS_linux=$(O)/livemusic.so
+LIVEMUSIC_linux=test/livemusic -x $(O)/lba
+
 # check runs lint and test, then the tests on the game's files in
 # LBATMP: the oracles, cfgtest on the CD's LBA.CFG, cdimagetest on the
 # CDs' images, the proofs of the tables the C holds (the cells and the
 # texts of the data's fixes, sources/gridfix.c and sources/textfix.c)
 # and the records (test/e2e check).
-check: lint test oraclecheck
+check: lint test oraclecheck $(CHECKDEPS_$(OS))
 	rm -rf $(O)/run/cfg && mkdir -p $(O)/run/cfg
 	$(RUN) $(O)/cfgtest$(EXE) $(call HOSTPATH,$(O)/run/cfg) $(call HOSTPATH,$(LBATMP)/pc/LBA)
 	rm -rf $(O)/run/cdimages
@@ -189,3 +206,4 @@ check: lint test oraclecheck
 		$(LBATMP)/pc/LBA/TEXT.HQR $(LBATMP)/gog/lba1/CommonClassic/TEXT.HQR\
 		$(LBATMP)/ps/TEXT.HQR
 	test/e2e check -x $(O)/lba$(EXE)
+	$(LIVEMUSIC_$(OS))

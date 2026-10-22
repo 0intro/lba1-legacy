@@ -1,0 +1,34 @@
+# Outside the prison with the samples and the music on (fixtures/soundout:
+# the outside save of holomap.keys, and the lba.cfg of sound.keys with
+# MidiDriver A32SP2FM.DLL): the logo's jingle, the scene's XMIDI tune, the
+# ambience and the footsteps, P's pause, which fades the samples out and
+# Y ends, and F5's zoom, which waits for them to fade out before changing
+# the mode.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 15
+shot outside
+down Left
+sleep 2
+up Left
+key p
+sleep 3
+shot pause
+key y
+sleep 3
+key F5
+sleep 3
+shot zoom
+key F5
+sleep 3
+shot unzoom
+down Up
+sleep 2
+up Up
+sleep 3
+shot walked

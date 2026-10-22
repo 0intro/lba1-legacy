@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+#
+# livemusic: the music's stream in play, the game stalled, on SDL's
+# dummy drivers.
+#
+#     test/livemusic [-x exe]
+#
+# A replay runs as fast as it goes, and the records sum the frames
+# before SDL takes them: how the sound reaches the device in play is
+# this test's. It plays the start in real time, with SDL's dummy video
+# and audio, the logo's jingle (tune 31, XMIDI) on the OPL3, from the
+# fixture soundout. The preload test/livemusic.c (livemusic.so beside
+# exe) is the music's device: it pulls 1024 frames a period on the
+# port's clock, and logs what the port puts and reads queued and what
+# each pull lacked. It stalls the game 80 ms at 1.5, 3.0 and 4.5 s and
+# 250 ms at 5.5 s, in the jingle, and 250 ms at 9.5 s, in quiet, the
+# long ones longer than the lag the clock catches up after, and ends the
+# run at 11 s. tools/livemusic.py checks that the stream ran short only
+# in the long stalls, that the port kept its lead through the short ones
+# and filled it again after the long ones, and that every loud frame the
+# chip made (-m) reached it, in order.
+#
+# The game's files are $LBATMP/pc's, the fixtures $E2E/fixtures's ($E2E
+# is $LBATMP/e2e by default), and the runs go to $LBATMP/livemusic.
+#
+# exe is build/linux-amd64-gcc/lba by default: a preload works on Linux
+# builds alone.
+
+set -Eeuo pipefail
+
+TEST=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPO=$(cd -- "$TEST/.." && pwd)
+LBATMP=${LBATMP:-$(cd -- "$REPO/.." && pwd)/lba1-tmp}
+E2E=${E2E:-$LBATMP/e2e}
+RUN=$LBATMP/livemusic
+STALLS=1.5:80,3.0:80,4.5:80,5.5:250,9.5:250
+# each chip played: its name, the fixture whose lba.cfg chooses it, its rate
+CHIPS=(opl3:soundout:49716)
+END=11
+
+usage() {
+	echo "usage: livemusic [-x exe]" >&2
+	exit 2
+}
+
+exe=$REPO/build/linux-amd64-gcc/lba
+while (( $# )); do
+	case $1 in
+	-x) exe=$(cd -- "$(dirname -- "${2:?}")" && pwd)/$(basename -- "$2"); shift 2 ;;
+	*) usage ;;
+	esac
+done
+[[ $exe != *.exe ]] || { echo "livemusic: $exe: a preload works on Linux builds alone" >&2; exit 1; }
+so=$(dirname -- "$exe")/livemusic.so
+for f in "$exe" "$so"; do
+	[[ -e $f ]] || { echo "livemusic: no $f; build it first" >&2; exit 1; }
+done
+[[ -d $LBATMP/pc/LBA ]] || { echo "livemusic: no $LBATMP/pc; run tools/extract" >&2; exit 1; }
+
+status=0
+for c in "${CHIPS[@]}"; do
+	IFS=: read -r name fixture rate <<< "$c"
+	[[ -d $E2E/fixtures/$fixture ]] || { echo "livemusic: no $E2E/fixtures/$fixture, as with no records none played"; exit 0; }
+	dir=$RUN/$name
+	rm -rf -- "${dir:?}"
+	mkdir -p "$dir"
+	cp -R "$E2E/fixtures/$fixture" "$dir/pref"
+	timeout -k 5 30 env LD_PRELOAD="$so" LIVEMUSIC_RATE="$rate" LIVEMUSIC_STALLS="$STALLS" \
+		LIVEMUSIC_END="$END" LIVEMUSIC_LOG="$dir/log" LIVEMUSIC_DATA="$dir/data" \
+		SDL_VIDEO_DRIVER=dummy SDL_AUDIO_DRIVER=dummy \
+		"$exe" -g "$LBATMP/pc/LBA" -c "$LBATMP/pc" -p "$dir/pref" -m "$dir/music.raw" \
+		> "$dir/out" 2>&1 || true
+	python3 -I "$REPO/tools/livemusic.py" "$name" "$dir/log" "$dir/data" "$dir/music.raw" || status=1
+done
+exit "$status"

@@ -109,6 +109,12 @@ cdtick(uint64_t t)
 	USED(t);
 }
 
+void
+miditick(uint64_t t)
+{
+	USED(t);
+}
+
 /* One turn's calls. */
 static void
 turn(const char *s)

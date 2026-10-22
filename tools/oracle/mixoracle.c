@@ -27,8 +27,8 @@
  * the CT1745, its register at 224h and its data at 225h, each volume's
  * 5 bits read back as written, the chip as a reset leaves it: master,
  * voice and MIDI at 24 of 31, the CD and the line at 0. The port's
- * soundinit is given M_SB16.DLL for MixerDriver and NoWave for
- * WaveDriver.
+ * soundinit is given M_SB16.DLL for MixerDriver, NoWave for WaveDriver
+ * and NoMidi for MidiDriver.
  *
  *	calls	the start's MixerGetInfo and MixerGetVolume, as
  *		ReadVolumeSettings makes them, then 100000 MixerChangeVolume
@@ -41,7 +41,8 @@
  * does otherwise on purpose is let pass: the right channels, which the
  * driver writes alike, the game reading the left, and the PC speaker's
  * and the outputs' switches (3Bh, 3Ch), which the driver sets at each
- * change, where the port's sources are the samples and the CD.
+ * change, where the port's sources are the samples, the CD and the
+ * music.
  *
  * Each part runs in a process of its own, ended after 600 seconds, its
  * differences reported, the first 20 in full, and the end is
@@ -79,19 +80,23 @@ static int mixreg;	/* the register 224h chose */
 static uint8_t *dll;	/* M_SB16.DLL's bytes */
 static long ndll;
 
-/* def_file.c's, sys.c's, wave.c's and sdl.c's, for sys/sound.c */
+/* def_file.c's, midi.c's, sys.c's, wave.c's and sdl.c's, for sys/sound.c */
 char	PathConfigFile[1];
 int32_t	PlayRate = 22000;
 int32_t	Wave_Driver_Enable;
+int16_t	Midi_Driver_Enable;
+char	MidiFM;
 
-/* The configuration: M_SB16.DLL for the mixer, NoWave. */
+/* The configuration: M_SB16.DLL for the mixer, NoWave and NoMidi. */
 unsigned char*
 Def_ReadString(unsigned char *path, unsigned char *key)
 {
 	USED(path);
 	if (strcmp((char*)key, "MixerDriver") == 0)
 		return (unsigned char*)"M_SB16.DLL";
-	return (unsigned char*)"NoWave";
+	if (strcmp((char*)key, "WaveDriver") == 0)
+		return (unsigned char*)"NoWave";
+	return (unsigned char*)"NoMidi";
 }
 
 int32_t
@@ -101,6 +106,18 @@ Def_ReadValue2(unsigned char *path, unsigned char *key, int32_t *v)
 	USED(key);
 	USED(v);
 	return 0;
+}
+
+int
+midiinit(void)
+{
+	return 0;
+}
+
+void
+sdlmidigain(float g)
+{
+	USED(g);
 }
 
 void

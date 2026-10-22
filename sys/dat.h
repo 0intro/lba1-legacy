@@ -29,6 +29,8 @@ extern char	PathConfigFile[];	/* lba.cfg's name, InitAdelineSystem's (sys.c) */
 extern volatile uint32_t	TimerRef;	/* the game's time, in the PIT's ticks of 50 Hz (timer.c) */
 extern int32_t	Wave_Driver_Enable;	/* the samples' driver loaded (wave.c) */
 extern int32_t	PlayRate;	/* the samples' rate, in Hz */
+extern int16_t	Midi_Driver_Enable;	/* the music's driver loaded (midi.c) */
+extern char	MidiFM;	/* MidiType FM: MIDI_SB.HQR's tunes, the OPL3's (sys.c) */
 
 enum
 {
@@ -50,3 +52,50 @@ enum
 
 /* a CD's image, a cue sheet and its files or an ISO (cdimage.c) */
 typedef struct Image Image;
+
+typedef struct Drvrdesc Drvrdesc;
+typedef struct Synth Synth;
+
+/* AIL's drvr_desc: what an XMIDI driver's describe_driver gives. */
+struct Drvrdesc
+{
+	uint32_t	minapi;
+	uint32_t	type;
+	char	suffix[4];
+	char	*names;		/* the devices, each NUL-ended, an empty one last */
+	int32_t	io;
+	int32_t	irq;
+	int32_t	dma;
+	int32_t	drq;
+	int32_t	rate;		/* the service's, in Hz */
+	uint32_t	display;
+};
+
+/*
+ * An XMIDI driver's synthesizer, what xmidi32.asm includes: the
+ * procedures the sequencer calls, and those of the driver's index the
+ * synthesizer gives.
+ */
+struct Synth
+{
+	Drvrdesc	*desc;
+	void	(*setioparms)(uint32_t, uint32_t, uint32_t, uint32_t);
+	void	(*reset)(void);
+	void	(*init)(void);
+	uint32_t	(*send)(uint32_t, uint32_t, uint32_t);
+	void	(*shutdown)(void);
+	int32_t	(*detect)(uint32_t, uint32_t, uint32_t, uint32_t);
+	uint32_t	(*cvmsg)(uint32_t, uint32_t, uint32_t);
+	void	(*sysexmsg)(uint32_t, uint32_t, uint32_t, uint32_t, uint8_t*, uint32_t);
+	void	(*display)(char*);
+	uint32_t	(*cachesize)(void);
+	void	(*definecache)(void*, uint32_t);
+	int32_t	(*request)(int32_t);
+	void	(*install)(uint32_t, uint32_t, uint8_t*);
+	void	(*protect)(uint32_t, uint32_t);
+	void	(*unprotect)(uint32_t, uint32_t);
+	int32_t	(*status)(uint32_t, uint32_t);
+};
+
+extern Synth	opl3;	/* the OPL3's synthesizer (yamaha.c) */
+

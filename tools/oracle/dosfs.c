@@ -20,12 +20,13 @@
 /*
  * DOS's file functions, int 21h's, over a host directory, the game's as
  * C:\LBA is, current, for the oracles: 3Ch, 3Dh, 3Eh, 3Fh, 40h (a count
- * of 0 cutting the file there), 41h, 42h, 1Ah, 4Eh and 4Fh (the
+ * of 0 cutting the file there), 41h, 42h, 4400h, 1Ah, 4Eh and 4Fh (the
  * search's place in the DTA's first 21 bytes), 2Ah and 2Ch (a clock of
  * the model's, two seconds on at each read), and 5700h and 5701h, a
  * name's parts, of 12 characters at most, cut to 8 and 3 characters in
  * upper case, as the host's directory holds DOS's names, 20 handles, 5
- * of them DOS's own. dosfsinit gives the directory and closes what a run left
+ * of them DOS's own, whose reads give 0 bytes and whose writes are
+ * taken whole. dosfsinit gives the directory and closes what a run left
  * open, and dosfs is the handler pcint takes.
  */
 
@@ -380,12 +381,18 @@ dosfs(Cpu *c)
 		c->eax = h;
 		return;
 	case 0x3e:
+		if ((c->ebx & 0xffff) < 5)
+			return;
 		if ((f = handle(c)) == NULL)
 			return;
 		fclose(f->f);
 		f->f = NULL;
 		return;
 	case 0x3f:
+		if ((c->ebx & 0xffff) < 5) {
+			c->eax = 0;
+			return;
+		}
 		if ((f = handle(c)) == NULL)
 			return;
 		if (f->mode == 1 || f->pos < 0) {
@@ -398,6 +405,10 @@ dosfs(Cpu *c)
 		c->eax = n;
 		return;
 	case 0x40:
+		if ((c->ebx & 0xffff) < 5) {
+			c->eax = c->ecx;
+			return;
+		}
 		if ((f = handle(c)) == NULL)
 			return;
 		if (f->mode == 0 || f->pos < 0) {
@@ -458,6 +469,17 @@ dosfs(Cpu *c)
 	case 0x4f:
 		if (nextfile() != 0)
 			doserr(c, 18);
+		return;
+	case 0x44:
+		if ((c->eax & 0xff) != 0)
+			break;
+		if ((c->ebx & 0xffff) < 5) {
+			setlo(&c->edx, 0x80d3);
+			return;
+		}
+		if ((f = handle(c)) == NULL)
+			return;
+		setlo(&c->edx, 2);
 		return;
 	case 0x57:
 		if ((f = handle(c)) == NULL)

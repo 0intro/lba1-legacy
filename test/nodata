@@ -27,12 +27,13 @@
 # CD_LBA alone: the start goes past the CD to its first missing
 # resource, the inventory's ("HQR Inventory"), the same screens. Then
 # three runs from empty preferences, which they must leave empty. On two
-# game directories, the first, langé, holding an LBA.CFG of two keys,
-# Language: Deutsch and LanguageCD in CP437, the second empty, lba reads
-# that LBA.CFG as it is: the same screens. On a game directory without
-# LBA.CFG, a copy of lba in besidé reads the lba.cfg beside it: the same
-# screens. A copy beside none reads the text lba holds of lba.cfg to
-# "No CD".
+# game directories, the first, langé, holding an LBA.CFG of three keys,
+# Language: Deutsch, LanguageCD in CP437 and NoMidi, the second empty,
+# lba reads that LBA.CFG as it is: the same screens and the OPL3 left
+# alone. On a game directory without LBA.CFG, a copy of lba in besidé
+# reads the lba.cfg beside it: the same screens and the OPL3's timbres
+# said missing. A copy beside none reads the text lba holds of lba.cfg to
+# "No CD", the OPL3's timbres said missing.
 #
 # exe is build/linux-amd64-gcc/lba by default, cfgtest and lba.cfg
 # beside it. A Windows exe runs natively (Git Bash, MSYS2), SDL3.dll
@@ -156,11 +157,24 @@ untouched() {
 	fi
 }
 
+# opl3 want what: whether the run said the OPL3's timbres are missing, as
+# want (1 or 0) says it must, lba.cfg's music read
+opl3() {
+	local said=0
+	grep -q 'cannot load SAMPLE.OPL' out && said=1
+	if (( said != $1 )); then
+		echo "nodata: $2: the OPL3's timbres said missing: $said where $1 was due" >&2
+		cat out >&2
+		exit 1
+	fi
+}
+
 mkdir gamecfg langé nogame
-printf 'Language: Deutsch\r\nLanguageCD: Fran\207ais\r\n' > langé/LBA.CFG
+printf 'Language: Deutsch\r\nLanguageCD: Fran\207ais\r\nMidiDriver: NoMidi\r\n' > langé/LBA.CFG
 run gamecfg sums-gamecfg 'No CD' -g langé -g nogame -c cd
 grep '^[0-9]' sums-gamecfg > screens-gamecfg || true
 same screens-gamecfg "with a game directory's LBA.CFG, "
+opl3 0 "a game directory's LBA.CFG"
 untouched gamecfg "a game directory's LBA.CFG"
 
 mkdir besidé besidecfg
@@ -170,11 +184,13 @@ cp "$cfg" besidé/lba.cfg
 exe=besidé/$(basename -- "$exe") run besidecfg sums-beside 'No CD' -g nogame -c cd
 grep '^[0-9]' sums-beside > screens-beside || true
 same screens-beside "with lba.cfg beside the program, "
+opl3 1 "lba.cfg beside the program"
 untouched besidecfg "lba.cfg beside the program"
 
 mkdir bare textcfg
 cp "$exe" bare/
 [[ ! -f $(dirname -- "$exe")/SDL3.dll ]] || cp "$(dirname -- "$exe")/SDL3.dll" bare/
 exe=bare/$(basename -- "$exe") run textcfg sums-text 'No CD' -g nogame -c cd
+opl3 1 "the program's text of lba.cfg"
 untouched textcfg "the program's text of lba.cfg"
 echo "nodata: the program's text of lba.cfg read to \"No CD\""

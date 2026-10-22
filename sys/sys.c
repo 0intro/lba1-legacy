@@ -9,9 +9,10 @@
 /*
  * What lib386/lib_sys/adeline.c set up: the configuration file, whose
  * keys chose DOS's drivers, the video, the keyboard and the timer. Here
- * the sound's drivers are the port's (sound.c), and the configuration
- * file is read where the game's files are read, as LBA.EXE reads LBA.CFG
- * in its directory, its changes written into the preferences (files.c).
+ * the sound's drivers are the port's (sound.c), MidiType chooses the
+ * music banks, and the configuration file is read where the game's
+ * files are read, as LBA.EXE reads LBA.CFG in its directory, its changes
+ * written into the preferences (files.c).
  */
 
 char	PathConfigFile[260];
@@ -20,6 +21,8 @@ char	MidiFM = 1;
 void
 InitAdelineSystem(char *name, int32_t inits)
 {
+	unsigned char *p;
+
 	USED(inits);
 	printf("\nCopyright (c) Adeline Software International 1994, All Rights Reserved.\n\n");
 	snprintf(PathConfigFile, sizeof PathConfigFile, "%s", name);
@@ -31,6 +34,9 @@ InitAdelineSystem(char *name, int32_t inits)
 	 * program holds. Taken from LbaWin 0.8.1, the text the port's own.
 	 */
 	bindconfig(name, (char*)lbacfg);
+	p = Def_ReadString((unsigned char*)name, (unsigned char*)"MidiType");
+	if (p != NULL && *p != 0)
+		MidiFM = watcomstricmp((char*)p, "FM") == 0;
 	soundinit();
 	videoinit();
 	clockinit();
@@ -39,6 +45,7 @@ InitAdelineSystem(char *name, int32_t inits)
 void
 ClearAdelineSystem(void)
 {
+	ClearMidi();
 	sdlclose();
 }
 

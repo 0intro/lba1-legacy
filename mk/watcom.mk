@@ -260,9 +260,10 @@ test: all oracles
 	dos/nodata -g $(DOS4GW) -x $(O)/lba0.exe
 
 # check, with the fixes: lint and test, then asmoracle and the
-# W_SB16.DLL on the game's files, cdoracle on the CD's images, and
-# mixoracle, its mixer through the CD's M_SB16.DLL on a model of the
-# CT1745 against sys/sound.c.
+# W_SB16.DLL on the game's files, cdoracle on the CD's images, mixoracle,
+# its mixer through the CD's M_SB16.DLL on a model of the CT1745 against
+# sys/sound.c, and ailoracle, its music through AIL/32 and the CD's
+# A32SP2FM.DLL on a model of the OPL3 and the PIT against sys/midi.c.
 check: lint test
 	$(ORACLE)/asmoracle -g $(LBATMP)/pc/LBA $(O)/lba0.elf $(O)/lba0.sym
 	$(ORACLE)/waveoracle -f -g $(LBATMP)/pc/LBA $(O)/w_sb16.elf $(O)/w_sb16.sym
@@ -271,6 +272,7 @@ check: lint test
 		$(LBATMP)/iso/adeline/ADELINE.CUE $(LBATMP)/pc $(LBATMP)/music/eu\
 		$(LBATMP)/gog/lba1/Speedrun/Windows/LBA.DAT - -
 	$(ORACLE)/mixoracle $(O)/lba0.elf $(O)/lba0.sym $(LBATMP)/pc/LBA/M_SB16.DLL
+	$(ORACLE)/ailoracle $(O)/lba0.elf $(O)/lba0.sym $(LBATMP)/pc/LBA
 else
 # test, LBA.EXE's code: the build's sums, and the oracles whose cases
 # hold it as they hold the fixes: the run-time's, waveoracle's own

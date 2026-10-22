@@ -112,7 +112,8 @@ usage::
 # the 1994 game's modules and libraries, which the port builds with
 # sys/compat.h read first and their warnings off. NEW are the
 # translations of the game's assembly and the game's new code, PORT the
-# layer on SDL3.
+# layer on SDL3. Nuked OPL3 (sys/nuked) builds as published, its
+# warnings off.
 GAME=\
 	sources/ambiance.o\
 	sources/diskfunc.o\
@@ -180,6 +181,8 @@ PORT=\
 	sys/files.o\
 	sys/keyb.o\
 	sys/mem.o\
+	sys/midi.o\
+	sys/oplio.o\
 	sys/qsort.o\
 	sys/rand.o\
 	sys/replay.o\
@@ -189,7 +192,12 @@ PORT=\
 	sys/timer.o\
 	sys/video.o\
 	sys/wave.o\
+	sys/xmidi.o\
+	sys/yamaha.o\
 	sys/cdimage.o\
+
+OPL3=\
+	sys/nuked/opl3.o\
 
 # sys/lba.cfg's text made into C at the build.
 ARRAYS=\

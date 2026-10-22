@@ -13,13 +13,15 @@
  * none. WaveDriver gives the samples (wave.c) at WaveRate, which
  * W_SB16.DLL kept between 12000 and 22000. A rate the original had to
  * be given is its own 22000 here, and the base it had to be given is
- * nothing. MidiDriver is taken for none, the music silent. MixerDriver
- * gives the mixer, as M_SB16.DLL drove it: every volume adjustable, 0
- * to 255 being 2 dB a step of 8 below the top, read back to its step,
- * the music's read from the samples' (a slip of M_SB16.DLL's), its
- * registers at first the chip's own after a reset, giving their gains
- * to the samples and the CD's audio (cd.c). Without one the game offers
- * the music's volume alone and the card plays as it was.
+ * nothing. MidiDriver gives the music (midi.c), whatever driver it
+ * names the OPL3's, A32SP2FM.DLL, so MIDI_SB.HQR's tunes whatever
+ * MidiType says. MixerDriver gives the mixer, as M_SB16.DLL drove it:
+ * every volume adjustable, 0 to 255 being 2 dB a step of 8 below the
+ * top, read back to its step, the music's read from the samples' (a
+ * slip of M_SB16.DLL's), its registers at first the chip's own after a
+ * reset, giving their gains to the samples, the CD's audio (cd.c) and
+ * the music. Without one the game offers the music's volume alone and
+ * the card plays as it was.
  */
 
 enum
@@ -30,9 +32,6 @@ enum
 	Vline,
 	Vmaster,
 };
-
-int16_t	Midi_Driver_Enable;
-int32_t	MaxVolume = 100;
 
 static int mixer;
 static int32_t volumes[5] = {0xC0, 0xC0, 0, 0, 0xC0};
@@ -54,12 +53,13 @@ gain(int32_t v)
 	return powf(10, (float)(((v & 0xFF) >> 3) - 31) * 2 / 20);
 }
 
-/* The registers' gains on the samples and the CD. */
+/* The registers' gains on the samples, the CD and the music. */
 static void
 gains(void)
 {
 	sdlwavegain(gain(volumes[Vwave]) * gain(volumes[Vmaster]));
 	sdlcdgain(gain(volumes[Vcd]) * gain(volumes[Vmaster]));
+	sdlmidigain(gain(volumes[Vmidi]) * gain(volumes[Vmaster]));
 }
 
 void
@@ -77,45 +77,12 @@ soundinit(void)
 		if ((uint32_t)PlayRate > 22000)
 			PlayRate = 22000;
 	}
-	Midi_Driver_Enable = 0;
+	Midi_Driver_Enable = driver("MidiDriver", "NoMidi") && midiinit();
+	if (Midi_Driver_Enable)
+		MidiFM = 1;
 	mixer = driver("MixerDriver", "NoMixer");
 	if (mixer)
 		gains();
-}
-
-/* lib_midi's calls, on a driver taken for none. */
-void
-PlayMidi(unsigned char *xmi)
-{
-	USED(xmi);
-}
-
-void
-StopMidi(void)
-{
-}
-
-int32_t
-IsMidiPlaying(void)
-{
-	return 0;
-}
-
-void
-FadeMidiDown(int16_t nbsec)
-{
-	USED(nbsec);
-}
-
-void
-VolumeMidi(int16_t volume)
-{
-	USED(volume);
-}
-
-void
-DoLoopMidi(void)
-{
 }
 
 /* SetMixerVolume is M_SB16.DLL's: a byte to each register, -1 none. */

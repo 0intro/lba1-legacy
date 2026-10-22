@@ -32,6 +32,7 @@ extern int	(*pcfault)(void*);	/* a fault past pc.c's decoding, given its ucontex
 
 void	pcload(char*, char*);
 uintptr_t	lookup(char*);
+uintptr_t	symaddr(char*);
 void	pcint(int, void (*)(Cpu*));
 void	pcport(uint32_t, uint32_t, uint32_t (*)(uint32_t, int), void (*)(uint32_t, uint32_t, int));
 void	pcbios(int, void (*)(void));

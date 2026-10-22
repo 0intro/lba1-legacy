@@ -145,6 +145,7 @@ pump(void)
 	replay(npump);
 	wavetick(now);
 	cdtick(now);
+	miditick(now);
 	t = now - now%frame();
 	if (t > retrace) {
 		retrace = t;

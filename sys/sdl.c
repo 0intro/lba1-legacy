@@ -19,6 +19,7 @@ enum
 	Width = 640,
 	Height = 480,
 	Ext = 0x100,	/* an extended key: E0 before its code */
+	Quiet = 16,	/* a sample of the music within this of 0 is silence: -66 dB */
 	Drift = 5000,	/* the most steer nudges a stream's rate, in millionths */
 };
 
@@ -540,6 +541,80 @@ sdlcdgain(float g)
 }
 
 /*
+ * The music's chip, at its rate (the OPL3's 49716 Hz), to a stream of
+ * its own. Its frames come only as the clock passes them, so that its
+ * lead (leadof) is silence put at the start. A chunk all within Quiet
+ * of 0 is silence (Nuked OPL3 gives a dozen below). After a tenth of a
+ * second of it the lead is held in place of the chunk, so that a rest
+ * within a tune keeps its time. A chunk is dropped when more than half
+ * a second waits, the clock having run ahead (a replay).
+ */
+static SDL_AudioStream *midistream;
+static int nomidi;
+static float midigain = 1;
+static int midilead;	/* bytes */
+static int midiquiet;	/* frames of silence in a row, a tenth of a second at most */
+
+/* Whether n samples all lie within Quiet of 0. */
+static int
+quiet(int16_t *s, int n)
+{
+	int i;
+
+	for (i = 0; i < n; i++)
+		if (s[i] > Quiet || s[i] < -Quiet)
+			return 0;
+	return 1;
+}
+
+void
+sdlmidi(int16_t *buf, int n, int rate)
+{
+	SDL_AudioSpec spec;
+	int q;
+
+	if (nomidi)
+		return;
+	if (midistream == NULL) {
+		spec.format = SDL_AUDIO_S16LE;
+		spec.channels = 2;
+		spec.freq = rate;
+		if (!SDL_InitSubSystem(SDL_INIT_AUDIO)
+		|| (midistream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL)) == NULL) {
+			fprintf(stderr, "lba: no music: %s\n", SDL_GetError());
+			nomidi = 1;
+			return;
+		}
+		SDL_SetAudioStreamGain(midistream, midigain);
+		SDL_ResumeAudioStreamDevice(midistream);
+		midilead = leadof(midistream, rate);
+		fill(midistream, midilead);
+	}
+	if (!quiet(buf, 2*n))
+		midiquiet = 0;
+	else if (midiquiet < rate/10)
+		midiquiet += n;
+	if (midiquiet >= rate/10) {
+		fill(midistream, midilead);
+		return;
+	}
+	q = SDL_GetAudioStreamQueued(midistream);
+	if (q > rate/2*4)
+		return;
+	SDL_PutAudioStreamData(midistream, buf, n*4);
+	steer(midistream, q + n*4, midilead);
+}
+
+/* The mixer chip's gain on the music. */
+void
+sdlmidigain(float g)
+{
+	midigain = g;
+	if (midistream != NULL)
+		SDL_SetAudioStreamGain(midistream, g);
+}
+
+/*
  * sdllate: the lag the clock gave up, which spent what the streams held
  * ahead, made silence: each stream filled to its lead.
  */
@@ -550,6 +625,8 @@ sdllate(void)
 		fill(wavestream, wavelead);
 	if (cdstream != NULL)
 		fill(cdstream, cdlead);
+	if (midistream != NULL)
+		fill(midistream, midilead);
 }
 
 uint64_t
@@ -697,7 +774,7 @@ sdlpoll(void)
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: lba [-g gamedir]... [-c cd]... [-p prefdir] [-r record | -i record] [-s sums] [-S n[-m[/k]]] [-w wave]\n");
+	fprintf(stderr, "usage: lba [-g gamedir]... [-c cd]... [-p prefdir] [-r record | -i record] [-s sums] [-S n[-m[/k]]] [-w wave] [-m music]\n");
 	exit(2);
 }
 
@@ -711,7 +788,8 @@ usage(void)
  * is read after them from the program's directory (files.c). The input
  * can be recorded (-r) or played from a record (-i), the screens shown
  * summed (-s), the nth, or the nth to the mth (every kth), written as
- * lban.bmp (-S), and the samples mixed written raw (-w): replay.c.
+ * lban.bmp (-S), and the samples mixed (-w) and the music made (-m)
+ * written raw: replay.c.
  */
 int
 main(int argc, char *argv[])
@@ -766,6 +844,9 @@ main(int argc, char *argv[])
 			break;
 		case 'w':
 			waveto(argv[++i]);
+			break;
+		case 'm':
+			musicto(argv[++i]);
 			break;
 		default:
 			usage();

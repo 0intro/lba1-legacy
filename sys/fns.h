@@ -87,7 +87,9 @@ void	shotat(uint32_t, uint32_t, uint32_t);
 void	summed(uint32_t, uint64_t);
 void	summedwave(uint64_t, const uint32_t*, int);
 void	summedcd(uint64_t, const uint8_t*, int);
+void	summedmidi(uint64_t, int16_t*, int);
 void	waveto(char*);
+void	musicto(char*);
 
 /* video.c */
 void	videoinit(void);
@@ -103,6 +105,54 @@ void	wavestate(uint8_t*);
 /* cd.c */
 void	cdtick(uint64_t);
 
+/* xmidi.c */
+uint32_t	uldivide(uint32_t, uint32_t);
+void	servedriver(void);
+void	initdriver(Synth*, uint32_t, uint32_t, uint32_t, uint32_t);
+void	shutdowndriver(char*);
+uint32_t	statesize(void);
+void	installcallback(void (*)(int32_t, int32_t));
+void	cancelcallback(void);
+int32_t	registerseq(uint8_t*, uint32_t, void*, uint8_t*);
+void	releaseseqhandle(int32_t);
+void	stopseq(int32_t);
+void	startseq(int32_t);
+void	resumeseq(int32_t);
+int32_t	seqstatus(int32_t);
+int32_t	beatcount(int32_t);
+int32_t	barcount(int32_t);
+void	mapseqchannel(int32_t, uint32_t, uint32_t);
+int32_t	trueseqchannel(int32_t, uint32_t);
+void	branchindex(int32_t, uint32_t);
+int32_t	reltempo(int32_t);
+int32_t	relvolume(int32_t);
+void	setreltempo(int32_t, int32_t, uint32_t);
+void	setrelvolume(int32_t, int32_t, uint32_t);
+int32_t	controlval(int32_t, uint32_t, uint32_t);
+void	setcontrolval(int32_t, uint32_t, uint32_t, uint32_t);
+int32_t	channotes(int32_t, uint32_t);
+uint8_t*	seqtimb(int32_t);
+int32_t	lockchannel(void);
+void	releasechannel(uint32_t);
+void	xmidistate(uint8_t*);
+void	xmidiseqstate(int32_t, uint8_t*);
+
+/* yamaha.c */
+void	yamahastate(uint8_t*);
+
+/* oplio.c */
+void	oplioreset(uint32_t);
+void	oplportout(uint32_t, uint32_t);
+uint32_t	oplportin(uint32_t);
+
+/* midi.c */
+void	oplwrite(uint32_t, uint32_t);
+void	oplout(uint32_t, uint32_t);
+uint32_t	oplin(uint32_t);
+int	midiinit(void);
+void	ClearMidi(void);
+void	miditick(uint64_t);
+
 /* sdl.c */
 void	fatal(char*, ...);
 void	sdlclose(void);
@@ -115,6 +165,8 @@ void	sdlwavegain(float);
 void	sdlcd(const void*, int);
 void	sdlcdstop(void);
 void	sdlcdgain(float);
+void	sdlmidi(int16_t*, int, int);
+void	sdlmidigain(float);
 void	sdllate(void);
 
 /* the game's */
@@ -122,3 +174,4 @@ int	lbamain(int, char**);
 unsigned char*	Def_ReadString(unsigned char*, unsigned char*);
 int32_t	Def_ReadValue2(unsigned char*, unsigned char*, int32_t*);
 int32_t	Def_WriteValue(unsigned char*, unsigned char*, int32_t);
+uint32_t	Load(char*, void*);

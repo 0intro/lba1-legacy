@@ -23,14 +23,18 @@
  * from the one before: its number, the clock in ns, the sum. When the
  * samples play, they add a line per half of them mixed: w, its number,
  * the sum of its frames. When the CD plays, it adds a line per frame of
- * its audio handed on: c, its number, its sum. The halves can be
- * written too, raw, 16-bit stereo at the samples' rate.
+ * its audio handed on: c, its number, its sum. When the music's driver
+ * is on, it adds a line per period of its timer: m, the chip's samples
+ * made so far, the sum of the period's. The halves can be written too,
+ * raw, 16-bit stereo at the samples' rate, and the chip's samples, at
+ * its rate.
  */
 
 static FILE *rec;
 static FILE *play;
 static FILE *sums;
 static FILE *wave;
+static FILE *music;
 static uint32_t shot = 1, lastshot, shotstep = 1;	/* none unless shotat */
 static uint64_t due;
 static int duekind;
@@ -297,4 +301,22 @@ summedcd(uint64_t n, const uint8_t *buf, int len)
 {
 	if (sums != NULL)
 		fprintf(sums, "c %" PRIu64 " %08" PRIx32 "\n", n, crc(0, buf, (size_t)len));
+}
+
+void
+musicto(char *file)
+{
+	music = fopen(file, "wb");
+	if (music == NULL)
+		fatal("cannot create %s", file);
+}
+
+/* The chip's n frames made by the clock's sample s: their sum, and the frames written. */
+void
+summedmidi(uint64_t s, int16_t *buf, int n)
+{
+	if (sums != NULL)
+		fprintf(sums, "m %" PRIu64 " %08" PRIx32 "\n", s, crc(0, (uint8_t*)buf, (size_t)n*4));
+	if (music != NULL)
+		fwrite(buf, 4, n, music);
 }

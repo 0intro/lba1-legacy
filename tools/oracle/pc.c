@@ -49,7 +49,8 @@
  * 0100h with DOS's error 8 and a largest block of 0 paragraphs, the
  * others with 8012h. The PIC counts its ends of interrupt at 20h.
  * Anything else ends the run, reported, as does any other fault, and a
- * run's alarm. The faults are taken on a stack of their own.
+ * run's alarm. The faults are taken on a stack of their own: AIL's
+ * timer runs its callbacks on a stack in its data.
  *
  * acall calls a procedure as the C does and checks its convention,
  * cxcall calls one as the C does with a known ECX, intcall an interrupt
@@ -231,7 +232,7 @@ loadsyms(char *path)
 }
 
 /* The address of name, or 0 if the map lacks it. */
-static uintptr_t
+uintptr_t
 symaddr(char *name)
 {
 	int i;

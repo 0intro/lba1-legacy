@@ -115,6 +115,12 @@ cdtick(uint64_t t)
 }
 
 void
+miditick(uint64_t t)
+{
+	USED(t);
+}
+
+void
 sdlshow(void)
 {
 }
