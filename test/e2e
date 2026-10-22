@@ -38,25 +38,25 @@
 # game's directories. The game's files are those tools/extract unpacked
 # from the CD into $LBATMP/pc. A record plays on that CD, or with -c on
 # cd, another directory of $LBATMP holding the CD, its audio files
-# beside it, a CD's image there, a cue sheet or an ISO, -c given again
-# for each CD more, read in turn, which the record keeps (name.cd, a
-# line each) and replays on, or with -c - alone on the port's own
-# default, the first game directory's parent. The game's directory is
-# the CD's, pc/LBA, or with -g game, another directory of $LBATMP
-# holding the game's files, -g given again for each directory more, read
-# in turn, which the record keeps (name.game, a line each). A record
-# whose directory is missing is said so. derive makes the record name
-# from the input and preferences of from, replayed on cd and game, each
-# key of -k set in their lba.cfg: the replay must show from's screens,
-# the sound alone changing, and its sums and the files it left are kept
-# as name's reference. E2E, if set, names the records' directory in
-# place of $LBATMP/e2e. A record keeps the display it was made on, which
-# its replays take, so that the wide screen has the record's width on
-# every display: record's -D makes it as on a display of WxH, the
-# Xephyr's otherwise. With -R the port takes the display's refresh as
-# hz, 0 for unknown or 1 to 1000, which DisplaySync paces the game and
-# its presents by, and the record keeps its frame, as it keeps the frame
-# of the display it ran on otherwise.
+# beside it, a CD's image there, a cue sheet or an ISO, or another
+# version's install without one, -c given again for each CD more, read
+# in turn, which the record keeps (name.cd, a line each) and replays on,
+# or with -c - alone on the port's own default, the first game
+# directory's parent. The game's directory is the CD's, pc/LBA, or with
+# -g game, another directory of $LBATMP holding the game's files, -g
+# given again for each directory more, read in turn, which the record
+# keeps (name.game, a line each). A record whose directory is missing is
+# said so. derive makes the record name from the input and preferences
+# of from, replayed on cd and game, each key of -k set in their lba.cfg:
+# the replay must show from's screens, the sound alone changing, and its
+# sums and the files it left are kept as name's reference. E2E, if set,
+# names the records' directory in place of $LBATMP/e2e. A record keeps
+# the display it was made on, which its replays take, so that the wide
+# screen has the record's width on every display: record's -D makes it
+# as on a display of WxH, the Xephyr's otherwise. With -R the port takes
+# the display's refresh as hz, 0 for unknown or 1 to 1000, which
+# DisplaySync paces the game and its presents by, and the record keeps
+# its frame, as it keeps the frame of the display it ran on otherwise.
 
 set -Eeuo pipefail
 

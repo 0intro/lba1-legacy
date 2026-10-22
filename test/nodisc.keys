@@ -1,0 +1,19 @@
+# A new game on the Classic's own files, without a disc, the Classic's
+# music on (fixtures/nodisc): the start and its movie, the menu, the
+# name, the introduction's text spoken, its movie, the cell.
+
+sleep 45
+shot menu
+key Return
+sleep 4
+key a b c
+sleep 1
+key Return
+sleep 20
+shot text
+key Escape
+sleep 15
+shot movie
+key Escape
+sleep 10
+shot scene

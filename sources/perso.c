@@ -2023,6 +2023,20 @@ int	main( int argc, char *argv[] )
 		strcpy( PathFla, drive ) ;
 		strcat( PathFla, "\\LBA\\FLA\\" ) ;
 	}
+#ifndef	DOS
+	/*
+	 * FEATURE: without the CD, the movies play from FLA\ where the
+	 * preferences or a game's directory hold their samples, FLASAMP.HQR,
+	 * as the source's build for the hard disk reads them, and the CD's
+	 * other files where its directory holds them: the Classic's Common
+	 * and LbaWin's install, its movies copied there, hold the CD's
+	 * movies and voices. The port's own.
+	 */
+	else if( FileSize( "FLA\\FLASAMP.HQR" ) )
+	{
+		strcpy( PathFla, "FLA\\" ) ;
+	}
+#endif
 	else	TheEnd(PROGRAM_OK, "No CD")	;
 
 #ifdef	DOS

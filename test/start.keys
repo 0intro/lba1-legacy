@@ -1,0 +1,8 @@
+# The start: the logo and its jingle, the bumper, the movie, the main
+# menu and its tune, then Quit, so that the run ends.
+
+sleep 45
+shot menu
+hold 0.05
+key Up Return
+sleep 5
