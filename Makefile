@@ -17,7 +17,8 @@ SANITIZE=
 
 # LBATMP holds the game's files, the records, the downloads and the
 # tools, by default ../lba1-tmp beside the tree, and the scripts the
-# recipes run read it from the environment. The recipes' PWD is the
+# recipes run read it from the environment. LBAISO holds the CDs'
+# images, by default ../iso beside the tree. The recipes' PWD is the
 # tree's path as make has it, CURDIR, which gcc records as the build's
 # directory and mk/port.mk's map takes out, where a symbolic link
 # leading to the tree gave the shell's another path.
@@ -25,6 +26,7 @@ LBATMP?=../lba1-tmp
 override LBATMP:=$(abspath $(LBATMP))
 export LBATMP
 export PWD:=$(CURDIR)
+LBAISO?=../iso
 
 # TARGETS lists the targets, each named as its directory.
 TARGETS=\
@@ -101,7 +103,7 @@ usage::
 	@echo 'the tree:'
 	@echo '  oracles      build the oracles into build/oracle'
 	@echo '  asan         build asmoracle-asan, asmoracle under AddressSanitizer, into build/oracle'
-	@echo "  oraclecheck  run the oracle on the game's LBA.EXE"
+	@echo "  oraclecheck  run the oracles on the game's files"
 	@echo "  lint         check the tree's rules a program can"
 	@echo "  defs         make the game's .def files again (tools/defs)"
 	@echo '  clean        remove build/ and dist/'
@@ -186,6 +188,8 @@ PORT=\
 	sys/sys.o\
 	sys/timer.o\
 	sys/video.o\
+	sys/wave.o\
+	sys/cdimage.o\
 
 # sys/lba.cfg's text made into C at the build.
 ARRAYS=\
@@ -201,6 +205,7 @@ CFGTEST=\
 	sys/compat.o\
 	sys/files.o\
 	sys/mem.o\
+	sys/cdimage.o\
 
 # clocktest: sys/timer.c's clock driven as the game drives it, the
 # retraces each loop of its calls waits for (test/clocktest.c).
@@ -217,6 +222,14 @@ FILESTEST=\
 	sys/compat.o\
 	sys/files.o\
 	sys/mem.o\
+	sys/cdimage.o\
+
+# cdimagetest: a CD's image read as the CD.
+CDIMAGETEST=\
+	test/cdimagetest.o\
+	sys/compat.o\
+	sys/files.o\
+	sys/cdimage.o\
 
 # The game's modules whose .def files make defs writes.
 DEFS=\

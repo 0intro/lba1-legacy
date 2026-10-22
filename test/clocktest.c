@@ -58,6 +58,11 @@ sdlsleep(uint64_t ns)
 }
 
 void
+sdllate(void)
+{
+}
+
+void
 sdlshow(void)
 {
 }
@@ -90,6 +95,18 @@ void
 replay(uint64_t n)
 {
 	USED(n);
+}
+
+void
+wavetick(uint64_t t)
+{
+	USED(t);
+}
+
+void
+cdtick(uint64_t t)
+{
+	USED(t);
 }
 
 /* One turn's calls. */

@@ -4,7 +4,7 @@
 
 /*
  * Calls to the assembly that keep the convention whatever it does, as
- * asmoracle makes them.
+ * asmoracle and waveoracle make them.
  * abicall(fn, n, args) calls fn with the n words at args on the stack,
  * as cdecl, and returns its EAX. Before the call EBX, ESI, EDI and EBP
  * hold known values. After it, abibroke has a bit set for each of them

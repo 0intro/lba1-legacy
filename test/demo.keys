@@ -1,0 +1,16 @@
+# The main menu's demo with the samples on (fixtures/sound): Shift+C
+# starts it, and no key ends it: the credits (scene 119), DRAGON3, three
+# stills, then BATEAU, whose last frames stop every sample (a stop of
+# 0xFFFF), the bumper and Adeline's logo, and the main menu again.
+
+sleep 40
+shot menu
+down Shift_L
+key c
+up Shift_L
+sleep 30
+shot credits
+sleep 150
+shot bateau
+sleep 30
+shot menu2

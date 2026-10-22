@@ -1,0 +1,91 @@
+# The protopack's hum, samples on (fixtures/proto: the sound fixture's
+# lba.cfg and the outside save with the protopack, flag 12, and the
+# saber, flag 2, byte 8). The protopack put on from the inventory (item
+# 12, Right three times from item 0) and flown, then taken off in flight
+# by the inventory, by F1, and by the saber (item 2, Left three times and
+# Down twice), each time put on and flown again. Last, the holomap opened
+# in flight with Up held across it, and Twinsen flying again after it.
+
+hold 0.15
+sleep 40
+key Down Return
+sleep 3
+key Return
+sleep 15
+shot start
+key Shift_L
+sleep 2
+key Right
+sleep 1
+key Right
+sleep 1
+key Right
+sleep 1
+key Return
+sleep 4
+down Up
+sleep 3
+shot flying
+key Shift_L
+up Up
+sleep 2
+key Return
+sleep 4
+shot inventory
+key Shift_L
+sleep 2
+key Return
+sleep 4
+down Up
+sleep 3
+key F1
+up Up
+sleep 4
+shot f1
+key Shift_L
+sleep 2
+key Return
+sleep 4
+down Up
+sleep 3
+key Shift_L
+up Up
+sleep 2
+key Left
+sleep 1
+key Left
+sleep 1
+key Left
+sleep 1
+key Down
+sleep 1
+key Down
+sleep 1
+key Return
+sleep 4
+shot saber
+key Shift_L
+sleep 2
+key Up
+sleep 1
+key Up
+sleep 1
+key Right
+sleep 1
+key Right
+sleep 1
+key Right
+sleep 1
+key Return
+sleep 4
+down Up
+sleep 3
+key h
+sleep 6
+shot holomap
+key h
+sleep 4
+sleep 3
+up Up
+sleep 2
+shot after

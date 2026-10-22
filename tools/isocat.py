@@ -5,7 +5,8 @@ bytes a sector as a cue/bin dump keeps it (the PlayStation CD, mode 2 form
 1, whose user data starts 24 bytes into each sector). Only the data track
 is in the file: a directory entry that points past its end, as the
 PlayStation disc's TRACKn.WAV do into the audio tracks, is listed, and a
-copy of it fails.
+copy of it fails. cuelines, cuefileline and cuefile read a cue sheet as the
+port reads it, for tools/cdtracks.py.
 
     isocat.py -l image                 list every file: size, sector, date, path
     isocat.py image path               write one file to standard output
@@ -16,6 +17,7 @@ time and its offset from UTC.
 """
 import calendar
 import os
+import re
 import struct
 import sys
 
@@ -26,6 +28,36 @@ RAW = 2352
 def fail(msg):
     sys.stderr.write("%s: %s\n" % (os.path.basename(sys.argv[0]), msg))
     sys.exit(1)
+
+
+def cuelines(cue):
+    """A cue sheet's lines, stripped, a UTF-8 byte order mark dropped."""
+    for line in open(cue, encoding="latin-1"):
+        yield line.replace("\xef\xbb\xbf", "", 1).strip()
+
+
+def cuefileline(w):
+    """A FILE line's name and kind, the keyword in any case, or None."""
+    return re.match(r'FILE\s+"(.*)"\s+(\S+)$', w, re.I) or re.match(r'FILE\s+(\S+)\s+(\S+)$', w, re.I)
+
+
+def cuefile(base, name):
+    """The path of a FILE line's name, its \\ read as /, found beside the
+    sheet, base, or from the root, each part whatever its case, as the
+    port finds it. One missing is said in a line."""
+    name = name.replace("\\", "/")
+    path = "/" if name.startswith("/") else base or "."
+    for part in name.split("/"):
+        if part in ("", "."):
+            continue
+        p = os.path.join(path, part)
+        if not os.path.exists(p):
+            try:
+                p = next(os.path.join(path, e) for e in sorted(os.listdir(path)) if e.lower() == part.lower())
+            except (OSError, StopIteration):
+                fail("%s: no such file beside %s" % (name, base or "."))
+        path = p
+    return path
 
 
 class Image:

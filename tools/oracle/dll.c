@@ -9,10 +9,12 @@
 #include "dll.h"
 
 /*
- * The oracles' way to a build's image, as tools/le2elf.py
+ * The oracles' way to a build's image or a driver, as tools/le2elf.py
  * makes it an ELF32, its objects mapped where they were linked in this
  * 32-bit process (dllmap).
  */
+
+void	Expand(void*, void*, uint32_t);
 
 uint32_t
 get16(uint8_t *p)
@@ -47,6 +49,50 @@ readfile(char *path, long *np)
 	fclose(f);
 	*np = n;
 	return b;
+}
+
+/*
+ * An HQR file's entries, unpacked, NULL for an empty one (an offset of 0,
+ * or the table's last, the file's size), each offset and size held to
+ * the file's size before a pointer is made of it.
+ */
+int
+hqr(char *path, uint8_t ***ents)
+{
+	uint8_t *b, *e, **v;
+	uint32_t o, size, packed;
+	long n;
+	int i, ne;
+
+	b = readfile(path, &n);
+	if (n < 4 || get32(b) / 4 == 0 || get32(b) > (uint32_t)n)
+		fatal("%s: bad HQR table", path);
+	ne = get32(b) / 4;
+	v = calloc(ne, sizeof v[0]);
+	if (v == NULL)
+		fatal("out of memory");
+	for (i = 0; i < ne; i++) {
+		o = get32(b + 4*i);
+		if (o == 0 || o == (uint32_t)n)
+			continue;
+		if (o > (uint32_t)n || (uint32_t)n - o < 10)
+			fatal("%s: bad HQR entry %d", path, i);
+		size = get32(b + o);
+		packed = get16(b + o + 8) == 0 ? size : get32(b + o + 4);
+		if (size > 1u<<28 || packed > (uint32_t)n - o - 10)
+			fatal("%s: bad HQR entry %d", path, i);
+		e = calloc(1, size + 4096);
+		if (e == NULL)
+			fatal("out of memory");
+		if (get16(b + o + 8) == 0)
+			memcpy(e, b + o + 10, size);
+		else
+			Expand(b + o + 10, e, size);
+		v[i] = e;
+	}
+	free(b);
+	*ents = v;
+	return ne;
 }
 
 /* dllmap: the PT_LOAD segments of an ELF32 mapped at their addresses. */

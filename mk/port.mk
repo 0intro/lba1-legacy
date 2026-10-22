@@ -70,6 +70,7 @@ TESTS=\
 	cfgtest\
 	clocktest\
 	filestest\
+	cdimagetest\
 
 # The objects, the game's in their link order, and their directories.
 OFILES=$(addprefix $(O)/,$(GAME) $(LIBS) $(NEW) $(PORT) $(ARRAYS))
@@ -142,6 +143,9 @@ $(O)/clocktest$(EXE): $(addprefix $(O)/,$(CLOCKTEST)) $(MANIFEST)
 $(O)/filestest$(EXE): $(addprefix $(O)/,$(FILESTEST)) $(MANIFEST)
 	$(LINK)
 
+$(O)/cdimagetest$(EXE): $(addprefix $(O)/,$(CDIMAGETEST)) $(MANIFEST)
+	$(LINK)
+
 # GAME and LIBS, the 1994 code.
 $(addprefix $(O)/,$(GAME) $(LIBS)): $(O)/%.o: %.c | $(DIRS)
 	$(COMPILE) $(CFLAGS) $(OLDFLAGS) -c -o $@ $<
@@ -166,13 +170,19 @@ test: all
 	test/nodata -x $(O)/lba$(EXE)
 
 # check runs lint and test, then the tests on the game's files in
-# LBATMP: the oracles, cfgtest on the CD's LBA.CFG, the proofs of the
-# tables the C holds (the cells and the texts of the data's fixes,
-# sources/gridfix.c and sources/textfix.c) and the records (test/e2e
-# check).
+# LBATMP: the oracles, cfgtest on the CD's LBA.CFG, cdimagetest on the
+# CDs' images, the proofs of the tables the C holds (the cells and the
+# texts of the data's fixes, sources/gridfix.c and sources/textfix.c)
+# and the records (test/e2e check).
 check: lint test oraclecheck
 	rm -rf $(O)/run/cfg && mkdir -p $(O)/run/cfg
 	$(RUN) $(O)/cfgtest$(EXE) $(call HOSTPATH,$(O)/run/cfg) $(call HOSTPATH,$(LBATMP)/pc/LBA)
+	rm -rf $(O)/run/cdimages
+	$(RUN) $(O)/cdimagetest$(EXE) $(call HOSTPATH,$(O)/run/cdimages)\
+		$(call HOSTPATH,$(LBAISO)/little_big_adventure_1.iso) $(call HOSTPATH,$(LBATMP)/pc) $(call HOSTPATH,$(LBATMP)/pc)\
+		$(call HOSTPATH,$(LBATMP)/iso/adeline/ADELINE.CUE) $(call HOSTPATH,$(LBATMP)/pc) $(call HOSTPATH,$(LBATMP)/music/eu)\
+		$(call HOSTPATH,$(LBATMP)/gog/lba1/Speedrun/Windows/LBA.DAT) $(call HOSTPATH,$(LBATMP)/gog/cd)\
+		$(call HOSTPATH,$(LBATMP)/gog/cdtracks)
 	python3 -I tools/grids.py -c sources/gridfix.c $(LBATMP)/pc/LBA/LBA_GRI.HQR\
 		$(LBATMP)/gog/cd/LBA_GRI.HQR $(LBATMP)/gog/lba1/Speedrun/Windows/LBA_GRI.HQR
 	python3 -I tools/texts.py -c sources/textfix.c $(LBATMP)/gog/cd/TEXT.HQR\

@@ -127,7 +127,7 @@ record() {
 	[[ -d $SW/saves/001 ]] || saves
 	printf 'sleep 40\nkey Down Return\nsleep 3\nkey Return\nsleep 100\n' > "$SW/port.keys"
 	pref "$RUN/pref" 001
-	"$TOOLS/xkeys" -c lba -o "$SW/run/shots" "$SW/port.keys" "$exe" \
+	SDL_AUDIO_DRIVER=dummy "$TOOLS/xkeys" -c lba -o "$SW/run/shots" "$SW/port.keys" "$exe" \
 		-g "$LBATMP/pc/LBA" -c "$LBATMP/pc" -p "$RUN/pref" -r "$SW/port.in"
 	echo "sweep: recorded ${SW#"$LBATMP"/}/port.in"
 }
@@ -173,11 +173,11 @@ replay() {
 	rm -rf -- "$2"
 	mkdir -p "$2"
 	pref "$RUN/pref" "$1"
-	(cd -- "$2" && SDL_VIDEO_DRIVER=dummy "$exe" -g "$LBATMP/pc/LBA" \
+	(cd -- "$2" && SDL_VIDEO_DRIVER=dummy SDL_AUDIO_DRIVER=dummy "$exe" -g "$LBATMP/pc/LBA" \
 		-c "$LBATMP/pc" -p "$RUN/pref" -i "$SW/port.in" -S "$3" > /dev/null 2>&1) || true
 }
 
-# screens sums: the screens a sums file holds
+# screens sums: the screens a sums file holds, its other lines the sound's
 screens() {
 	grep -c '^[0-9]' "$1" || true
 }
@@ -195,7 +195,7 @@ port() {
 	mkdir -p "$SW/port"
 	for s in "${scenes[@]}"; do
 		pref "$RUN/pref" "$s"
-		SDL_VIDEO_DRIVER=dummy "$exe" -g "$LBATMP/pc/LBA" -c "$LBATMP/pc" \
+		SDL_VIDEO_DRIVER=dummy SDL_AUDIO_DRIVER=dummy "$exe" -g "$LBATMP/pc/LBA" -c "$LBATMP/pc" \
 			-p "$RUN/pref" -i "$SW/port.in" -s "$SW/port/$s.sums" > "$SW/port/$s.log" 2>&1 ||
 			{ echo "$s: failed (${SW#"$LBATMP"/}/port/$s.log)"; continue; }
 		read -ra w <<< "$(window "$s")"
@@ -331,7 +331,7 @@ check() {
 	for s in "${scenes[@]}"; do
 		[[ -f $SW/port/$s.sums ]] || { echo "$s: no reference"; bad=1; continue; }
 		pref "$RUN/pref" "$s"
-		SDL_VIDEO_DRIVER=dummy "$exe" -g "$LBATMP/pc/LBA" -c "$LBATMP/pc" \
+		SDL_VIDEO_DRIVER=dummy SDL_AUDIO_DRIVER=dummy "$exe" -g "$LBATMP/pc/LBA" -c "$LBATMP/pc" \
 			-p "$RUN/pref" -i "$SW/port.in" -s "$RUN/$s.sums" > /dev/null 2>&1 || true
 		if cmp -s "$SW/port/$s.sums" "$RUN/$s.sums"; then
 			echo "$s: same, $(screens "$RUN/$s.sums") screens"

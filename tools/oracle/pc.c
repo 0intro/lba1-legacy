@@ -23,7 +23,8 @@
  * image where it was linked (dll.c's dllmap), writes this process's
  * selectors into its selector fixups, which tools/le2elf.py leaves 0
  * (the interrupt handlers' loads of DGROUP), reads its symbols, and
- * maps DOS memory from 80000h to lowend.
+ * maps DOS memory from 80000h to lowend, where code loaded there runs
+ * as the image's does.
  *
  * What the code does to the machine faults here, its gates and ports
  * being the kernel's, and is done in place on the ucontext's registers:
@@ -43,9 +44,11 @@
  * DPMI, the functions the builds and the CD's drivers call: 0100h and
  * 0101h (DOS memory, first fit), 0300h (a real-mode int, its register
  * block copied in and back, to the handlers pcint gives, CX counted),
- * 0500h, 0501h and 0502h (linear memory, mapped). The PIC counts its
- * ends of interrupt at 20h. Anything else ends the run, reported, as
- * does any other fault, and a
+ * 0500h, 0501h and 0502h (linear memory, mapped), any of them made to
+ * fail as a machine short of memory fails it (dpmifail, ndpmifail):
+ * 0100h with DOS's error 8 and a largest block of 0 paragraphs, the
+ * others with 8012h. The PIC counts its ends of interrupt at 20h.
+ * Anything else ends the run, reported, as does any other fault, and a
  * run's alarm. The faults are taken on a stack of their own.
  *
  * acall calls a procedure as the C does and checks its convention,
@@ -93,6 +96,8 @@ uint32_t	pccs;
 int	ncx;
 uint32_t	cxlast;
 int	neoi;
+uint32_t	dpmifail;
+int	ndpmifail;
 int	(*pcfault)(void*);
 
 static struct
@@ -513,6 +518,16 @@ dpmi(Cpu *c)
 	int i;
 
 	c->flags &= ~1;
+	if (dpmifail != 0 && (c->eax & 0xffff) == dpmifail && ndpmifail != 0) {
+		if (ndpmifail > 0)
+			ndpmifail--;
+		if (dpmifail == 0x0100) {
+			dpmierr(c, 8);
+			setlo(&c->ebx, 0);
+		} else
+			dpmierr(c, 0x8012);
+		return;
+	}
 	switch (c->eax & 0xffff) {
 	case 0x0100:
 		n = c->ebx & 0xffff;

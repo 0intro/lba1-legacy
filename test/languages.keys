@@ -1,0 +1,15 @@
+# A new game in Spanish with French voices, both languages named in
+# UTF-8 (fixtures/languages): the menu, the name, the introduction's
+# text spoken for a while.
+
+sleep 40
+shot menu
+key Return
+sleep 4
+key a b c
+sleep 1
+key Return
+sleep 15
+shot text
+key Escape
+sleep 4

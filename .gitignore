@@ -1,7 +1,8 @@
-# The builds and the error file a Watcom compiler writes where make runs
-# for a module that fails. The game's files and every other resource the
-# tools read or make live in $LBATMP, ../lba1-tmp by default, outside
-# the tree.
+# The builds, the error file a Watcom compiler writes where make runs
+# for a module that fails, and Python's caches. The game's files and
+# every other resource the tools read or make live in $LBATMP,
+# ../lba1-tmp by default, outside the tree.
 /build/
 /dist/
 *.err
+__pycache__/

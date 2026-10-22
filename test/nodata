@@ -98,7 +98,7 @@ run() {
 	if [[ -n ${argv0:-} ]]; then
 		start=(bash -c 'exec -a "$0" "$@"' "$argv0" "$exe")
 	fi
-	if ! SDL_VIDEO_DRIVER=dummy "${start[@]}" "$@" -p "$pref" -i rec -s "$sums" > out 2>&1; then
+	if ! SDL_VIDEO_DRIVER=dummy SDL_AUDIO_DRIVER=dummy "${start[@]}" "$@" -p "$pref" -i rec -s "$sums" > out 2>&1; then
 		echo "nodata: $exe failed" >&2
 		cat out >&2
 		exit 1

@@ -204,6 +204,18 @@ replay(uint64_t n)
 }
 
 void
+wavetick(uint64_t t)
+{
+	USED(t);
+}
+
+void
+cdtick(uint64_t t)
+{
+	USED(t);
+}
+
+void
 sdlshow(void)
 {
 }
@@ -226,6 +238,11 @@ void
 sdlsleep(uint64_t t)
 {
 	USED(t);
+}
+
+void
+sdllate(void)
+{
 }
 
 /* A replay's: the clock runs as fast as the oracle calls. */

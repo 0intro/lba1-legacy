@@ -3,6 +3,8 @@
 sys/cd.c * apart	game: LBA1's cdrom.asm's CD in C, LBA2's MSS redbook from track files
 sys/cd.c * lba1	game: LBA1's cdrom.asm's CD in C, LBA2's MSS redbook from track files
 sys/cd.c * lba2	game: LBA1's cdrom.asm's CD in C, LBA2's MSS redbook from track files
+sys/cdimage.c imagesound lba1	game: an image's audio tracks, read as sounds named TRACKnn.WAV for LBA1's cd.c
+sys/cdimage.c struct Image apart	game: LBA2's audio tracks decoded from the MP3 or OGG files a cue sheet names
 sys/compat.c #else lba1	game: the C library calls each game makes
 sys/compat.c #endif lba1	game: the C library calls each game makes
 sys/compat.c #ifdef _WIN32 lba1	game: the C library calls each game makes
@@ -52,8 +54,10 @@ sys/files.c _harderr lba2	game: DOS's drives and current directories, which the 
 sys/files.c absolute lba2	game: DOS's drives and current directories, which the 1997 code moves through
 sys/files.c bindconfig apart	game: LBA2's MSS reads an MP3 or Ogg Vorbis file bound alone as a WAV file (coded)
 sys/files.c bindfile apart	game: LBA2's MSS reads an MP3 or Ogg Vorbis file bound alone as a WAV file (coded)
+sys/files.c cdimagefile lba1	game: the CD's frames handed to cd.c, LBA1's
 sys/files.c cdir lba2	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
 sys/files.c cdlabel lba2	game: DOS's drives and current directories, which the 1997 code moves through
+sys/files.c cdtrack lba1	game: the CD's frames handed to cd.c, LBA1's
 sys/files.c classic lba2	game: the CD's tracks and the Classic's jingles as WAV files, which MSS streams
 sys/files.c codedplaces lba2	game: LBA2's port gives the CD's tracks as WAV files, decoded where the sheet names MP3 or OGG files
 sys/files.c codedread lba2	game: the CD's tracks and the Classic's jingles as WAV files, which MSS streams
@@ -74,12 +78,13 @@ sys/files.c file lba1	game: each game's file calls, lib386's OpenRead, Read and 
 sys/files.c files lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
 sys/files.c freeslot lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
 sys/files.c grow apart	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
-sys/files.c havecd lba1	game: the CD's drive for cd.c, LBA1's
+sys/files.c havecd lba1	game: the CD's frames handed to cd.c, LBA1's
 sys/files.c havefile lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c imagehandle lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
 sys/files.c inbinds lba1	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
 sys/files.c ingame lba2	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
 sys/files.c ispref apart	game: DOS's drives and current directories, which the 1997 code moves through
-sys/files.c locate apart	game: each game's CD audio, LBA2's tracks and the Classic's music as WAV files for MSS
+sys/files.c locate apart	game: each game's CD audio, LBA1's sounds of an image for its cd.c, LBA2's tracks and the Classic's music as WAV files for MSS
 sys/files.c memhandle apart	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
 sys/files.c ondisk lba2	game: the C library calls each game makes
 sys/files.c own lba2	game: LBA2's C library updates a bound file in place, which the port first copies into the preferences
@@ -107,16 +112,16 @@ sys/files.c readpath lba1	game: each game's paths, LBA1's below its directory, L
 sys/files.c readplace lba2	game: LBA2's C library updates a bound file in place, which the port first copies into the preferences
 sys/files.c renamefile lba1	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
 sys/files.c scanbinds lba2	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
-sys/files.c setcdletter lba1	game: the CD's drive for cd.c, LBA1's
+sys/files.c setcdletter lba1	game: the CD's frames handed to cd.c, LBA1's
 sys/files.c setpref apart	game: each game's saves, LBA1's at the root, its CD's letter for the voices, LBA2's in SAVE
 sys/files.c settle lba2	game: the C library calls each game makes
 sys/files.c splitgame lba1	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
 sys/files.c streams lba2	game: the C library calls each game makes
-sys/files.c struct Bind apart	game: each game's CD audio, LBA2's tracks and the Classic's music as WAV files for MSS
+sys/files.c struct Bind apart	game: each game's CD audio, LBA1's sounds of an image for its cd.c, LBA2's tracks and the Classic's music as WAV files for MSS
 sys/files.c struct Dirs apart	game: each game's saves, LBA1's at the root, its CD's letter for the voices, LBA2's in SAVE
 sys/files.c struct File lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
 sys/files.c struct Pfile lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
-sys/files.c struct Place apart	game: each game's CD audio, LBA2's tracks and the Classic's music as WAV files for MSS
+sys/files.c struct Place apart	game: each game's CD audio, LBA1's sounds of an image for its cd.c, LBA2's tracks and the Classic's music as WAV files for MSS
 sys/files.c struct Stream lba2	game: the C library calls each game makes
 sys/files.c textat lba1	game: lib386's file calls read a text of the port's bound at a root's name, LBA2's C library through its handles
 sys/files.c typedef File lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
@@ -205,11 +210,16 @@ sys/sdl.c main apart	game: each program's start, LBA1's in InitAdelineSystem, LB
 sys/sdl.c maketexture lba2	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, LBA2's one mode, its texture made again at each width
 sys/sdl.c prefapp apart	game: the preferences' names
 sys/sdl.c prefapp#2 apart	game: the preferences' names
+sys/sdl.c sdlcdgain apart	game: LBA1's its samples' volume as the wave stream's gain, LBA2's MSS mixing its own
 sys/sdl.c sdlclose apart	game: LBA1's ClearAdelineSystem, the 1994 code's end, closes SDL first, LBA2's 1997 code ends through exit alone
 sys/sdl.c sdlinit apart	game: each program's name
+sys/sdl.c sdllate apart	game: LBA1's its samples' volume as the wave stream's gain, LBA2's MSS mixing its own
 sys/sdl.c sdlpoll apart	game: LBA2's mouse, which the 1997 code reads in its editor
 sys/sdl.c sdlshow apart	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, LBA2's one mode, its texture made again at each width
+sys/sdl.c sdlwave apart	game: LBA1's its samples' volume as the wave stream's gain, LBA2's MSS mixing its own
+sys/sdl.c sdlwavegain lba1	game: LBA1's mixer chip's gains
 sys/sdl.c usage apart	game: each program's start, LBA1's in InitAdelineSystem, LBA2's display, wide screen and clock in main before the 1997 game's parameters
+sys/sdl.c wavegain lba1	game: LBA1's mixer chip's gains
 sys/sys.c #include <stdio.h> lba1	game: LBA1's sys.c stands for lib386's adeline.c
 sys/sys.c #include <system/adeline.h> lba2	game: LBA2's sys.c stands for dossys.c's ManageEvents
 sys/sys.c #include <system/deffile.h> lba2	game: LBA2 reads the port's keys of lba2.cfg through the game's deffile
@@ -237,13 +247,13 @@ sys/timer.c divisor lba2	game: MSS's PIT, its interrupts and LBA2.EXE's millisec
 sys/timer.c enum Pitclock lba2	game: LBA1's PIT tick and mode 13h's frame, LBA2's PIT clock and MSS's spin
 sys/timer.c enum Tick lba1	game: LBA1's PIT tick and mode 13h's frame, LBA2's PIT clock and MSS's spin
 sys/timer.c frame apart	game: LBA1's frame by the screen's mode, mode 13h's 70.09 Hz beside VGA's 59.94 Hz, LBA2's one
-sys/timer.c idle apart	game: the devices each pump drives, LBA1's PIT ticks, LBA2's MSS interrupts, its CD and its pad's repeats
+sys/timer.c idle apart	game: the devices each pump drives, LBA1's PIT ticks, its wave and CD, LBA2's MSS interrupts, its CD and its pad's repeats
 sys/timer.c interrupts lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c irqat lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c millis lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c msat lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c pitcount lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
-sys/timer.c pump apart	game: the devices each pump drives, LBA1's PIT ticks, LBA2's MSS interrupts, its CD and its pad's repeats
+sys/timer.c pump apart	game: the devices each pump drives, LBA1's PIT ticks, its wave and CD, LBA2's MSS interrupts, its CD and its pad's repeats
 sys/timer.c setpit lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
 sys/timer.c tick lba1	game: timer_a.asm's counts at the PIT's 50 Hz
 sys/timer.c ticks lba1	game: timer_a.asm's counts at the PIT's 50 Hz
@@ -349,6 +359,38 @@ sys/video.c typedef Rect lba1	game: lib_svga's own routines and mode 13h, agains
 sys/video.c vbeinfo lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
 sys/video.c videoinit lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
 sys/video.c wideinit lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+test/cdimagetest.c #define O_BINARY lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/cdimagetest.c #else#3 lba1	game: LBA1's CD_LBA, a name without extension whose last dot a copied tree keeps, and GOG's tree of the CD's files by their base names
+test/cdimagetest.c #ifdef _WIN32#3 lba1	game: LBA1's CD_LBA, a name without extension whose last dot a copied tree keeps, and GOG's tree of the CD's files by their base names
+test/cdimagetest.c #ifndef O_BINARY lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/cdimagetest.c #include <fcntl.h> lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/cdimagetest.c #include <io.h> lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/cdimagetest.c alike lba2	game: LBA2's port gives the CD's tracks as WAV files, decoded where the sheet names MP3 or OGG files
+test/cdimagetest.c autorun lba2	game: each game's CD, its files, its volume and its date
+test/cdimagetest.c check apart	game: each game's CD, its files, its volume and its date
+test/cdimagetest.c coded lba2	game: LBA2's port gives the CD's tracks as WAV files, decoded where the sheet names MP3 or OGG files
+test/cdimagetest.c decl portclose lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/cdimagetest.c decl portfopen lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/cdimagetest.c decl portlseek lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/cdimagetest.c decl portopen lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/cdimagetest.c decl portread lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/cdimagetest.c enum Autorec lba2	game: each game's CD, its files, its volume and its date
+test/cdimagetest.c enum Cdrec lba1	game: each game's CD, its files, its volume and its date
+test/cdimagetest.c enum Sector apart	game: LBA2's port's handles and the WAV files it gives for the CD's tracks
+test/cdimagetest.c gamedir apart	game: each game's CD, its files, its volume and its date
+test/cdimagetest.c made apart	game: each game's CD, its files, its volume and its date
+test/cdimagetest.c makebin apart	game: a data track's subheader of MODE2/2352, the PlayStation's in LBA1, the EU CD's in LBA2
+test/cdimagetest.c makeiso apart	game: each game's CD, its files, its volume and its date
+test/cdimagetest.c own apart	game: each game's CD, its files, its volume and its date
+test/cdimagetest.c port apart	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/cdimagetest.c readall apart	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/cdimagetest.c sound lba1	game: LBA1's audio tracks read as sounds, against LBA2's tracks as the port's WAV files
+test/cdimagetest.c track lba2	game: LBA2's port gives the CD's tracks as WAV files, decoded where the sheet names MP3 or OGG files
+test/cdimagetest.c tracks apart	game: LBA1's audio tracks read as sounds, against LBA2's tracks as the port's WAV files
+test/cdimagetest.c walkdir apart	game: LBA1's trees hold the directories the 1994 game reads, LBA2's the whole CD
+test/cdimagetest.c walked apart	game: LBA1's CD_LBA, a name without extension whose last dot a copied tree keeps, and GOG's tree of the CD's files by their base names
+test/cdimagetest.c windows lba1	game: LBA1's CD_LBA, a name without extension whose last dot a copied tree keeps, and GOG's tree of the CD's files by their base names
+test/cdimagetest.c windows#2 lba1	game: LBA1's CD_LBA, a name without extension whose last dot a copied tree keeps, and GOG's tree of the CD's files by their base names
 test/cfgtest.c * apart	game: each game's reader of its settings, def_file.c's lba.cfg of ON and OFF and deffile.c's lba2.cfg of 0 and 1, with LBA2's port's keys
 test/cfgtest.c * lba1	game: each game's reader of its settings, def_file.c's lba.cfg of ON and OFF and deffile.c's lba2.cfg of 0 and 1, with LBA2's port's keys
 test/cfgtest.c * lba2	game: each game's reader of its settings, def_file.c's lba.cfg of ON and OFF and deffile.c's lba2.cfg of 0 and 1, with LBA2's port's keys

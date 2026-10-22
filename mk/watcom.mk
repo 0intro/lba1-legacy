@@ -22,7 +22,8 @@
 # the exe and of the wave drivers, then each symbol's sum
 # (tools/lecmp.py -s), which make test compares with dos/$(CC).sums, or
 # with FIXES=1 dos/watcom-fixes.sums. Each driver comes with its map,
-# its .sym and its .elf, which tools/lecmp.py compares with the CD's.
+# its .sym and its .elf, which make test runs through waveoracle,
+# W_SB16.DLL against sys/wave.c.
 
 DOSAS=$(JWASMEXE)
 # the variables wcc386, jwasm and wlink read options or paths from
@@ -230,19 +231,27 @@ ifneq ($(DOSFIXES),)
 # test, with the fixes: the build's sums against the reference, the
 # oracle on its image (its rand, srand and qsort against ours, Watcom C
 # 9's being LBA.EXE's), asmoracle on it (its assembly against the
-# translations into C, the fixes where LBA.EXE's faults among them),
-# keyoracle, its keyboard.asm's interrupt handler on a model of the 8042
-# and the BIOS against sys/keyb.c, timeoracle, its timer on a model of
-# the PIT against sys/timer.c, vgaoracle, its screen on a model of VESA
-# and the VGA against sys/video.c, fileoracle, its files on a model of
-# DOS's int 21h against sys/files.c, memoracle, its memory over Watcom's
-# heap and DPMI against sys/mem.c, and its run to No CD.
+# translations into C, the fixes where LBA.EXE's faults among them), its
+# W_SB16.DLL against sys/wave.c, the calls where the CD's faults among
+# them, waveoracle's cards on each other driver, cdoracle, its cdrom.asm
+# on a model of MSCDEX against sys/cd.c on discs of its own, keyoracle,
+# its keyboard.asm's interrupt handler on a model of the 8042 and the
+# BIOS against sys/keyb.c, timeoracle, its timer on a model of the PIT
+# against sys/timer.c, vgaoracle, its screen on a model of VESA and the
+# VGA against sys/video.c, fileoracle, its files on a model of DOS's int
+# 21h against sys/files.c, memoracle, its memory over Watcom's heap and
+# DPMI against sys/mem.c, and its run to No CD.
 test: all oracles
 	diff dos/$(CC)$(if $(FIXES),-fixes).sums $(O)/lba0.sums
 	$(ORACLE)/oracle $(O)/lba0.elf $(O)/lba0.sym
 	$(ORACLE)/asmoracle $(O)/lba0.elf $(O)/lba0.sym
 	$(ORACLE)/asmoracle $(O)/lba0.elf $(O)/lba0.sym fixes
-	mkdir -p $(O)/run/fileoracle
+	$(ORACLE)/waveoracle -f $(O)/w_sb16.elf $(O)/w_sb16.sym
+	for d in $(filter-out w_sb16,$(DOSDLL)); do\
+		$(ORACLE)/waveoracle -f $(O)/$$d.elf $(O)/$$d.sym cards || exit 1;\
+	done
+	mkdir -p $(O)/run/cdoracle $(O)/run/fileoracle
+	$(ORACLE)/cdoracle -d $(O)/run/cdoracle $(O)/lba0.elf $(O)/lba0.sym
 	$(ORACLE)/keyoracle $(O)/lba0.elf $(O)/lba0.sym
 	$(ORACLE)/timeoracle $(O)/lba0.elf $(O)/lba0.sym
 	$(ORACLE)/vgaoracle $(O)/lba0.elf $(O)/lba0.sym
@@ -250,20 +259,32 @@ test: all oracles
 	$(ORACLE)/memoracle $(O)/lba0.elf $(O)/lba0.sym
 	dos/nodata -g $(DOS4GW) -x $(O)/lba0.exe
 
-# check, with the fixes: lint and test, then asmoracle on the game's
-# files.
+# check, with the fixes: lint and test, then asmoracle and the
+# W_SB16.DLL on the game's files, cdoracle on the CD's images, and
+# mixoracle, its mixer through the CD's M_SB16.DLL on a model of the
+# CT1745 against sys/sound.c.
 check: lint test
 	$(ORACLE)/asmoracle -g $(LBATMP)/pc/LBA $(O)/lba0.elf $(O)/lba0.sym
+	$(ORACLE)/waveoracle -f -g $(LBATMP)/pc/LBA $(O)/w_sb16.elf $(O)/w_sb16.sym
+	$(ORACLE)/cdoracle -d $(O)/run/cdoracle $(O)/lba0.elf $(O)/lba0.sym\
+		$(LBAISO)/little_big_adventure_1.iso $(LBATMP)/pc $(LBATMP)/pc\
+		$(LBATMP)/iso/adeline/ADELINE.CUE $(LBATMP)/pc $(LBATMP)/music/eu\
+		$(LBATMP)/gog/lba1/Speedrun/Windows/LBA.DAT - -
+	$(ORACLE)/mixoracle $(O)/lba0.elf $(O)/lba0.sym $(LBATMP)/pc/LBA/M_SB16.DLL
 else
 # test, LBA.EXE's code: the build's sums, and the oracles whose cases
-# hold it as they hold the fixes: the run-time's and the memory's, then
-# its run to No CD.
+# hold it as they hold the fixes: the run-time's, waveoracle's own
+# scenarios on W_SB16.DLL and the memory's, then its run to No CD.
 test: all oracles
 	diff dos/$(CC).sums $(O)/lba0.sums
 	$(ORACLE)/oracle $(O)/lba0.elf $(O)/lba0.sym
+	$(ORACLE)/waveoracle $(O)/w_sb16.elf $(O)/w_sb16.sym
 	$(ORACLE)/memoracle $(O)/lba0.elf $(O)/lba0.sym
 	dos/nodata -g $(DOS4GW) -x $(O)/lba0.exe
 
-# check, LBA.EXE's code: lint and test.
+# check, LBA.EXE's code: lint and test, then the W_SB16.DLL on the
+# game's files and the mixer through the CD's M_SB16.DLL.
 check: lint test
+	$(ORACLE)/waveoracle -g $(LBATMP)/pc/LBA $(O)/w_sb16.elf $(O)/w_sb16.sym
+	$(ORACLE)/mixoracle $(O)/lba0.elf $(O)/lba0.sym $(LBATMP)/pc/LBA/M_SB16.DLL
 endif

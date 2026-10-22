@@ -21,7 +21,8 @@
  * work between two: a run depends on its input alone, and a replay
  * repeats it (replay.c). Unless replaying, the clock is held to the real
  * one, never ahead of it. Behind it by more than Late, as after a load,
- * it gives the lag up.
+ * it gives the lag up, which the sound's streams take as silence
+ * (sdllate).
  */
 
 enum
@@ -118,8 +119,10 @@ advance(uint64_t t)
 	ahead = skew + (int64_t)now - (int64_t)sdlnanos();
 	if (ahead > 0)
 		sdlsleep((uint64_t)ahead);
-	else if (ahead < -Late)
+	else if (ahead < -Late) {
 		skew -= ahead;
+		sdllate();
+	}
 }
 
 /* The system's events or the record's, the clocks, and the screen if a retrace came since it was last shown. */
@@ -140,6 +143,8 @@ pump(void)
 	}
 	sdlpoll();
 	replay(npump);
+	wavetick(now);
+	cdtick(now);
 	t = now - now%frame();
 	if (t > retrace) {
 		retrace = t;

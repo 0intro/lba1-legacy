@@ -8,8 +8,9 @@
 # fills, or the folder CI's Windows runner downloads. Each test of the
 # table below runs from the tree's root with its arguments, DIR among
 # them standing for dir/run/NAME, made empty first: the clock's retraces
-# and ticks (clocktest) and the preferences' files and their writer
-# (filestest). cfgtest runs in test/nodata. A Windows build's tests
+# and ticks (clocktest), the preferences' files and their writer
+# (filestest) and a CD's image read on images of the test's own
+# (cdimagetest). cfgtest runs in test/nodata. A Windows build's tests
 # (NAME.exe) run natively under Git Bash or MSYS2, and on Linux under
 # tools/winerun, which starts this script again in its Wine prefix on
 # the project's Xephyr. The paths given to a test are relative to the
@@ -24,6 +25,7 @@ REPO=$(cd -- "$TEST/.." && pwd)
 tests=(
 	'clocktest'
 	'filestest DIR'
+	'cdimagetest DIR'
 )
 
 usage() {

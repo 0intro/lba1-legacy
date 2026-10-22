@@ -20,12 +20,17 @@
  * A record is text, a line per input: the pump in decimal, then k and
  * the byte or b and the word, in hex. Its last line holds the pump the
  * run ended at and e. The sums are a line per screen shown that differs
- * from the one before: its number, the clock in ns, the sum.
+ * from the one before: its number, the clock in ns, the sum. When the
+ * samples play, they add a line per half of them mixed: w, its number,
+ * the sum of its frames. When the CD plays, it adds a line per frame of
+ * its audio handed on: c, its number, its sum. The halves can be
+ * written too, raw, 16-bit stereo at the samples' rate.
  */
 
 static FILE *rec;
 static FILE *play;
 static FILE *sums;
+static FILE *wave;
 static uint32_t shot = 1, lastshot, shotstep = 1;	/* none unless shotat */
 static uint64_t due;
 static int duekind;
@@ -266,4 +271,30 @@ summed(uint32_t n, uint64_t t)
 		snprintf(file, sizeof file, "lba%" PRIu32 ".bmp", n);
 		writebmp(file, w, h);
 	}
+}
+
+void
+waveto(char *file)
+{
+	wave = fopen(file, "wb");
+	if (wave == NULL)
+		fatal("cannot create %s", file);
+}
+
+/* The samples' half n, mixed: its sum, and its frames written. */
+void
+summedwave(uint64_t n, const uint32_t *buf, int frames)
+{
+	if (sums != NULL)
+		fprintf(sums, "w %" PRIu64 " %08" PRIx32 "\n", n, crc(0, (const uint8_t*)buf, (size_t)frames*4));
+	if (wave != NULL)
+		fwrite(buf, 4, (size_t)frames, wave);
+}
+
+/* The CD's frame of audio n, handed on: its sum. */
+void
+summedcd(uint64_t n, const uint8_t *buf, int len)
+{
+	if (sums != NULL)
+		fprintf(sums, "c %" PRIu64 " %08" PRIx32 "\n", n, crc(0, buf, (size_t)len));
 }

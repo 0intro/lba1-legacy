@@ -29,14 +29,15 @@
  * bound at the game's paths (bindpath): the game's directories at the
  * root (the CD's LBA directory, a copy of it or another version's
  * install, one or more) and the CD's root at the CD's drive letter, one
- * or more. A relative path is read from the preferences first, then
- * from each bind at its directory or above it in the order bound, a
- * file or a text of the port's bound alone at a path among them
- * (bindfile, bindtext), as the configuration file beside the program
- * and the program's text of it are bound last (bindconfig). A path on
- * the CD's drive is read from the CD's binds. Each part of a path is
- * found whatever its case. Handles are small numbers, 0 meaning
- * failure, as the game keeps some in a WORD.
+ * or more, each a directory or a CD's image (cdimage.c). A relative
+ * path is read from the preferences first, then from each bind at its
+ * directory or above it in the order bound, a file or a text of the
+ * port's bound alone at a path among them (bindfile, bindtext), as the
+ * configuration file beside the program and the program's text of it
+ * are bound last (bindconfig). A path on the CD's drive is read from the
+ * CD's binds. Each part of a path is found whatever its case. Handles
+ * are small numbers, 0 meaning failure, as the game keeps some in
+ * a WORD.
  *
  * The files the game writes in the preferences (the saves and lba.cfg
  * at the root, the voice cache in VOX) are held in memory while open
@@ -71,24 +72,30 @@ typedef struct Entry Entry;
 typedef struct Job Job;
 
 /*
- * What is bound at a game path: a host directory, the files below the
- * path read from it, or a file alone, the path's own.
+ * What is bound at a game path: a host directory or a CD's image, the
+ * files below the path read from it, or a file alone, the path's own.
  */
 struct Bind
 {
 	int	cd;	/* the path is on the CD's drive */
 	char	path[Npath];	/* with slashes, "" for the drive's root */
-	char	dir[Npath];	/* the host's directory or file */
+	char	dir[Npath];	/* the host's directory, image or file */
+	Image	*img;	/* dir's image, or NULL */
 	int	file;	/* dir a file bound alone */
 	const char	*text;	/* the port's text bound alone, else NULL */
 };
 
-/* Where a game path's file lies: on the host, or in the port's text. */
+/* Where a game path's file lies: on the host, in a CD's image as a file or a sound, or in the port's text. */
 struct Place
 {
-	char	path[Npath];	/* the host's, text NULL */
+	char	path[Npath];	/* the host's, img and text NULL */
 	const char	*text;	/* the port's text, else NULL */
+	Image	*img;
+	uint32_t	start;	/* the image's file's first sector */
 	uint32_t	size;	/* its bytes */
+	int32_t	track;	/* the audio track of the image's sound, else 0 */
+	uint32_t	first;	/* the sound's first frame in its track */
+	uint32_t	frames;	/* its frames */
 };
 
 struct Dirs
@@ -101,14 +108,15 @@ struct Dirs
 };
 
 /*
- * A handle's kind: free, a file on the disk, or a file of the
- * preferences in memory.
+ * A handle's kind: free, a file on the disk, a file of the preferences
+ * in memory, or a file in a CD's image.
  */
 enum
 {
 	Hfree,
 	Hdisk,
 	Hmem,
+	Himage,
 };
 
 struct File
@@ -116,6 +124,8 @@ struct File
 	int	kind;
 	FILE	*f;	/* Hdisk's */
 	uint8_t	*b;	/* Hmem's bytes */
+	Image	*img;	/* Himage's, the file's at its first sector start */
+	uint32_t	start;
 	uint32_t	len;
 	uint32_t	room;	/* the bytes b holds room for */
 	uint32_t	pos;
@@ -198,13 +208,18 @@ isfile(const char *path)
 	return stat(path, &st) == 0 && S_ISREG(st.st_mode);
 }
 
-/* setpref: the preferences, where everything written goes, read again at their next use, the binds cleared. */
+/* setpref: the preferences, where everything written goes, read again at their next use, the binds cleared, each one's image closed. */
 void
 setpref(char *pref)
 {
+	Bind *b;
+
 	if (strlen(pref) >= sizeof dirs.pref)
 		fatal("%s: too long a path", pref);
 	snprintf(dirs.pref, sizeof dirs.pref, "%s", pref);
+	for (b = dirs.bind; b < dirs.bind + dirs.nbind; b++)
+		if (b->img != NULL)
+			imageclose(b->img);
 	dirs.nbind = 0;
 	freeview(&top);
 	/* D:, the letter InitCDR gives the CD, from the start */
@@ -257,7 +272,8 @@ newbind(int cd, char *path, char *dir, char *err, int nerr)
 /*
  * bindpath binds dir at path, a game path on the CD's drive with cd
  * set, "" for the drive's root: the files below path are read from dir
- * after the binds made before. 0, or -1 with the reason in err.
+ * after the binds made before. On the CD's drive a file is a CD's
+ * image, read as the CD. 0, or -1 with the reason in err.
  */
 int
 bindpath(int cd, char *path, char *dir, char *err, int nerr)
@@ -266,6 +282,11 @@ bindpath(int cd, char *path, char *dir, char *err, int nerr)
 
 	if ((b = newbind(cd, path, dir, err, nerr)) == NULL)
 		return -1;
+	if (cd && isfile(dir)) {
+		b->img = imageopen(dir, err, nerr);
+		if (b->img == NULL)
+			return -1;
+	}
 	dirs.nbind++;
 	return 0;
 }
@@ -810,6 +831,8 @@ locate(int cd, char *rel, Place *p)
 	for (b = dirs.bind; b < dirs.bind + dirs.nbind; b++) {
 		if (b->cd != cd || (r = below(b->path, rel)) == NULL)
 			continue;
+		p->img = b->img;
+		p->track = 0;
 		p->text = NULL;
 		if (b->file) {
 			if (r[0] != 0)
@@ -823,7 +846,12 @@ locate(int cd, char *rel, Place *p)
 				continue;
 			return 0;
 		}
-		if (under(b->dir, r, p->path, sizeof p->path, 0) == 0)
+		if (b->img == NULL) {
+			if (under(b->dir, r, p->path, sizeof p->path, 0) == 0)
+				return 0;
+		} else if (imagesound(b->img, (char*)r, &p->track, &p->first, &p->frames) == 0)
+			return 0;
+		else if (imagefile(b->img, (char*)r, &p->start, &p->size) == 0)
 			return 0;
 	}
 	return -1;
@@ -836,7 +864,7 @@ inbinds(int cd, char *rel, char *out, int n)
 	Place p;
 	int k;
 
-	if (locate(cd, rel, &p) < 0 || p.text != NULL)
+	if (locate(cd, rel, &p) < 0 || p.img != NULL || p.text != NULL)
 		return -1;
 	k = snprintf(out, n, "%s", p.path);
 	return k >= 0 && k < n ? 0 : -1;
@@ -1186,7 +1214,7 @@ waitjob(uint64_t num)
 	reap();
 }
 
-/* The host's path to read a game path from: 0 if the file exists there. */
+/* The host's path to read a game path from: 0 if the file exists there, outside a CD's image. */
 int
 readpath(char *path, char *out, int n)
 {
@@ -1211,7 +1239,7 @@ readpath(char *path, char *out, int n)
 	return inbinds(0, rel, out, n);
 }
 
-/* havefile: whether a game path names a file the game can read. */
+/* havefile: whether a game path names a file the game can read, on the host or in a CD's image. */
 int
 havefile(char *path)
 {
@@ -1227,7 +1255,7 @@ havefile(char *path)
 	return readpath(path, out, sizeof out) == 0 || locate(0, rel, &p) == 0;
 }
 
-/* havecd: whether the CD's drive has a bind. */
+/* havecd: whether the CD's drive has a bind, a directory or a CD's image. */
 int
 havecd(void)
 {
@@ -1236,6 +1264,41 @@ havecd(void)
 	for (b = dirs.bind; b < dirs.bind + dirs.nbind; b++)
 		if (b->cd)
 			return 1;
+	return 0;
+}
+
+/* cdimagefile: whether a CD path names a file of a CD's image, the image, the file's first sector and its bytes into *img, *start and *size. */
+int
+cdimagefile(char *path, Image **img, uint32_t *start, uint32_t *size)
+{
+	char rel[Npath];
+	Place p;
+
+	if (splitgame(path, rel, sizeof rel) != 1 || locate(1, rel, &p) < 0 || p.img == NULL || p.track != 0)
+		return 0;
+	*img = p.img;
+	*start = p.start;
+	*size = p.size;
+	return 1;
+}
+
+/*
+ * cdtrack: the sound of a CD's image a CD path names (imagesound), the
+ * image into *img, its audio track's number into *num, the track's frame
+ * it starts at into *first and its frames into *n: 0, or -1 for none.
+ */
+int
+cdtrack(char *path, Image **img, int32_t *num, uint32_t *first, uint32_t *n)
+{
+	char rel[Npath];
+	Place p;
+
+	if (splitgame(path, rel, sizeof rel) != 1 || locate(1, rel, &p) < 0 || p.track == 0)
+		return -1;
+	*img = p.img;
+	*num = p.track;
+	*first = p.first;
+	*n = p.frames;
 	return 0;
 }
 
@@ -1361,6 +1424,26 @@ diskhandle(FILE *f)
 	return Hbase + i;
 }
 
+/* A handle on the file of a CD's image at its first sector start, of len bytes: 0 with every handle taken. */
+static int32_t
+imagehandle(Image *img, uint32_t start, uint32_t len)
+{
+	File *h;
+	int i;
+
+	i = freeslot();
+	if (i < 0)
+		return 0;
+	h = &files[i];
+	memset(h, 0, sizeof *h);
+	h->kind = Himage;
+	h->img = img;
+	h->start = start;
+	h->len = len;
+	h->rd = 1;
+	return Hbase + i;
+}
+
 /* A handle on the bytes in memory, b, which it takes, of the preferences' file rel: 0 with every handle taken. */
 static int32_t
 memhandle(const char *rel, uint8_t *b, uint32_t len, int rd, int wr, int changed)
@@ -1394,6 +1477,7 @@ OpenRead(char *name)
 	const char *t;
 	uint8_t *b;
 	Entry *d, *e;
+	Place p;
 	FILE *f;
 	int cd;
 
@@ -1409,6 +1493,8 @@ OpenRead(char *name)
 	cd = splitgame(name, rel, sizeof rel);
 	if (cd < 0)
 		return 0;
+	if (cd && locate(1, rel, &p) == 0 && p.img != NULL)
+		return p.track != 0 ? 0 : imagehandle(p.img, p.start, p.size);
 	if (readpath(name, path, sizeof path) < 0) {
 		if (cd || (t = textat(rel)) == NULL)
 			return 0;
@@ -1517,7 +1603,10 @@ Read(int32_t h, void *buf, uint32_t n)
 	k = f->len - f->pos;
 	if (n < k)
 		k = n;
-	memcpy(buf, f->b + f->pos, k);
+	if (f->kind == Himage)
+		k = imageread(f->img, f->start, f->pos, buf, k);
+	else
+		memcpy(buf, f->b + f->pos, k);
 	f->pos += k;
 	return k;
 }
@@ -1706,6 +1795,7 @@ FileSize(char *name)
 	const char *t;
 	struct stat st;
 	Entry *d, *e;
+	Place p;
 	int cd;
 
 	if (ispref(name, rel, sizeof rel) && keeping()) {
@@ -1716,6 +1806,8 @@ FileSize(char *name)
 	cd = splitgame(name, rel, sizeof rel);
 	if (cd < 0)
 		return 0;
+	if (cd && locate(1, rel, &p) == 0 && p.img != NULL)
+		return p.track != 0 ? 0 : p.size;
 	if (readpath(name, path, sizeof path) == 0)
 		return stat(path, &st) == 0 && !S_ISDIR(st.st_mode) ? st.st_size : 0;
 	if (!cd && (t = textat(rel)) != NULL)
@@ -2004,8 +2096,8 @@ keepfound(const char *name, size_t max, uint8_t attrib, uint32_t size, uint16_t 
 
 /*
  * An entry of the host's found, kept as keepfound keeps one, its year
- * within DOS's 1980 to 2107, and a time localtime cannot give, as
- * mingw's before 1970, DOS's first day.
+ * within DOS's 1980 to 2107, as cdimage.c's listed keeps an image's, and
+ * a time localtime cannot give, as mingw's before 1970, DOS's first day.
  */
 static void
 addfound(const char *name, size_t max, uint8_t attrib, uint32_t size, time_t mtime)
@@ -2056,6 +2148,28 @@ scan(const char *dir, const char *pat, int subdirs, size_t max)
 			addfound(e->d_name, max, _A_ARCH, (uint32_t)st.st_size, st.st_mtime);
 	}
 	closedir(d);
+}
+
+typedef struct Search Search;
+
+/* A search's pattern, whether it takes directories, and its longest name, given to the entries of a CD's image. */
+struct Search
+{
+	const char	*pat;
+	int	subdirs;
+	size_t	max;
+};
+
+/* An entry of a CD's image, kept where the search takes it. */
+static void
+imagefound(void *arg, char *name, int dir, uint32_t size, uint16_t date, uint16_t time)
+{
+	Search *s;
+
+	s = arg;
+	if (!findable(name, s->max) || !dosmatch(s->pat, name) || (dir && !s->subdirs))
+		return;
+	keepfound(name, s->max, dir ? _A_SUBDIR : _A_ARCH, size, date, time);
 }
 
 /* The entries of the view's directory d whose names match pat, as scan finds them on the disk. */
@@ -2120,6 +2234,7 @@ _dos_findfirst(const char *pattern, unsigned attr, struct find_t *ft)
 	const char *e, *r;
 	struct stat st;
 	Entry *vd, *ve;
+	Search s;
 	size_t max;
 	Bind *b;
 	int cd, subdirs;
@@ -2149,6 +2264,9 @@ _dos_findfirst(const char *pattern, unsigned attr, struct find_t *ft)
 		} else if (under(dirs.pref, dir, host, sizeof host, 0) == 0)
 			scan(host, pat, subdirs, max);
 	}
+	s.pat = pat;
+	s.subdirs = subdirs;
+	s.max = max;
 	for (b = dirs.bind; b < dirs.bind + dirs.nbind; b++) {
 		if (b->cd != cd)
 			continue;
@@ -2162,7 +2280,9 @@ _dos_findfirst(const char *pattern, unsigned attr, struct find_t *ft)
 		}
 		if (b->file || (r = below(b->path, dir)) == NULL)
 			continue;
-		if (under(b->dir, r, host, sizeof host, 0) == 0)
+		if (b->img != NULL)
+			imagelist(b->img, (char*)r, imagefound, &s);
+		else if (under(b->dir, r, host, sizeof host, 0) == 0)
 			scan(host, pat, subdirs, max);
 	}
 	if (nfound > 1)

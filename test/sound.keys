@@ -1,0 +1,30 @@
+# A new game with the samples on (fixtures/sound): the name, the
+# introduction's text spoken for a while, then cut, the movie for a
+# while, then cut, and the cell, walked about.
+
+sleep 40
+shot menu
+key Return
+sleep 4
+key a b c
+sleep 1
+key Return
+sleep 20
+shot text
+key Escape
+sleep 15
+shot movie
+key Escape
+sleep 10
+shot scene
+down Up
+sleep 2
+up Up
+down Left
+sleep 1
+up Left
+down Up
+sleep 2
+up Up
+sleep 3
+shot walked

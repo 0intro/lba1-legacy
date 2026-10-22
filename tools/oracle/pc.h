@@ -26,6 +26,8 @@ extern uint32_t	pccs;	/* this process's code selector */
 extern int	ncx;	/* DPMI 0300h calls given a CX other than 0 */
 extern uint32_t	cxlast;
 extern int	neoi;	/* ends of interrupt sent to the PIC */
+extern uint32_t	dpmifail;	/* the DPMI function made to fail when nonzero */
+extern int	ndpmifail;	/* its calls to fail before it answers, -1 for every one */
 extern int	(*pcfault)(void*);	/* a fault past pc.c's decoding, given its ucontext: 1 if taken */
 
 void	pcload(char*, char*);

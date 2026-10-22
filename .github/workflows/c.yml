@@ -16,8 +16,9 @@ name: C
 # passed, the release job publishes the tag's GitHub release: make
 # dist's archives, with the tag's annotation as its notes. make check
 # reads the game's files in $LBATMP: the CD's and the PlayStation's,
-# which tools/extract takes from their images (pc/, ps/), GOG's install
-# (gog/) and the records (e2e/): it runs where they are.
+# which tools/extract takes from their images (pc/, iso/, ps/), the CD's
+# tracks as WAV files (music/), GOG's install (gog/) and the records
+# (e2e/): it runs where they are.
 
 on:
   push:

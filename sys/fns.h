@@ -1,3 +1,16 @@
+/* cdimage.c */
+Image*	imageopen(char*, char*, int);
+void	imageclose(Image*);
+int	imagefile(Image*, char*, uint32_t*, uint32_t*);
+uint32_t	imageread(Image*, uint32_t, uint32_t, uint8_t*, uint32_t);
+int	imagedir(Image*, char*);
+int	imagelist(Image*, char*, void(*)(void*, char*, int, uint32_t, uint16_t, uint16_t), void*);
+char*	imagelabel(Image*);
+uint32_t	imageaudio(Image*, int32_t);
+int32_t	tracknum(const char*);
+int	imagesound(Image*, char*, int32_t*, uint32_t*, uint32_t*);
+uint32_t	imagetrackread(Image*, int32_t, uint64_t, uint8_t*, uint32_t);
+
 /* compat.c */
 int	watcomstricmp(const char*, const char*);
 int	watcomstrnicmp(const char*, const char*, size_t);
@@ -21,8 +34,11 @@ int	bindpath(int, char*, char*, char*, int);
 int	bindfile(int, char*, char*, char*, int);
 int	bindtext(int, char*, const char*, char*, int);
 void	bindconfig(char*, const char*);
+int	findhost(const char*, const char*, char*, int);
 int	havefile(char*);
 int	havecd(void);
+int	cdimagefile(char*, Image**, uint32_t*, uint32_t*);
+int	cdtrack(char*, Image**, int32_t*, uint32_t*, uint32_t*);
 void	setcdletter(int);
 int	setprogdir(const char*);
 int	readpath(char*, char*, int);
@@ -69,6 +85,9 @@ void	replay(uint64_t);
 void	sumto(char*);
 void	shotat(uint32_t, uint32_t, uint32_t);
 void	summed(uint32_t, uint64_t);
+void	summedwave(uint64_t, const uint32_t*, int);
+void	summedcd(uint64_t, const uint8_t*, int);
+void	waveto(char*);
 
 /* video.c */
 void	videoinit(void);
@@ -77,6 +96,13 @@ void	PalMulti(int16_t, int16_t, uint8_t*);
 /* sound.c */
 void	soundinit(void);
 
+/* wave.c */
+void	wavetick(uint64_t);
+void	wavestate(uint8_t*);
+
+/* cd.c */
+void	cdtick(uint64_t);
+
 /* sdl.c */
 void	fatal(char*, ...);
 void	sdlclose(void);
@@ -84,8 +110,15 @@ uint64_t	sdlnanos(void);
 void	sdlsleep(uint64_t);
 void	sdlshow(void);
 void	sdlpoll(void);
+void	sdlwave(const uint32_t*, int, int);
+void	sdlwavegain(float);
+void	sdlcd(const void*, int);
+void	sdlcdstop(void);
+void	sdlcdgain(float);
+void	sdllate(void);
 
 /* the game's */
 int	lbamain(int, char**);
+unsigned char*	Def_ReadString(unsigned char*, unsigned char*);
 int32_t	Def_ReadValue2(unsigned char*, unsigned char*, int32_t*);
 int32_t	Def_WriteValue(unsigned char*, unsigned char*, int32_t);

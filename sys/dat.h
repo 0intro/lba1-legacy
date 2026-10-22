@@ -3,6 +3,11 @@
 
 enum
 {
+	Ahead = 8,	/* the CD's frames handed on before the clock passes them */
+};
+
+enum
+{
 	Svga,		/* the game's, VESA mode 101h in LBA.EXE */
 	Mcga,		/* 320x200, mode 13h, the movies' */
 };
@@ -20,7 +25,10 @@ struct Vga
 extern Vga vga;	/* the video card (video.c) */
 
 extern uint16_t	AsciiMode;	/* the keys passed to the BIOS's buffer too, for GetAscii (keyb.c) */
+extern char	PathConfigFile[];	/* lba.cfg's name, InitAdelineSystem's (sys.c) */
 extern volatile uint32_t	TimerRef;	/* the game's time, in the PIT's ticks of 50 Hz (timer.c) */
+extern int32_t	Wave_Driver_Enable;	/* the samples' driver loaded (wave.c) */
+extern int32_t	PlayRate;	/* the samples' rate, in Hz */
 
 enum
 {
@@ -39,3 +47,6 @@ enum
 	Wwait,		/* the lock given up until a wake, then taken back */
 	Wwake,		/* every waiter woken */
 };
+
+/* a CD's image, a cue sheet and its files or an ISO (cdimage.c) */
+typedef struct Image Image;

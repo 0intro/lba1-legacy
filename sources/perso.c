@@ -1432,7 +1432,7 @@ int	main( int argc, char *argv[] )
 
 #ifdef	DOS
 	/*
-	 * DOS's drives: the port's CD is a directory, its D: a
+	 * DOS's drives: the port's CD is a directory or an image, its D: a
 	 * name of its own.
 	 */
 	if ( ProgDrive[0]-'A' == DriveCDR )// A=0 , B=1 etc.

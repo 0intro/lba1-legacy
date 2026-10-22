@@ -19,6 +19,7 @@ enum
 	Width = 640,
 	Height = 480,
 	Ext = 0x100,	/* an extended key: E0 before its code */
+	Drift = 5000,	/* the most steer nudges a stream's rate, in millionths */
 };
 
 static SDL_Window *window;
@@ -334,6 +335,223 @@ sdlclose(void)
 	SDL_Quit();
 }
 
+/*
+ * The sound's streams, 16-bit, each opened at its first frames and kept
+ * a lead ahead of the device, which a pause of the game spends while
+ * the device plays on. The clock (timer.c) catches up after a lag of up
+ * to its Late, a tenth of a second, handing on at once what the pause
+ * held back, and each lead holds that tenth besides what the stream
+ * needs to play on time. A longer lag it gives up, and sdllate puts the
+ * leads back as silence. The device's clock drifts from ours, and a
+ * tune held long without a rest would drain its stream or fill it past
+ * its limit: steer nudges the stream's rate, by Drift millionths at
+ * most, to hold what waits at the lead.
+ */
+static uint32_t silence[1024];
+
+/* Silence to stream s until n bytes wait there. */
+static void
+fill(SDL_AudioStream *s, int n)
+{
+	int q, m;
+
+	for (q = SDL_GetAudioStreamQueued(s); q < n; q += m) {
+		m = n - q < (int)sizeof silence ? n - q : (int)sizeof silence;
+		SDL_PutAudioStreamData(s, silence, m);
+	}
+}
+
+/*
+ * The lead of stream s at rate, in bytes, for frames that come only as
+ * the clock passes them: the clock's Late, two of the device's pulls, a
+ * frame of the screen (what the clock hands on at a retrace) and 5 ms.
+ */
+static int
+leadof(SDL_AudioStream *s, int rate)
+{
+	SDL_AudioSpec dev;
+	int frames;
+
+	if (!SDL_GetAudioDeviceFormat(SDL_GetAudioStreamDevice(s), &dev, &frames)
+	|| dev.freq <= 0 || frames <= 0) {
+		dev.freq = rate;
+		frames = 2048;
+	}
+	return 4*(rate/10 + (int)((int64_t)2*frames*rate/dev.freq) + rate/60 + rate/200);
+}
+
+/* Stream s, which holds n bytes, its rate set to bring them back to lead. */
+static void
+steer(SDL_AudioStream *s, int n, int lead)
+{
+	float e;
+
+	e = (float)(n - lead) / lead;
+	if (e > 1)
+		e = 1;
+	else if (e < -1)
+		e = -1;
+	SDL_SetAudioStreamFrequencyRatio(s, 1 + e*Drift/1000000);
+}
+
+/*
+ * The samples' halves to the sound card, at rate: a half of silence
+ * ahead at the start, as the card's other half was, and the clock's
+ * Late, so that the lead is two halves, the one playing and the one
+ * being mixed, and that tenth. After a tenth of a second of silent
+ * halves (mixhalf's zeros), the lead is held in place of each. A half
+ * is dropped when more than two past the lead wait, the clock having
+ * run ahead (a replay).
+ */
+static SDL_AudioStream *wavestream;
+static int nowave;
+static float wavegain = 1;
+static int wavelead;	/* bytes */
+static int wavequiet;	/* frames of silence in a row, a tenth of a second at most */
+
+/* Whether n words are all 0. */
+static int
+zero(const uint32_t *w, int n)
+{
+	int i;
+
+	for (i = 0; i < n; i++)
+		if (w[i] != 0)
+			return 0;
+	return 1;
+}
+
+void
+sdlwave(const uint32_t *buf, int frames, int rate)
+{
+	SDL_AudioSpec spec;
+	int q;
+
+	if (nowave)
+		return;
+	if (wavestream == NULL) {
+		spec.format = SDL_AUDIO_S16LE;
+		spec.channels = 2;
+		spec.freq = rate;
+		if (!SDL_InitSubSystem(SDL_INIT_AUDIO)
+		|| (wavestream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL)) == NULL) {
+			fprintf(stderr, "lba: no sound: %s\n", SDL_GetError());
+			nowave = 1;
+			return;
+		}
+		SDL_SetAudioStreamGain(wavestream, wavegain);
+		SDL_ResumeAudioStreamDevice(wavestream);
+		wavelead = 4*(2*frames + rate/10);
+		fill(wavestream, wavelead - frames*4);
+	}
+	if (!zero(buf, frames))
+		wavequiet = 0;
+	else if (wavequiet < rate/10)
+		wavequiet += frames;
+	if (wavequiet >= rate/10) {
+		fill(wavestream, wavelead);
+		return;
+	}
+	q = SDL_GetAudioStreamQueued(wavestream);
+	if (q > wavelead + 2*frames*4)
+		return;
+	SDL_PutAudioStreamData(wavestream, buf, frames*4);
+	steer(wavestream, q + frames*4, wavelead);
+}
+
+/* The mixer chip's gain on the samples. */
+void
+sdlwavegain(float g)
+{
+	wavegain = g;
+	if (wavestream != NULL)
+		SDL_SetAudioStreamGain(wavestream, g);
+}
+
+/*
+ * The CD's audio, at 44100 Hz, to a stream of its own, opened at the
+ * first frame. cd.c hands its frames on Ahead ahead of the clock, and
+ * silence before the first frame of each play makes up the rest of the
+ * lead. A frame is dropped when more than half a second waits, the clock
+ * having run ahead (a replay), and what waits is dropped when the CD
+ * stops.
+ */
+static SDL_AudioStream *cdstream;
+static int nocd;
+static float cdgain = 1;
+static int cdlead;	/* bytes */
+static int cdstart = 1;	/* the CD's next frame a play's first */
+
+/* n bytes of the CD's audio, a frame, to stream *s, opened if need be, *start set where it begins a play. */
+static void
+cdput(SDL_AudioStream **s, int *start, const void *buf, int n)
+{
+	SDL_AudioSpec spec;
+	int q;
+
+	if (nocd)
+		return;
+	if (*s == NULL) {
+		spec.format = SDL_AUDIO_S16LE;
+		spec.channels = 2;
+		spec.freq = 44100;
+		if (!SDL_InitSubSystem(SDL_INIT_AUDIO)
+		|| (*s = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL)) == NULL) {
+			fprintf(stderr, "lba: no CD audio: %s\n", SDL_GetError());
+			nocd = 1;
+			return;
+		}
+		SDL_SetAudioStreamGain(*s, cdgain);
+		SDL_ResumeAudioStreamDevice(*s);
+		cdlead = leadof(*s, 44100);
+	}
+	if (*start) {
+		fill(*s, cdlead - Ahead*n);
+		*start = 0;
+	}
+	q = SDL_GetAudioStreamQueued(*s);
+	if (q > 44100/2*4)
+		return;
+	SDL_PutAudioStreamData(*s, buf, n);
+	steer(*s, q + n, cdlead);
+}
+
+void
+sdlcd(const void *buf, int n)
+{
+	cdput(&cdstream, &cdstart, buf, n);
+}
+
+void
+sdlcdstop(void)
+{
+	if (cdstream != NULL)
+		SDL_ClearAudioStream(cdstream);
+	cdstart = 1;
+}
+
+/* The mixer chip's gain on the CD. */
+void
+sdlcdgain(float g)
+{
+	cdgain = g;
+	if (cdstream != NULL)
+		SDL_SetAudioStreamGain(cdstream, g);
+}
+
+/*
+ * sdllate: the lag the clock gave up, which spent what the streams held
+ * ahead, made silence: each stream filled to its lead.
+ */
+void
+sdllate(void)
+{
+	if (wavestream != NULL)
+		fill(wavestream, wavelead);
+	if (cdstream != NULL)
+		fill(cdstream, cdlead);
+}
+
 uint64_t
 sdlnanos(void)
 {
@@ -479,21 +697,21 @@ sdlpoll(void)
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: lba [-g gamedir]... [-c cd]... [-p prefdir] [-r record | -i record] [-s sums] [-S n[-m[/k]]]\n");
+	fprintf(stderr, "usage: lba [-g gamedir]... [-c cd]... [-p prefdir] [-r record | -i record] [-s sums] [-S n[-m[/k]]] [-w wave]\n");
 	exit(2);
 }
 
 /*
  * The directories: the game's (LBA.CFG and the HQR files), one or more,
  * read in the order given, the CD's (CD_LBA and LBA/, for the movies
- * and voices), one or more, each its root, read in the order given,
- * and the preferences, where everything written goes. By default the
- * game's is the current one, the CD's the first game directory's
- * parent, and the preferences SDL's. The configuration file is read
- * after them from the program's directory (files.c). The input can be
- * recorded (-r) or played from a record (-i), the screens shown summed
- * (-s), and the nth, or the nth to the mth (every kth), written as
- * lban.bmp (-S): replay.c.
+ * and voices), one or more, each its root or a CD's image, read in the
+ * order given, and the preferences, where everything written goes. By
+ * default the game's is the current one, the CD's the first game
+ * directory's parent, and the preferences SDL's. The configuration file
+ * is read after them from the program's directory (files.c). The input
+ * can be recorded (-r) or played from a record (-i), the screens shown
+ * summed (-s), the nth, or the nth to the mth (every kth), written as
+ * lban.bmp (-S), and the samples mixed written raw (-w): replay.c.
  */
 int
 main(int argc, char *argv[])
@@ -545,6 +763,9 @@ main(int argc, char *argv[])
 			if (*e == '/')
 				k = strtoul(e+1, NULL, 10);
 			shotat(n, m, k);
+			break;
+		case 'w':
+			waveto(argv[++i]);
 			break;
 		default:
 			usage();
