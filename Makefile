@@ -166,9 +166,11 @@ NEW=\
 	lib386/lib_sys/buffer_a.o\
 	lib386/lib_sys/expand.o\
 	lib386/lib_sys/hqr.o\
+	lib386/lib_sys/settings.o\
 	sources/adfli_a.o\
 	sources/balance.o\
 	sources/cpymask.o\
+	sources/exttext.o\
 	sources/fire.o\
 	sources/func.o\
 	sources/gridfix.o\
@@ -188,6 +190,7 @@ PORT=\
 	sys/keyb.o\
 	sys/mem.o\
 	sys/midi.o\
+	sys/modes.o\
 	sys/oplio.o\
 	sys/qsort.o\
 	sys/rand.o\
@@ -218,15 +221,19 @@ EMU8KTEST=\
 	sys/emu8kfx.o\
 	sys/emu8ktab.o\
 
-# cfgtest: lba.cfg's reading and writing, through the port's files.
+# cfgtest: lba.cfg's reading and writing, through the port's files, and
+# LbaWin's settings.
 CFGTEST=\
 	test/cfgtest.o\
 	lib386/lib_sys/def_file.o\
 	lib386/lib_sys/loadmall.o\
+	lib386/lib_sys/settings.o\
 	sys/compat.o\
 	sys/files.o\
 	sys/mem.o\
+	sys/modes.o\
 	sys/cdimage.o\
+	sys/lbacfg.o\
 
 # clocktest: sys/timer.c's clock driven as the game drives it, the
 # retraces each loop of its calls waits for (test/clocktest.c).
@@ -252,7 +259,11 @@ CDIMAGETEST=\
 	sys/files.o\
 	sys/cdimage.o\
 
-# The game's modules whose .def files make defs writes.
+# The game's modules whose .def files make defs writes, NEWDEFS the
+# port's own, which include sys/compat.h themselves.
+NEWDEFS=\
+	exttext\
+
 DEFS=\
 	ambiance\
 	diskfunc\
@@ -269,6 +280,7 @@ DEFS=\
 	object\
 	perso\
 	playfla\
+	$(NEWDEFS)\
 
 # lint checks with shellcheck every bash script, with tools/lint.py the
 # tree's text, the new C in the layout of The Practice of Programming
@@ -287,7 +299,7 @@ lint:
 # defs makes each module's .def again, the prototypes of the functions
 # it defines (tools/defs, tools/mkdefs.py), into build/defs first.
 defs:
-	tools/defs -o build/defs $(DEFS)
+	tools/defs -o build/defs -n '$(strip $(NEWDEFS))' $(DEFS)
 
 # tables makes sys/emu8ktab.c again with tools/emu8ktab.py and, where it
 # changed, puts the new one in its place and stops make with an error.

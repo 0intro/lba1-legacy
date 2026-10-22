@@ -1,0 +1,25 @@
+# wall.keys again, with LbaWinSettings: 212 in lba.cfg (fixtures/walloff:
+# the CD's LBA.CFG and that line, the Classic's default, Hit walls off):
+# Twinsen runs on along the cell's wall where wall.keys has him bump
+# into it.
+
+sleep 40
+key Return
+sleep 4
+key a b c
+sleep 1
+key Return
+sleep 20
+key Escape
+sleep 15
+key Escape
+sleep 10
+shot cell
+key F2
+sleep 1
+down Up
+sleep 4
+up Up
+shot ran
+sleep 2
+shot after

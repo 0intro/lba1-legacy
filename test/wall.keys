@@ -1,0 +1,25 @@
+# Running into a wall in the sportif behaviour (F2): a new game, its text
+# and movie cut, then forward in the cell until its wall, where Twinsen
+# bumps, Hit walls being on with LbaWinSettings: 210, the 1994 play's.
+# walloff plays these keys with Hit walls off.
+
+sleep 40
+key Return
+sleep 4
+key a b c
+sleep 1
+key Return
+sleep 20
+key Escape
+sleep 15
+key Escape
+sleep 10
+shot cell
+key F2
+sleep 1
+down Up
+sleep 4
+up Up
+shot ran
+sleep 2
+shot after

@@ -34,6 +34,7 @@ InitAdelineSystem(char *name, int32_t inits)
 	 * program holds. Taken from LbaWin 0.8.1, the text the port's own.
 	 */
 	bindconfig(name, (char*)lbacfg);
+	readplatform(name);
 	p = Def_ReadString((unsigned char*)name, (unsigned char*)"MidiType");
 	if (p != NULL && *p != 0)
 		MidiFM = watcomstricmp((char*)p, "FM") == 0;

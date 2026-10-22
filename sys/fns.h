@@ -91,6 +91,9 @@ void	summedmidi(uint64_t, int16_t*, int);
 void	waveto(char*);
 void	musicto(char*);
 
+/* modes.c */
+void	readplatform(char*);
+
 /* video.c */
 void	videoinit(void);
 void	PalMulti(int16_t, int16_t, uint8_t*);
@@ -201,4 +204,5 @@ int	lbamain(int, char**);
 unsigned char*	Def_ReadString(unsigned char*, unsigned char*);
 int32_t	Def_ReadValue2(unsigned char*, unsigned char*, int32_t*);
 int32_t	Def_WriteValue(unsigned char*, unsigned char*, int32_t);
+void	ReadLbaWinSettings(void);
 uint32_t	Load(char*, void*);

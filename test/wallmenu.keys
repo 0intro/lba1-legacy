@@ -1,0 +1,44 @@
+# Hit walls switched off from the option menu in play, with LbaWin's
+# LbaWinSettings: 209 in lba.cfg (fixtures/lbawin: the CD's LBA.CFG and
+# that line, Keep original game play set, which turns Hit walls on at
+# the start). A new game, its text and movie cut. In the cell, F6 opens
+# the option menu, whose fifth entry says Hit walls: ON. Return turns it
+# OFF and writes the settings to lba.cfg, and the first entry goes back
+# to the game. Then forward in the sportif behaviour into the cell's
+# wall, along which Twinsen runs on.
+
+sleep 40
+key Return
+sleep 4
+key a b c
+sleep 1
+key Return
+sleep 20
+key Escape
+sleep 15
+key Escape
+sleep 10
+shot cell
+hold 0.05
+key F6
+sleep 3
+shot options
+key Down Down Down Down
+sleep 1
+key Return
+sleep 2
+shot off
+key Up Up Up Up
+sleep 1
+key Return
+sleep 3
+hold 0.15
+shot back
+key F2
+sleep 1
+down Up
+sleep 4
+up Up
+shot ran
+sleep 2
+shot after

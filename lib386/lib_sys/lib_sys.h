@@ -266,6 +266,15 @@ LONG	Def_ReadValue( UBYTE *deffic, UBYTE *indentificateur ) ;
 #ifndef	DOS
 LONG	Def_ReadValue2( UBYTE *deffic, UBYTE *identificateur, LONG *result ) ;
 #endif
+#ifndef	DOS
+/*──────────────────────────────────────────────────────────────────────────*/
+/*				SETTINGS.C				*/
+
+extern	LONG	LbaWinSettings ;
+
+void	ReadLbaWinSettings( void ) ;
+void	WriteLbaWinSettings( void ) ;
+#endif
 /*──────────────────────────────────────────────────────────────────────────*/
 /*				BUFFER_A.ASM				*/
 void	RazMem( void *pt, ULONG size )	;

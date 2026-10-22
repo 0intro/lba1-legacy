@@ -14,7 +14,9 @@
 # 120 scenes of SCENE.HQR (saves/NNN/S2292.LBA): the outside save of the
 # records ($LBATMP/e2e/fixtures/outside, a new game's flags and the
 # holomap) with its scene (byte 261) set and its start (bytes 270-271)
-# at -1, the scene's own, and beside them the CD's LBA.CFG, no sound.
+# at -1, the scene's own, and beside them the CD's LBA.CFG, no sound,
+# each port's preferences given the values the sweep was made under
+# where the CD's file leaves them out: LbaWinSettings 210.
 # record plays the loading of a save on the port in our Xephyr
 # (tools/xkeys): the main menu, Continue saved game, the save, then a
 # hundred seconds. It keeps its input (port.in). A record counts its
@@ -116,11 +118,17 @@ saves() {
 	echo "sweep: $NSCENES saves in ${SW#"$LBATMP"/}/saves"
 }
 
+# pins dir: the values the sweep was made under added to dir's lba.cfg
+pins() {
+	printf 'LbaWinSettings: 210\r\n' >> "$1/lba.cfg"
+}
+
 # pref dir scene: the port's preferences for a scene's save
 pref() {
 	rm -rf -- "$1"
 	mkdir -p "$1"
 	cp "$SW/saves/lba.cfg" "$SW/saves/$2/S2292.LBA" "$1/"
+	pins "$1"
 }
 
 record() {

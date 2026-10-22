@@ -1788,7 +1788,17 @@ if( APtObj->Flags & CHECK_BRICK_COL )
 
 	// choc si on court
 
+#ifdef	DOS
 	if( (Col1 != 0)
+#else
+	/*
+	 * FEATURE: Hit walls. With LbaWinSettings's 2 clear, Twinsen runs on
+	 * along a wall, the probe ahead and its bump skipped. Taken from the
+	 * Classic 3.2.3, as LbaWin 0.7.4 made it.
+	 */
+	if( (LbaWinSettings & 2)
+	AND (Col1 != 0)
+#endif
 	AND !(APtObj->WorkFlags & FALLING)
 	AND (AnimNumObj == NUM_PERSO)
 	AND (Comportement == C_SPORTIF)
@@ -1841,7 +1851,19 @@ if( APtObj->Flags & CHECK_BRICK_COL )
 			{
 				if( numobj == NUM_PERSO )
 				{
+#ifdef	DOS
 					if( (Comportement == C_SPORTIF)
+#else
+					/*
+					 * FIXED: LbaWin and the Classic test Hit walls at
+					 * the first bump alone, so that with it off a new
+					 * position in a full brick still bumps Twinsen and
+					 * costs him a point. The switch is tested here as
+					 * there.
+					 */
+					if( (LbaWinSettings & 2)
+					AND (Comportement == C_SPORTIF)
+#endif
 					AND (APtObj->GenAnim == GEN_ANIM_MARCHE) )
 					{
 						InitSpecial(	APtObj->PosObjX,

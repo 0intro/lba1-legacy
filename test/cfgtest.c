@@ -25,10 +25,20 @@
  * def_file.c's fixes take: a value led by a tab written over whole,
  * lines ended by LF or CR alone, a key written among them keeping the
  * lines after it, and lines longer than DefString, a key read past them
- * and a value kept to its first 255 bytes.
+ * and a value kept to its first 255 bytes. Then LbaWin's settings, as
+ * lib386/lib_sys/settings.c reads, forces and writes them. First, the
+ * port's keys as readplatform reads them, from sys/lba.cfg, shipped
+ * beside the program and held as its text, each named there, and from
+ * the CD's LBA.CFG, which leaves them out: the same values, the code's
+ * defaults being the shipped file's.
  */
 
 void	setdirs(char*, char**, int, char**, int);
+int	bindtext(int, char*, const char*, char*, int);
+void	readplatform(char*);
+
+
+char	PathConfigFile[260];	/* sys/sys.c's, which cfgtest leaves out */
 
 static char *pref;
 static int fails;
@@ -151,6 +161,65 @@ longcase(void)
 	text("G.CFG", want);
 }
 
+/* The port's keys, in readplatform's order */
+static char *names[] = {
+	"LbaWinSettings",
+};
+
+/* readplatform's values for the configuration file name into v, in names' order */
+static void
+platform(char *name, int32_t *v)
+{
+	strcpy(PathConfigFile, name);
+	readplatform(name);
+	v[0] = LbaWinSettings;
+}
+
+/* key named in sys/lba.cfg, and its value a where the CD's LBA.CFG leaves it out the same as b, sys/lba.cfg's */
+static void
+shipped(char *key, int32_t a, int32_t b)
+{
+	if (Def_ReadString((UBYTE*)"SHIPPED.CFG", (UBYTE*)key) == NULL) {
+		fprintf(stderr, "cfgtest: sys/lba.cfg leaves %s out\n", key);
+		fails++;
+	}
+	if (a != b) {
+		fprintf(stderr, "cfgtest: %s left out: %ld where sys/lba.cfg gives %ld\n", key, (long)a, (long)b);
+		fails++;
+	}
+}
+
+/*
+ * The port's keys of sys/lba.cfg, the program's text of it (lbacfg),
+ * and of the CD's LBA.CFG, which leaves them out, read first, while
+ * LbaWinSettings and the data the reads keep hold their values at the
+ * start: each named in sys/lba.cfg, and the same in both.
+ */
+static void
+defaults(void)
+{
+	char err[256];
+	int32_t a[nelem(names)], b[nelem(names)];
+	int i;
+
+	platform("LBA.CFG", a);
+	if (bindtext(0, "SHIPPED.CFG", (char*)lbacfg, err, sizeof err) < 0)
+		fatal("SHIPPED.CFG: %s", err);
+	platform("SHIPPED.CFG", b);
+	for (i = 0; i < (int)nelem(names); i++)
+		shipped(names[i], a[i], b[i]);
+}
+
+static void
+setting(LONG want)
+{
+	if (LbaWinSettings == want)
+		return;
+	fprintf(stderr, "cfgtest: LbaWinSettings is %ld where %ld was due\n",
+		(long)LbaWinSettings, (long)want);
+	fails++;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -160,11 +229,13 @@ main(int argc, char **argv)
 	}
 	pref = argv[1];
 	setdirs(argv[1], &argv[2], 1, &argv[2], 1);
+	defaults();
 
 	str("LBA.CFG", "Language", "English");
 	str("LBA.CFG", "SvgaDriver", "VESA");
 	str("LBA.CFG", "MidiDriver", "NoMidi");
 	str("LBA.CFG", "MidiBase", "");
+	val("LBA.CFG", "LbaWinSettings", 0, 0);
 	val("LBA.CFG", "WaveRate", 1, 0);	/* empty: the next line's first word, read as 0 */
 
 	put("T.CFG",
@@ -251,6 +322,25 @@ main(int argc, char **argv)
 	text("C.CFG", "Alpha: one\rDec: 11025\r\nNeg: -5\r");
 
 	longcase();
+
+	strcpy(PathConfigFile, "S.CFG");
+	put("S.CFG", "Other: 1\r\n");
+	ReadLbaWinSettings();
+	setting(212);	/* missing: the default */
+	WriteLbaWinSettings();
+	text("S.CFG", "Other: 1\r\nLbaWinSettings: 212\r\n");
+	put("S.CFG", "LbaWinSettings: 209\r\n");
+	ReadLbaWinSettings();
+	setting(211);	/* LbaWin's: keep original game play sets Hit walls */
+	put("S.CFG", "LbaWinSettings: 212\r\n");
+	ReadLbaWinSettings();
+	setting(212);	/* the Classic's: Hit walls off */
+	put("S.CFG", "LbaWinSettings: 1\r\n");
+	ReadLbaWinSettings();
+	setting(19);	/* keep original game play sets 0x10 too */
+	put("S.CFG", "LbaWinSettings: 197\r\n");
+	ReadLbaWinSettings();
+	setting(211);
 
 	if (fails != 0)
 		return 1;

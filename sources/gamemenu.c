@@ -42,14 +42,23 @@ UWORD	GameQuitMenu[] = {
 
 UWORD	GameOptionMenu[] = {
 			0,	// selected
+#ifdef	DOS
 			4,	// nb entries
+#else
+			5,	// nb entries
+#endif
 			0,	// y from top.
 			0,	// .dia num
 
 			0, 24,  // annuler
 			0, 30,	// reglages volumes
 			0, 46,	// gestion saved game
+#ifdef	DOS
 			0, 47	// advanced options
+#else
+			0, 47,	// advanced options
+			0, 0x100A	// FEATURE: Hit walls, the option menu's last entry. Taken from the Classic 3.2.3.
+#endif
 				} ;
 
 UWORD	GameAdvancedMenu[] = {
@@ -2003,6 +2012,14 @@ void	DrawOneChoice( WORD x, WORD y, WORD type, WORD num, WORD select )
 	// text
 
 	CoulFont( COUL_TEXT_MENU ) ;
+#ifndef	DOS
+	/*
+	 * FEATURE: a text numbered from 0x1000 is one of the Classic's own,
+	 * Hit walls' among them. Taken from the Classic 3.2.3.
+	 */
+	if( num & 0x1000 )	strcpy( string, GetExtText( num ) ) ;
+	else
+#endif
 	GetMultiText( num, string ) ;
 
 	Font( x - SizeFont( string )/2, y-18, string ) ;
@@ -2301,7 +2318,24 @@ LONG	OptionsMenu()
 {
 	WORD select ;
 	WORD flag = 0 ;
+#ifndef	DOS
+	UWORD *ptrhitwalls ;
 
+	/*
+	 * FEATURE: Hit walls, the option menu's switch of the bump into
+	 * walls. Its entry says ON while LbaWinSettings has 2 and OFF
+	 * without, and its choice turns 2 over and writes the settings to
+	 * lba.cfg at once. Taken from the Classic 3.2.3. The entry is found
+	 * by its text.
+	 */
+	ptrhitwalls = GameOptionMenu+4 ;
+	while( (ptrhitwalls[1] != 0x100A) AND (ptrhitwalls[1] != 0x100B) )
+	{
+		ptrhitwalls += 2 ;
+	}
+	ptrhitwalls[1] = (LbaWinSettings & 2) ? 0x100A : 0x100B ;
+
+#endif
 	CopyScreen( Log, Screen ) ;
 
 #ifdef	FIXES
@@ -2347,6 +2381,23 @@ LONG	OptionsMenu()
 				Flip() ;
 				SavedGameManagement() ;
 				break ;
+#ifndef	DOS
+
+			case 0x100A:	// Hit walls: ON
+			case 0x100B:	// Hit walls: OFF
+				LbaWinSettings ^= 2 ;
+				/*
+				 * FIXED: with keep original game play (1) set, as
+				 * LbaWin's lba.cfg has it, ReadLbaWinSettings turns
+				 * Hit walls on again at each start, so that the
+				 * Classic's switch holds until the program ends. It
+				 * clears 1 too.
+				 */
+				LbaWinSettings &= ~1 ;
+				ptrhitwalls[1] = (LbaWinSettings & 2) ? 0x100A : 0x100B ;
+				WriteLbaWinSettings() ;
+				break ;
+#endif
 		}
 	}
 	CopyScreen( Screen, Log ) ;

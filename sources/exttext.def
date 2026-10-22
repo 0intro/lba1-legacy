@@ -1,0 +1,1 @@
+extern char *GetExtText(int32_t );

@@ -6,6 +6,9 @@
 #include	"ambiance.def"
 #include	"diskfunc.def"
 #include	"extra.def"
+#ifndef	DOS
+#include	"exttext.def"
+#endif
 #include	"fiche.def"
 #include	"flipbox.def"
 #include	"gamemenu.def"

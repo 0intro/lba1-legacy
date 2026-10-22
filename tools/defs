@@ -3,18 +3,20 @@
 # defs: each module's .def made again, the prototypes of the functions
 # it defines, from gcc's -aux-info and tools/mkdefs.py.
 #
-#     tools/defs [-o dir] module...
+#     tools/defs [-o dir] [-n 'module...'] module...
 #
 # For each module of sources/, gcc -m32 writes into dir (build/defs by
-# default) the declarations of the CD version (CDROM defined), of the
-# disk version, of the DOS build with the fixes and of LBA.EXE's code
-# (DOS defined, C89, Watcom's far and its critical error's answer made
-# void). tools/mkdefs.py makes the .def from them: the CD version's
+# default) the declarations of the CD version (CDROM defined) and of the
+# disk version, and for a module the DOS builds compile, those of the
+# DOS build with the fixes and of LBA.EXE's code (DOS defined, C89,
+# Watcom's far and its critical error's answer made void).
+# tools/mkdefs.py makes the .def from them: the CD version's
 # declarations, those the disk version lacks outside DOS alone, those
 # the DOS build declares otherwise under DOS, and those the fixes add or
 # change under FIXES. A .def that changed takes the place of
-# sources/MODULE.def. ccache is turned off, so that gcc runs and writes
-# the -aux-info files.
+# sources/MODULE.def. The modules -n names, the port's alone, include
+# sys/compat.h themselves. ccache is turned off, so that gcc runs and
+# writes the -aux-info files.
 
 set -Eeuo pipefail
 
@@ -22,14 +24,16 @@ TOOLS=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 REPO=$(cd -- "$TOOLS/.." && pwd)
 
 usage() {
-	echo "usage: defs [-o dir] module..." >&2
+	echo "usage: defs [-o dir] [-n 'module...'] module..." >&2
 	exit 2
 }
 
 out=build/defs
-while getopts o: c; do
+new=
+while getopts o:n: c; do
 	case $c in
 	o) out=$OPTARG ;;
+	n) new=$OPTARG ;;
 	*) usage ;;
 	esac
 done
@@ -40,14 +44,24 @@ out=$(cd -- "$out" && pwd)
 cd -- "$REPO"
 
 export CCACHE_DISABLE=1
-cc=(gcc -m32 -funsigned-char -w -fsyntax-only -include sys/compat.h)
+cc=(gcc -m32 -funsigned-char -w -fsyntax-only)
 dos=(-std=gnu89 -D__far= -Dfar= -D_HARDERR_RETRY=0 -DCDROM=1 -DDOS)
 for m; do
-	"${cc[@]}" -std=c99 -aux-info "$out/$m.aux" -DCDROM=1 "sources/$m.c"
-	"${cc[@]}" -std=c99 -aux-info "$out/$m.disk.aux" "sources/$m.c"
-	"${cc[@]}" "${dos[@]}" -aux-info "$out/$m.dos.aux" -DFIXES "sources/$m.c"
-	"${cc[@]}" "${dos[@]}" -aux-info "$out/$m.cd.aux" "sources/$m.c"
-	python3 -I tools/mkdefs.py -u sys/compat.h -n "$out/$m.disk.aux" -d "$out/$m.dos.aux" \
-		-c "$out/$m.cd.aux" "$out/$m.aux" "sources/$m.c" >"$out/$m.def"
+	inc=(-include sys/compat.h)
+	aux=(-d "$out/$m.dos.aux" -c "$out/$m.cd.aux")
+	case " $new " in
+	*" $m "*)
+		inc=()
+		aux=()
+		;;
+	esac
+	"${cc[@]}" -std=c99 "${inc[@]}" -aux-info "$out/$m.aux" -DCDROM=1 "sources/$m.c"
+	"${cc[@]}" -std=c99 "${inc[@]}" -aux-info "$out/$m.disk.aux" "sources/$m.c"
+	if (( ${#aux[@]} )); then
+		"${cc[@]}" "${dos[@]}" "${inc[@]}" -aux-info "$out/$m.dos.aux" -DFIXES "sources/$m.c"
+		"${cc[@]}" "${dos[@]}" "${inc[@]}" -aux-info "$out/$m.cd.aux" "sources/$m.c"
+	fi
+	python3 -I tools/mkdefs.py -u sys/compat.h -n "$out/$m.disk.aux" "${aux[@]}" \
+		"$out/$m.aux" "sources/$m.c" >"$out/$m.def"
 	cmp -s "$out/$m.def" "sources/$m.def" || cp "$out/$m.def" "sources/$m.def"
 done
