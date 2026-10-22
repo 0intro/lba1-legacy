@@ -1,0 +1,38 @@
+# Resume Game, SaveAnywhere: ON (fixtures/snapcfg: the CD's LBA.CFG
+# with the key): a new game, which starts at once, its text and movie
+# cut, a walk in the cell. Escape writes the game into current.lba and
+# opens the main menu over it, under current.lba's picture, and Resume
+# Game goes on with the game where it stood, the scene drawn whole
+# without a fade. A walk, then Escape again and Quit, which ends the
+# program, current.lba keeping the game for the next start (continue).
+
+sleep 40
+shot menu
+key Return
+sleep 20
+key Escape
+sleep 15
+key Escape
+sleep 10
+shot cell
+down Up
+sleep 1.2
+up Up
+key Left
+sleep 2
+shot walked
+key Escape
+sleep 3
+shot pause
+key Return
+sleep 2
+shot resumed
+down Up
+sleep 0.8
+up Up
+sleep 1
+shot moved
+key Escape
+sleep 3
+key Down Down Down Down Down Return
+sleep 3

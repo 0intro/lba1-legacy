@@ -26,6 +26,7 @@ void	watcomqsort(void*, size_t, size_t, int (*)(const void*, const void*));
 /* rand.c */
 int	watcomrand(void);
 void	watcomsrand(unsigned);
+unsigned	watcomseed(void);
 
 /* files.c */
 void	setpref(char*);

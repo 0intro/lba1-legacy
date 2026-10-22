@@ -1,0 +1,65 @@
+# Escape in the menus, SaveAnywhere: ON (fixtures/menumusic: soundout's
+# lba.cfg, the samples and the music on the OPL3, with the key, and the
+# outside save). From the main menu, the Options Menu, then its volumes,
+# the music's moved, and Escape, which goes back to the options as
+# Return to previous menu does, the XMIDI tune faded. The advanced
+# options and Escape, then Escape on the options: the main menu. The
+# save loads from the list. F6 opens the options in play, and Escape
+# held half a second goes back to the game, the main menu kept closed.
+# Escape opens the main menu over the game, its Options Menu the
+# options, and Escape goes back to the main menu, then to the game.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Down Return
+sleep 3
+shot options
+key Down Return
+sleep 3
+shot volume
+key Down
+sleep 1
+down Right
+sleep 0.5
+up Right
+sleep 1
+shot moved
+key Escape
+sleep 3
+shot options2
+key Down Return
+sleep 3
+shot advanced
+key Escape
+sleep 3
+shot options3
+key Escape
+sleep 3
+shot menu2
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 15
+shot playing
+key F6
+sleep 3
+shot f6
+hold 0.5
+key Escape
+hold 0.15
+sleep 3
+shot back
+key Escape
+sleep 3
+shot pause
+key Down Down Down Down Return
+sleep 3
+shot options4
+key Escape
+sleep 3
+shot pause2
+key Escape
+sleep 3
+shot resumed

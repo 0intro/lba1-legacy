@@ -1,0 +1,93 @@
+# The list of saves, SaveAnywhere: ON (fixtures/saves: snapdoor's
+# lba.cfg and seven copies of its save, outside the prison's back door,
+# named fay, Cyd, ada, Gus, Bob, eve and Dan in S1001 to S1007). The
+# main menu's Load Game lists them sorted, each with an empty frame (a
+# 1994 record). Page Down, End and Home move through the list, and Cyd
+# loads, grown out of its frame. S saves the game on the list's New
+# Game line as zed. The door opens, Twinsen walks into the prison,
+# whose first frame saves into autosave.lba. F8 and Return on zed write
+# over it, and S, Home and Return name ada's save amy. L lists them
+# with AUTOSAVE last, D deletes Bob's, and AUTOSAVE loads, grown out of
+# its picture: the prison at its entry.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Return
+sleep 3
+shot list
+key Next
+sleep 1
+shot pagedown
+key End
+sleep 1
+shot end
+key Home
+sleep 1
+key Down Down
+sleep 1
+shot cyd
+key Return
+hold 0.15
+sleep 0.3
+shot zoom
+sleep 12
+shot start
+key s
+sleep 2
+shot slist
+key End
+sleep 1
+key Return
+sleep 1
+key z e d
+sleep 0.5
+shot typed
+key Return
+sleep 3
+shot saved
+down Up
+sleep 0.8
+up Up
+sleep 1
+key space
+sleep 8
+shot inside
+key F8
+sleep 2
+shot f8list
+key Return
+sleep 1
+key Return
+sleep 3
+key s
+sleep 2
+key Home
+sleep 1
+key Return
+sleep 1
+key BackSpace BackSpace BackSpace
+key a m y
+sleep 0.5
+shot renamed
+key Return
+sleep 3
+key l
+sleep 2
+shot llist
+key Down
+sleep 1
+key d
+sleep 2
+shot delete
+key Down Return
+sleep 3
+shot deleted
+key End
+sleep 1
+shot autosave
+key Return
+sleep 0.3
+shot zoom2
+sleep 8
+shot loaded

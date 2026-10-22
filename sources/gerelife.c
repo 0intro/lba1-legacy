@@ -1314,7 +1314,17 @@ void	DoLife( WORD numobj )
 				ListObjet[NUM_PERSO].Beta = SaveBeta ;
 				NumCube = 113 ;
 				SceneStartX = -1 ;
+#ifdef	DOS
 				SaveGame() ;
+#else
+				/*
+				 * FEATURE: with SaveAnywhere, the end's record goes to
+				 * autosave.lba, the game's own save, the player's saves
+				 * being written from their list alone.
+				 */
+				if( FlagSaveAnywhere )	AutoSaveRecord() ;
+				else			SaveGame() ;
+#endif
 				FlagTheEnd = 1 ;	// credits
 				flag = -1 ;
 #endif

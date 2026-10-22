@@ -41,6 +41,13 @@ void    CloseTrayCDR( void )            ;
 //      Reprends une track apres un stopCDR
 void    ResumeCDR( void )               ;
 
+#ifndef	DOS
+//      FEATURE: the track playing paused where it is, then played on from
+//      there. Taken from LBA2.
+void    PauseCD( void )                 ;
+void    ResumeCD( void )                ;
+#endif
+
 //-------------------------------------- Fonction bas niveau
 
 //      Return pointeur sur Copyright File name ( pas forcement file )

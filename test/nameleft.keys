@@ -1,0 +1,30 @@
+# Left in a save's name, SaveAnywhere: ON (fixtures/saves: snapdoor's
+# lba.cfg and seven copies of its save). Cyd's save loads, S lists the
+# saves, and New Game's line takes zeb, of which Left takes the last
+# letter, as Backspace does, so that the save is named ze.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Down Down
+sleep 1
+key Return
+hold 0.15
+sleep 12
+hold 0.05
+key s
+sleep 2
+key End
+sleep 1
+key Return
+sleep 1
+key z e b
+sleep 0.5
+shot typed
+key Left
+sleep 0.5
+shot left
+key Return
+sleep 3
+shot saved

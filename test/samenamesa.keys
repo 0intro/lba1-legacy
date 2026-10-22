@@ -1,0 +1,18 @@
+# Two saves of one player's name, abc, SaveAnywhere: ON
+# (fixtures/samenamesa: snapcfg's lba.cfg and samename's two saves).
+# LBA2's list shows abc twice, and the second, chosen, loads scene 43,
+# the save's own, where the first file of that name was loaded.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Return
+sleep 3
+shot list
+key Down
+sleep 1
+shot second
+key Return
+hold 0.15
+sleep 15
+shot loaded

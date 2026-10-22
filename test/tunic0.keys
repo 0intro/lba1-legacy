@@ -1,0 +1,18 @@
+# Twinsen's tunic in the prison (fixtures/tunic0: the sweep's save of
+# scene 0 in chapter 0, Twinsen put by the dressing screen, SceneStartX,
+# Y, Z 14848 1280 4864 at bytes 270-275, and the CD's LBA.CFG with
+# SaveAnywhere: ON, whose load passes over the introduction). The
+# tunic, actor 19, hangs before the screen's column at the scene's own
+# place, its top under the wall's bricks, as LBA.EXE shows it.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 15
+shot start
+sleep 5
+shot end

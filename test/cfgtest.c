@@ -28,12 +28,13 @@
  * and a value kept to its first 255 bytes. Then LbaWin's settings, as
  * lib386/lib_sys/settings.c reads, forces and writes them, and the
  * switches WideScreen, SmoothScaling, IntegerScaling and DisplaySync,
- * each with its default, and DesiredDisplayNum. First, the port's keys
- * as readplatform reads them, and the game's own switch, SkipLogo, as
- * gamekey reads it for sources/perso.c, from sys/lba.cfg, shipped beside
- * the program and held as its text, each named there, and from the CD's
- * LBA.CFG, which leaves them out: the same values, the code's defaults
- * being the shipped file's.
+ * each with its default, and DesiredDisplayNum. First,
+ * the port's keys as readplatform reads them, and the game's own
+ * switches, SaveAnywhere and SkipLogo, as gamekey reads them for
+ * sources/perso.c, from sys/lba.cfg, shipped beside the program and
+ * held as its text, each named there, and from the CD's LBA.CFG, which
+ * leaves them out: the same values, the code's defaults being the
+ * shipped file's.
  */
 
 void	setdirs(char*, char**, int, char**, int);

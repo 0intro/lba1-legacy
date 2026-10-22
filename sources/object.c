@@ -46,6 +46,10 @@ WORD	IndexGrm = -1 ;
 WORD	BetaUsedObj = 0 ;
 
 #ifndef	DOS
+/* FEATURE: LBA2's saves of a change of scene and of the game loaded, at AffScene's first frame. Taken from LBA2. */
+WORD	FlagAutoSave = FALSE ;	// AffScene sauve la nouvelle scène à son premier affichage
+WORD	FlagCurrentSave = FALSE ;	// et la partie chargée dans current.lba
+WORD	FlagMainAff = FALSE ;	// l'AffScene de la boucle principale
 /* FEATURE: the clock of AffScene's last frame, which RedrawScene draws the scene at again. The port's own. */
 ULONG	AffTimerRef ;
 #endif
@@ -391,6 +395,63 @@ void	ClearScene()
 	ClearDial() ;
 }
 
+#ifndef	DOS
+/*══════════════════════════════════════════════════════════════════════════*/
+/*
+ * FEATURE: each actor set up again once LoadContexte has laid a save
+ * over its scene: its sprite, or its body, its animation and its
+ * animation's actions found again, the body set on the keyframe it came
+ * from (LoadKeyFrame), at the time it left it (LoadKeyTime). Taken from
+ * LBA2.
+ */
+void	InitLoadedGame()
+{
+	T_OBJET	*ptrobj ;
+	WORD	n ;
+	UBYTE	*ptrbody ;
+	ULONG	time ;
+
+	ptrobj = ListObjet ;
+
+	for( n=0; n<NbObjets; n++, ptrobj++ )
+	{
+		if( ptrobj->Flags & SPRITE_3D )
+		{
+			// c'est un sprite
+			if( ptrobj->Body != -1 )
+			{
+				ptrobj->Body = -1 ;	// pour forcer l'init
+				InitSprite( ptrobj->Sprite, n ) ;
+			}
+			continue ;
+		}
+
+		if( ptrobj->Body == -1 )	continue ;
+
+		ptrobj->Body = -1 ;	// pour forcer l'init
+		InitBody( ptrobj->GenBody, n ) ;	// pour retrouver la ZV
+
+		ptrobj->Anim = SearchAnim( ptrobj->GenAnim, n ) ;
+		if( ptrobj->Anim == -1 )
+		{
+			ptrobj->Anim = SearchAnim( GEN_ANIM_RIEN, n ) ;
+		}
+		ptrobj->PtrAnimAction = SearchPtrAnimAction ;
+
+		if( (ptrobj->Body != -1)
+		AND (ptrobj->Anim != -1)
+		AND (LoadKeyFrame[n] >= 0) )
+		{
+			ptrbody = PtrBody[ptrobj->Body] ;
+			SetAnimObjet( LoadKeyFrame[n],
+				HQR_Get( HQR_Anims, ptrobj->Anim ),
+				ptrbody ) ;
+			setbodyframe( ptrbody, bodyframe( ptrbody, &time ), LoadKeyTime[n] ) ;
+		}
+	}
+}
+#endif
+
 /*══════════════════════════════════════════════════════════════════════════*/
 // need: NewCube
 
@@ -411,6 +472,17 @@ void	ChangeCube()
 
 	oldcube = NumCube ;
 	NumCube = NewCube ;
+
+#ifndef	DOS
+	/*
+	 * FEATURE: with SaveAnywhere, the zoom a load asks of its first
+	 * frame and the tune a scene holds for its save (RestartMusic) go
+	 * with a scene left before that frame was drawn, and the scene a
+	 * zone or a script changes to fades in. The port's own.
+	 */
+	if( !FlagLoadGame )	ZoomSaveX = -1 ;
+	RestartMusic = FALSE ;
+#endif
 
 // clear
 
@@ -534,15 +606,29 @@ void	ChangeCube()
 	SetLightVector( AlphaLight, BetaLight, 0 ) ;
 //	PlayMidiFile( CubeJingle ) ;
 
+#ifdef	DOS
 	if( NewCube != oldcube )
+#else
+	/* FEATURE: a game loaded keeps the scene's actors and saves nothing. Taken from LBA2. */
+	if( (NewCube != oldcube)
+	AND (!FlagLoadGame) )
+#endif
 	{
 		SaveComportement = Comportement ;
 		SaveBeta = ListObjet[NUM_PERSO].Beta ;
+#ifndef	DOS
+		if( FlagSaveAnywhere )	FlagAutoSave = TRUE ;	// au premier affichage, dans autosave.lba
+		else
+#endif
 		SaveGame() ;
 	}
 
 	RestartPerso() ;
 
+#ifndef	DOS
+	/* FEATURE: a game loaded keeps its actors as they stood. Taken from LBA2. */
+	if( !FlagLoadGame )
+#endif
 	StartInitAllObjs() ;
 
 	NbLittleKeys = 0 ;
@@ -569,6 +655,34 @@ void	ChangeCube()
 
 	SetLightVector( AlphaLight, BetaLight, 0 ) ;
 
+#ifndef	DOS
+	/*
+	 * FEATURE: with SaveAnywhere, the game loaded is laid over its
+	 * scene, and its save into current.lba is asked of the first frame
+	 * drawn, of this scene or of the next if a zone leaves it first, as
+	 * LBA2 saves current.lba after each load. The load ends here, as
+	 * LBA2's at restartloop. The port's own.
+	 */
+	if( FlagLoadGame )	// la scène telle qu'elle était sauvée
+	{
+		if( !LoadGameScene() )	StartInitAllObjs() ;
+		FlagCurrentSave = TRUE ;
+		FlagLoadGame = FALSE ;
+	}
+	/*
+	 * FEATURE: with SaveAnywhere, a scene whose first frame saves the
+	 * game holds its tune (RestartMusic) until the save is written, as
+	 * LBA2 starts the tune after its first frame. The credits and the
+	 * end save nothing and play theirs at once. Taken from LBA2.
+	 */
+	if( (FlagAutoSave OR FlagCurrentSave)
+	AND (!FlagCredits) AND (!PLAY_THE_END)
+	AND (CubeJingle != 255) )
+	{
+		RestartMusic = TRUE ;
+	}
+	else
+#endif
 	if( CubeJingle != 255 )
 	{
 		PlayMusic( CubeJingle ) ;
@@ -3498,6 +3612,43 @@ void	AffScene( LONG flagflip )
 	}
 	poparea() ;
 #ifndef	DOS
+	/*
+	 * FEATURE: with SaveAnywhere, a new scene's first frame saves the
+	 * game into autosave.lba before it fades in, a game loaded keeps its
+	 * first in current.lba, and a game loaded from a list or by Resume
+	 * Game grows out of its save's picture at ZoomSaveX, ZoomSaveY in
+	 * place of the fade. The tune the scene holds for the saves starts
+	 * after them, before the scene shows (RestartCubeMusic). Taken from
+	 * LBA2.
+	 */
+	/*
+	 * FIXED: LBA2 saves a new scene in the first AffScene after the
+	 * change, which a script of its first frame may call in the middle
+	 * of a sequence: DoFoundObj draws the scene with Twinsen hidden, and
+	 * a save there keeps him hidden. The saves wait for the main loop's
+	 * own draw of the frame (FlagMainAff), the sequence over, and the
+	 * tune starts at the first draw, which shows the scene.
+	 */
+	if( FlagMainAff )
+	{
+		if( FlagAutoSave )
+		{
+			AutoSaveGame() ;
+			FlagAutoSave = FALSE ;
+		}
+		if( FlagCurrentSave )
+		{
+			CurrentSaveGame() ;
+			FlagCurrentSave = FALSE ;
+		}
+	}
+	RestartCubeMusic() ;
+	if( FlagFade AND (ZoomSaveX != -1) )
+	{
+		ZoomSavedGame( ZoomSaveX, ZoomSaveY ) ;
+		FlagFade = FALSE ;
+	}
+	ZoomSaveX = -1 ;
 	/*
 	 * FIXED: the Classic leaves a scene come in without a fade
 	 * (LbaWinSettings's 0x10) the palette of the scene left. The scene

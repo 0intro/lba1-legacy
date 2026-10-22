@@ -1,0 +1,42 @@
+# Widescreen display from LBA2's menu over a game in play, SaveAnywhere
+# ON, on a display of 1920x1080 (fixtures/widesa: the saves of
+# fixtures/saves, outside the prison's back door, and its lba.cfg with
+# WideScreen: OFF, recorded with -D 1920x1080). Load Game loads
+# Cyd, and Escape leaves the game for LBA2's menu over it. Its Options
+# Menu opens the option menu, Saved games management out of it and
+# Widescreen display: OFF its sixth entry, and Return turns it ON: the
+# scene drawn again under the menus on the whole screen of 852x480.
+# Escape goes back to LBA2's menu, and Resume Game draws the scene on
+# the whole screen of 852x480.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Down Down
+sleep 1
+key Return
+hold 0.15
+sleep 12
+shot start
+hold 0.05
+key Escape
+sleep 3
+shot lba2menu
+key Down Down Down Down
+sleep 1
+key Return
+sleep 3
+shot options
+key Down Down Down Down Down
+sleep 1
+key Return
+sleep 2
+shot on
+key Escape
+sleep 3
+shot back
+key Return
+sleep 5
+shot resumed

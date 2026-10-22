@@ -1,0 +1,40 @@
+# Escape in a question, SaveAnywhere: ON (fixtures/escchoice: candy's
+# save, Twinsen before scene 30's life candy machine with no kashes, and
+# snapcfg's lba.cfg). The save loads from the list. The action key asks
+# whether to buy, and Escape takes the last answer, "No, thank you.",
+# as the Classic does. The action key asks again, Return takes "Ok, I'll
+# buy.", and the machine asks text 87, "Not enough Kashes!", with no
+# answer, which Escape leaves as it was. Return goes on with the game,
+# and Escape opens the main menu over it, which Escape closes.
+
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 15
+shot start
+key space
+sleep 4
+shot question
+key Escape
+sleep 4
+shot declined
+key space
+sleep 4
+shot question2
+key Return
+sleep 4
+shot empty
+key Escape
+sleep 2
+shot still
+key Return
+sleep 4
+shot left
+key Escape
+sleep 3
+shot pause
+key Escape
+sleep 3
+shot resumed

@@ -1,0 +1,39 @@
+# DotEmu's saves under the names DotEmu gives them, SaveAnywhere: ON
+# (fixtures/longnamesa: snapcfg's lba.cfg and longname's saves). LBA2's
+# list sorts them by name, abc, then four Twinsen, each in an empty
+# frame (a 1994 record), the quick save first among them. The second
+# Twinsen, 20200509155535.LBA, loads Twinsen's house. F8 opens the list
+# on that save, where the first Twinsen was selected before, and Return
+# and Return save over its file, which L lists with the scene's picture
+# and loads, grown out of it.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Return
+sleep 3
+shot list
+key Down Down
+sleep 1
+shot second
+key Return
+hold 0.15
+sleep 15
+shot loaded
+key F8
+sleep 2
+shot f8list
+key Return
+sleep 1
+key Return
+sleep 3
+shot saved
+key l
+sleep 2
+shot llist
+key Return
+hold 0.15
+sleep 0.3
+shot zoom
+sleep 12
+shot reloaded

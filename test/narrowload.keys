@@ -1,0 +1,15 @@
+# A save made on a screen of 960x540 loaded on one of 640x480
+# (fixtures/narrowload: widesaves's save zed and snapcfg's lba.cfg,
+# SaveAnywhere ON). Load Game lists zed, its picture the one widesaves
+# showed, and it loads, grown out of its picture.
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+shot list
+key Return
+hold 0.15
+sleep 0.3
+shot zoom
+sleep 12
+shot loaded

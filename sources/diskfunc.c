@@ -280,6 +280,23 @@ if( n==5 )
 		NbBrickTrack = GET_WORD ;
 		ListBrickTrack = (T_TRACK*)PtrSce ;
 
+#ifndef	DOS
+		/*
+		 * FEATURE: the places of the scene its scripts rewrite, which a
+		 * save of the running scene keeps, from the port's table where
+		 * LBA2's scenes hold them. Taken from LBA2.
+		 */
+		//--------- PATCHES ----------
+		NbPatches = 0 ;
+		ListPatches = TabPatches ;
+		if( numscene < NbIndexPatches )
+		{
+			NbPatches = IndexPatches[numscene+1] - IndexPatches[numscene] ;
+			ListPatches = &TabPatches[IndexPatches[numscene]] ;
+		}
+		//----------------------------
+#endif
+
 		return TRUE ;
 }
 

@@ -74,6 +74,9 @@ extern		LONG	MatriceRot, MatriceDummy;
 extern		LONG	Distance ;
 
 extern		LONG	CmptMemoTimerRef ;
+#ifndef	DOS
+extern		ULONG	MemoTimerRef ;
+#endif
 
 #ifndef	DOS
 extern		WORD	TypeProj ;
@@ -132,6 +135,9 @@ LONG	SetInterDepObjet( LONG framedest, void *ptranimdest, void *ptrobj ) ;
 void	CopyInterAnim( void *ptrobjs, void *ptrobjd ) ;
 LONG	GetBouclageAnim( void *ptranim ) ;
 LONG	GetNbFramesAnim( void *ptranim ) ;
+
+void	*bodyframe( void *ptrobj, ULONG *time ) ;
+void	setbodyframe( void *ptrobj, void *frame, ULONG time ) ;
 
 LONG	BoundRegleTrois( LONG valeur1, LONG valeur2, LONG nbstep, LONG step ) ;
 LONG	GetAngle( LONG x0, LONG z0, LONG x1, LONG z1 ) ;

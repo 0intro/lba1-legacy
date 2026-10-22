@@ -9,6 +9,9 @@
 #     test/sweep port [-x exe] [-s WxH] [scene...]
 #     test/sweep compare [-x exe] [scene...]
 #     test/sweep check [-x exe] [-s WxH] [scene...]
+#     test/sweep snap record [-x exe]
+#     test/sweep snap keep [-x exe] [scene...]
+#     test/sweep snap check [-x exe] [scene...]
 #
 # Everything goes to $LBATMP/sweep. saves makes a save for each of the
 # 120 scenes of SCENE.HQR (saves/NNN/S2292.LBA): the outside save of the
@@ -16,8 +19,8 @@
 # holomap) with its scene (byte 261) set and its start (bytes 270-271)
 # at -1, the scene's own, and beside them the CD's LBA.CFG, no sound,
 # each port's preferences given the values the sweep was made under
-# where the CD's file leaves them out: LbaWinSettings 210 and WideScreen
-# OFF.
+# where the CD's file leaves them out: LbaWinSettings 210, SaveAnywhere
+# OFF and WideScreen OFF.
 # record plays the loading of a save on the port in our Xephyr
 # (tools/xkeys): the main menu, Continue saved game, the save, then a
 # hundred seconds. It keeps its input (port.in). A record counts its
@@ -41,6 +44,17 @@
 # report, a line a scene. check replays the input
 # on each save on exe and compares its sums with port's: the whole game
 # against the port as compare left it.
+#
+# snap saves each scene as it runs and loads it back, the port alone,
+# SaveAnywhere on: the sweep's saves beside the CD's LBA.CFG with
+# SaveAnywhere: ON (snap/lba.cfg). snap record plays on scene 1's save
+# in our Xephyr the main menu's Load Game and the save, twenty
+# seconds, S and the list's New Game line named zzz, five seconds, L
+# and zzz (the second name, abc's the first), twenty seconds. It keeps
+# its input (snap/snap.in). snap keep replays it on each scene's save
+# and keeps the sums of its screens and what the port printed
+# (snap/NNN.sums, snap/NNN.log). snap check replays it and compares
+# both with keep's: a change to the saves' code, the screens unchanged.
 #
 # port and check take -s WxH: the scenes with lba.cfg's WideScreen ON
 # on a display of that size (the port's -D), port's sums and screens
@@ -71,12 +85,19 @@ SPAN=24000000000	# ns: the screens compared from there
 usage() {
 	echo "usage: sweep saves | record [-x exe] | dos [-x exe] [scene...] | port [-x exe] [-s WxH] [scene...]" >&2
 	echo "       sweep compare [-x exe] [scene...] | check [-x exe] [-s WxH] [scene...]" >&2
+	echo "       sweep snap record [-x exe] | snap keep|check [-x exe] [scene...]" >&2
 	exit 2
 }
 
 (( $# )) || usage
 cmd=$1
 shift
+sub=
+if [[ $cmd == snap ]]; then
+	(( $# )) || usage
+	sub=$1
+	shift
+fi
 exe=$REPO/build/linux-amd64-gcc/lba
 size=
 while [[ ${1:-} == -[xs] ]]; do
@@ -145,6 +166,7 @@ pref() {
 	rm -rf -- "$1"
 	mkdir -p "$1"
 	cp "$SW/saves/lba.cfg" "$SW/saves/$2/S2292.LBA" "$1/"
+	printf 'SaveAnywhere: OFF\r\n' >> "$1/lba.cfg"
 	if [[ -n $size ]]; then
 		pins "$1" ON
 	else
@@ -372,6 +394,85 @@ check() {
 	return "$bad"
 }
 
+# snappref dir scene: the preferences of a scene's save with the key on
+snappref() {
+	rm -rf -- "$1"
+	mkdir -p "$1"
+	cp "$SW/snap/lba.cfg" "$SW/saves/$2/S2292.LBA" "$1/"
+	pins "$1" OFF
+}
+
+snaprecord() {
+	[[ -d $SW/saves/001 ]] || saves
+	mkdir -p "$SW/snap"
+	{ cat "$LBATMP/pc/LBA/LBA.CFG"; printf 'SaveAnywhere: ON\r\n'; } > "$SW/snap/lba.cfg"
+	cat > "$SW/snap/snap.keys" <<-'EOF'
+	hold 0.05
+	sleep 40
+	key Down Return
+	sleep 3
+	key Return
+	hold 0.15
+	sleep 20
+	key s
+	sleep 2
+	key End
+	sleep 1
+	key Return
+	sleep 1
+	key z z z
+	sleep 0.5
+	key Return
+	sleep 5
+	key l
+	sleep 2
+	key Home
+	sleep 1
+	key Down
+	sleep 1
+	key Return
+	sleep 20
+	EOF
+	snappref "$RUN/pref" 001
+	SDL_AUDIO_DRIVER=dummy "$TOOLS/xkeys" -c lba -o "$SW/run/snapshots" "$SW/snap/snap.keys" "$exe" \
+		-g "$LBATMP/pc/LBA" -c "$LBATMP/pc" -p "$RUN/pref" -r "$SW/snap/snap.in"
+	echo "sweep: recorded ${SW#"$LBATMP"/}/snap/snap.in"
+}
+
+# snapplay scene sums log: the input on a scene's save, its sums and output
+snapplay() {
+	snappref "$RUN/pref" "$1"
+	SDL_VIDEO_DRIVER=dummy SDL_AUDIO_DRIVER=dummy "$exe" -g "$LBATMP/pc/LBA" -c "$LBATMP/pc" \
+		-p "$RUN/pref" -i "$SW/snap/snap.in" -s "$2" > "$3" 2>&1 || true
+}
+
+snapkeep() {
+	local s
+	[[ -f $SW/snap/snap.in ]] || { echo "sweep: no ${SW#"$LBATMP"/}/snap/snap.in; run sweep snap record" >&2; exit 1; }
+	for s in "${scenes[@]}"; do
+		snapplay "$s" "$SW/snap/$s.sums" "$SW/snap/$s.log"
+		echo "$s: $(screens "$SW/snap/$s.sums") screens, $(wc -l < "$SW/snap/$s.log") lines printed"
+	done
+}
+
+snapcheck() {
+	local s bad=0
+	for s in "${scenes[@]}"; do
+		[[ -f $SW/snap/$s.sums ]] || { echo "$s: no reference"; bad=1; continue; }
+		snapplay "$s" "$RUN/$s.sums" "$RUN/$s.log"
+		if ! cmp -s "$SW/snap/$s.sums" "$RUN/$s.sums"; then
+			echo "$s: differs from $(diff "$SW/snap/$s.sums" "$RUN/$s.sums" | grep -m1 '^[<>]' || true)"
+			bad=1
+		elif ! cmp -s "$SW/snap/$s.log" "$RUN/$s.log"; then
+			echo "$s: prints otherwise: $(head -c 200 "$RUN/$s.log")"
+			bad=1
+		else
+			echo "$s: same, $(screens "$RUN/$s.sums") screens"
+		fi
+	done
+	return "$bad"
+}
+
 # run/cmd-pid: this command's preferences and report, so that two may
 # run at once
 RUN=$SW/run/$cmd-$$
@@ -384,5 +485,13 @@ dos) dos ;;
 port) port ;;
 compare) compare ;;
 check) check ;;
+snap)
+	case $sub in
+	record) snaprecord ;;
+	keep) snapkeep ;;
+	check) snapcheck ;;
+	*) usage ;;
+	esac
+	;;
 *) usage ;;
 esac

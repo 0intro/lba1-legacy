@@ -1,0 +1,24 @@
+# Escape leaves the language page, SaveAnywhere: ON (fixtures/langesc:
+# sound's lba.cfg with the key). From the main menu's Options Menu, its
+# fourth entry here, Choose language: the texts in French, then Escape
+# goes back to the options, in French, as Return to previous menu does,
+# and Escape again to the main menu.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Return
+sleep 3
+shot options
+key Down Down Down Return
+sleep 3
+shot page
+key Down Right
+sleep 3
+shot fr
+key Escape
+sleep 3
+shot options2
+key Escape
+sleep 3
+shot main

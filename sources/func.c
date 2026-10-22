@@ -7,7 +7,8 @@
 
 /*
  * What func.asm gave the game. Its calls to DOS (GetHDFreeSize,
- * ComputeTime) are the port's, and nothing calls SimpleInitMcga.
+ * ComputeTime) are the port's, and nothing calls SimpleInitMcga. LBA2's
+ * FUNC.ASM, which grew from it, adds SearchBoundColRGB.
  */
 
 /* SmallSort is func.asm's SmallSort: n entries of size bytes, by the signed word each starts with, smallest first. */
@@ -98,4 +99,36 @@ ShadeBox(int32_t x0, int32_t y0, int32_t x1, int32_t y1, int32_t dec)
 		}
 		p += Screen_X - (x1 - x0 + 1);
 	}
+}
+
+/*
+ * FEATURE: SearchBoundColRGB is LBA2's FUNC.ASM SearchBoundColRGB: the
+ * colour of the palette from coulmin to coulmax nearest to rouge, vert,
+ * bleu, the first of the nearest, which the pictures of the saves taken
+ * under the alarm's palette are given. Taken from LBA2.
+ */
+UBYTE
+SearchBoundColRGB(UBYTE rouge, UBYTE vert, UBYTE bleu, UBYTE *palette, UBYTE coulmin, UBYTE coulmax)
+{
+	uint32_t best, d, c, found;
+	int32_t dr, dv, db;
+	UBYTE *p;
+
+	best = 0xFFFFFFFF;
+	c = coulmin;
+	found = c;
+	p = palette + 3*c;
+	do {
+		dr = p[0] - rouge;
+		dv = p[1] - vert;
+		db = p[2] - bleu;
+		d = (uint32_t)(dr*dr + dv*dv) + (uint32_t)(db*db);
+		p += 3;
+		c++;
+		if (d < best) {
+			best = d;
+			found = c;
+		}
+	} while (c <= coulmax);
+	return (found - 1) & 0xFF;
 }

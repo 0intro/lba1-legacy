@@ -43,6 +43,7 @@ extern void FadePalToPal(unsigned char *,unsigned char *);
 extern void FadeToRed(unsigned char *);
 extern void FadeRedToPal(unsigned char *);
 #ifndef	DOS
+extern void RestartCubeMusic(void);
 extern void StopMusicCD(void);
 #endif
 extern void FadeMusicMidi(uint32_t );
@@ -53,4 +54,6 @@ extern void PlayMidiFile(int16_t );
 extern int32_t GetMusicCD(void);
 extern void PlayCdTrack(int16_t );
 extern void PlayAllMusic(int16_t );
+extern void PauseMusic(void);
+extern void ResumeMusic(void);
 #endif

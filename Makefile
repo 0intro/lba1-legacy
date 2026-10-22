@@ -112,9 +112,10 @@ usage::
 # The port's lists of objects, in their link order. GAME and LIBS are
 # the 1994 game's modules and libraries, which the port builds with
 # sys/compat.h read first and their warnings off. NEW are the
-# translations of the game's assembly and the game's new code, PORT the
-# layer on SDL3. Nuked OPL3 (sys/nuked) builds as published, its
-# warnings off.
+# translations of the game's assembly and the game's new code, CARRIED
+# LBA2's code carried in its own form, built as NEW but out of make
+# lint's layout of the new C, PORT the layer on SDL3. Nuked OPL3
+# (sys/nuked) builds as published, its warnings off.
 GAME=\
 	sources/ambiance.o\
 	sources/diskfunc.o\
@@ -163,7 +164,9 @@ NEW=\
 	lib386/lib_svga/s_poly.o\
 	lib386/lib_svga/s_screen.o\
 	lib386/lib_svga/texture.o\
+	lib386/lib_svga/zoom.o\
 	lib386/lib_sys/buffer_a.o\
+	lib386/lib_sys/compress.o\
 	lib386/lib_sys/expand.o\
 	lib386/lib_sys/hqr.o\
 	lib386/lib_sys/settings.o\
@@ -177,8 +180,13 @@ NEW=\
 	sources/grille_a.o\
 	sources/lba2text.o\
 	sources/mcga.o\
+	sources/patch.o\
 	sources/porttext.o\
 	sources/textfix.o\
+
+CARRIED=\
+	lib386/lib_sys/lzss.o\
+	sources/savegame.o\
 
 PORT=\
 	sys/awe.o\
@@ -282,6 +290,7 @@ NEWDEFS=\
 	exttext\
 	lba2text\
 	porttext\
+	savegame\
 
 DEFS=\
 	ambiance\

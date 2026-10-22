@@ -1,0 +1,11 @@
+extern void RemapPicture(unsigned char *,uint32_t );
+extern void AutoSaveGame(void);
+extern void AutoSaveRecord(void);
+extern void CurrentSaveGame(void);
+extern uint32_t TakeSaveGame(void);
+extern int32_t WriteSaveGame(int32_t );
+extern unsigned char *LoadGameScreen(void);
+extern int32_t LoadGameContexte(int32_t ,unsigned char );
+extern int32_t LoadGameScene(void);
+extern void SaveContexte(int32_t );
+extern int32_t LoadContexte(int32_t *);

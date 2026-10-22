@@ -133,6 +133,21 @@ int	WaveInList(		UWORD handle		);
 /*----------------------------------------------------------------------*/
 int	WaveGetSnap(		void **Buffer		);
 
+#ifndef	DOS
+/*----------------------------------------------------------------------*/
+/*	waveloop	: The nth sample playing for ever (Repeat 0),	*/
+/*			  as WavePlay was given it, and its Info0	*/
+/*									*/
+/*	Returns		: TRUE if there is one				*/
+/*----------------------------------------------------------------------*/
+LONG	waveloop(		LONG n,
+				UWORD *Handle,
+				UWORD *Pitchbend,
+				UWORD *VolLeft,
+				UWORD *VolRight,
+				ULONG *Info0		);
+#endif
+
 /*----------------------------------------------------------------------*/
 /*	WavePause	: Pause all the playing samples			*/
 /*									*/

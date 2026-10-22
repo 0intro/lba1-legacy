@@ -76,8 +76,8 @@ TESTS=\
 	cdimagetest\
 
 # The objects, the game's in their link order, and their directories.
-OFILES=$(addprefix $(O)/,$(GAME) $(LIBS) $(NEW) $(PORT) $(OPL3) $(ARRAYS))
-NEWOFILES=$(addprefix $(O)/,$(NEW) $(TESTS:%=test/%.o))
+OFILES=$(addprefix $(O)/,$(GAME) $(LIBS) $(NEW) $(CARRIED) $(PORT) $(OPL3) $(ARRAYS))
+NEWOFILES=$(addprefix $(O)/,$(NEW) $(CARRIED) $(TESTS:%=test/%.o))
 DIRS=$(patsubst %/,%,$(sort $(dir $(OFILES) $(NEWOFILES))))
 
 # all builds the game, lba.cfg beside it and the unit tests.
@@ -169,7 +169,7 @@ $(O)/livemusic.so: test/livemusic.c | $(DIRS)
 $(addprefix $(O)/,$(GAME) $(LIBS)): $(O)/%.o: %.c | $(DIRS)
 	$(COMPILE) $(CFLAGS) $(OLDFLAGS) -c -o $@ $<
 
-# NEW and the unit tests.
+# NEW, CARRIED and the unit tests.
 $(NEWOFILES): $(O)/%.o: %.c | $(DIRS)
 	$(COMPILE) $(CFLAGS) $(NEWFLAGS) -c -o $@ $<
 
@@ -201,8 +201,9 @@ LIVEMUSIC_linux=test/livemusic -x $(O)/lba
 # check runs lint and test, then the tests on the game's files in
 # LBATMP: the oracles, cfgtest on the CD's LBA.CFG, cdimagetest on the
 # CDs' images, the proofs of the tables the C holds (the cells and the
-# texts of the data's fixes, sources/gridfix.c and sources/textfix.c)
-# and the records (test/e2e check).
+# texts of the data's fixes, sources/gridfix.c and sources/textfix.c,
+# and the places the scripts rewrite, sources/patch.c) and the records
+# (test/e2e check).
 check: lint test oraclecheck $(CHECKDEPS_$(OS))
 	rm -rf $(O)/run/cfg && mkdir -p $(O)/run/cfg
 	$(RUN) $(O)/cfgtest$(EXE) $(call HOSTPATH,$(O)/run/cfg) $(call HOSTPATH,$(LBATMP)/pc/LBA)
@@ -214,6 +215,7 @@ check: lint test oraclecheck $(CHECKDEPS_$(OS))
 		$(call HOSTPATH,$(LBATMP)/gog/cdtracks)
 	python3 -I tools/grids.py -c sources/gridfix.c $(LBATMP)/pc/LBA/LBA_GRI.HQR\
 		$(LBATMP)/gog/cd/LBA_GRI.HQR $(LBATMP)/gog/lba1/Speedrun/Windows/LBA_GRI.HQR
+	python3 -I tools/patches.py -g $(LBATMP)/pc/LBA -p $(LBATMP)/ps -c sources/patch.c
 	python3 -I tools/texts.py -c sources/textfix.c $(LBATMP)/gog/cd/TEXT.HQR\
 		$(LBATMP)/pc/LBA/TEXT.HQR $(LBATMP)/gog/lba1/CommonClassic/TEXT.HQR\
 		$(LBATMP)/ps/TEXT.HQR

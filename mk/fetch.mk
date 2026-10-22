@@ -4,18 +4,19 @@
 # names the versions of what make fetches.
 
 # Each tool's version, the URL of its archive and the archive's SHA-256:
-# JWasm, which assembles OpenWatcom's build's assembly, OpenWatcom 2 by
-# the date of its snapshot, Watcom C 9.01 and 9.5b, MASM 6.11 and Turbo
-# Assembler 3.1, which built LBA.EXE, the last from the floppies of
-# Borland C++ 3.1, which shipped it, Watcom C/C++ 10.0a, whose qsort
-# both DOS builds link first and whose wlink links Watcom C 9's wave
-# drivers, and SDL3 for mingw-w64, which a Windows target links (a Linux
-# target takes the system's). 9.01 takes Watcom's patches B to D of
-# 1992, each a level, in their order, as WinWorld's floppies hold level
-# A: LBA.EXE links level D's library. They lie on Walnut Creek's Hobbes
-# OS/2 CD of October 1993, which discmaster serves. WinWorld's mirror
-# serves an archive to a client once the site's download link has sent
-# it there: its URLs are those links.
+# JWasm, which assembles OpenWatcom's build's assembly and the oracles'
+# copies of LBA2's, OpenWatcom 2 by the date of its snapshot, Watcom C
+# 9.01 and 9.5b, MASM 6.11 and Turbo Assembler 3.1,
+# which built LBA.EXE, the last from the floppies of Borland C++ 3.1,
+# which shipped it, Watcom C/C++ 10.0a, whose qsort both DOS builds link
+# first and whose wlink links Watcom C 9's wave drivers, and SDL3 for
+# mingw-w64, which a Windows target links (a Linux target takes the
+# system's). 9.01 takes Watcom's patches B to D of 1992, each a level,
+# in their order, as WinWorld's floppies hold level A: LBA.EXE links
+# level D's library. They lie on Walnut Creek's Hobbes OS/2 CD of
+# October 1993, which discmaster serves. WinWorld's mirror serves an
+# archive to a client once the site's download link has sent it there:
+# its URLs are those links.
 JWASM_VERSION=2.20
 JWASM_URL=https://github.com/Baron-von-Riedesel/JWasm/archive/refs/tags/v$(JWASM_VERSION).tar.gz
 JWASM_SHA256=a9b78dfe18af47ea9eb55fdee0bf1fb5b8b3d9a8f3d0a490cf6b2b984151ccde
@@ -90,10 +91,13 @@ ML_OK=$(TOOLS)/masm-$(ML_VERSION).ok
 TASM_OK=$(TOOLS)/tasm-$(TASM_VERSION).ok
 SDL_OK=$(TOOLS)/sdl-$(SDL_VERSION).ok
 
-# fetch installs what the target needs: on Windows SDL3, and for DOS
-# 10.0a's library and linker and the tools that CC names: OpenWatcom 2
-# and JWasm, or Watcom C 9.01 and its patches, 9.5b, MASM 6.11 and TASM
-# 3.1.
+# fetch installs what the target needs: on Linux JWasm, which make
+# check's oracles take, on Windows SDL3, and for DOS 10.0a's library and
+# linker and the tools that CC names: OpenWatcom 2 and JWasm, or Watcom
+# C 9.01 and its patches, 9.5b, MASM 6.11 and TASM 3.1.
+FETCH_linux=\
+	$(JWASM_OK)\
+
 FETCH_windows=\
 	$(SDL_OK)\
 
@@ -113,8 +117,11 @@ FETCH_watcom=\
 fetch: $(FETCH_$(OS)) $(FETCH_$(CC))
 
 ifeq ($(filter fetch,$(MAKECMDGOALS)),)
-# Outside make fetch a stamp that is missing stops the build.
-$(JWASM_OK) $(OW2_OK) $(W901_OK) $(W95_OK) $(W100A_OK) $(ML_OK) $(TASM_OK) $(SDL_OK):
+# Outside make fetch a stamp that is missing stops the build. JWasm comes
+# with every Linux target's fetch, the default's among them.
+$(JWASM_OK):
+	@echo "no $@: run make fetch" >&2; exit 1
+$(OW2_OK) $(W901_OK) $(W95_OK) $(W100A_OK) $(ML_OK) $(TASM_OK) $(SDL_OK):
 	@echo "no $@: run make fetch OS=$(OS) ARCH=$(ARCH) CC=$(CC)" >&2; exit 1
 else
 # CURL downloads a URL, and tries again when the network or the server

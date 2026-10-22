@@ -1,0 +1,16 @@
+# A movie on a loaded game's first frame, SaveAnywhere: ON
+# (fixtures/neigesa: the sweep's save of scene 82, its tune 21, with
+# Twinsen put in its scenario zone 0: SceneStartX, Y, Z at bytes
+# 270-275, 30464 256 26624, and soundout's lba.cfg with SaveAnywhere:
+# ON). LBA2's main menu loads the save from its list. Twinsen's script
+# in the zone plays neige2.fla on the first frame, before the scene is
+# drawn, tune 21 from the XMIDI under it, then changes to scene 96,
+# whose first frame is saved before its tune 9 starts, a CD track this
+# CD lacks.
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 30
+shot scene

@@ -29,7 +29,11 @@ void	CloseFdNar( void ) ;		// message.c's
 
 WORD	LargeurMenu = 550 ;
 
+#ifdef	DOS
 UWORD	GameMainMenu[] = {
+#else
+UWORD	GameMainMenu[4+2*6] = {	// FEATURE: room for LBA2's main menu (BuildGameMainMenu). Taken from LBA2.
+#endif
 			0,	// selected
 			4,	// nb entries
 			200,	// y center
@@ -39,6 +43,28 @@ UWORD	GameMainMenu[] = {
 			0, 23,	// options
 			0, 22	// ret dos
 				}	;
+
+#ifndef	DOS
+/*
+ * FEATURE: LBA2's main menu, of which BuildGameMainMenu keeps the
+ * entries that apply: Resume Game with a game in play or in current.lba,
+ * New Game, Load Game while a save is listed, Save Game with a game in
+ * play that may be saved, Options Menu, Quit, LBA2's own texts. Taken
+ * from LBA2.
+ */
+UWORD	RealGameMainMenu[] = {
+			0,	// selected
+			6,	// nb entries
+			335,	// y center
+			0,	// .dia num
+			0, 70|0x4000,	// reprendre partie
+			0, 71|0x4000,	// nouvelle partie
+			0, 72|0x4000,	// charger partie
+			0, 73|0x4000,	// sauver partie
+			0, 74|0x4000,	// Options
+			0, 75|0x4000	// Quitter
+				}	;
+#endif
 
 UWORD	GameQuitMenu[] = {
 			0,	// selected
@@ -152,6 +178,23 @@ UWORD	SavedConfirmMenu[] = {
 
 				} ;
 
+#ifndef	DOS
+/*
+ * FEATURE: LBA2's SavedConfirmMenu, with LBA2's own texts, under the
+ * picture of the save to delete (DeleteSavedGame). Taken from LBA2.
+ */
+UWORD	SavedDeleteMenu[] = {
+			0,	// selected
+			2,	// nb entries
+			350,	// y center.
+			0,	// .dia num
+
+			0, 24|0x4000,  // annuler
+			0, 48|0x4000	// détruire une sauvegarde
+
+				} ;
+#endif
+
 UWORD	GameChoiceMenu[] = {
 			0,	// selected
 			7,	// nb entries
@@ -164,13 +207,38 @@ UWORD	GameChoiceMenu[] = {
 			0, 3,
 			0, 4,
 			0, 5,
+#ifdef	DOS
 			0, 6	}	;
+#else
+			0, 6,
+			0xFFFF	}	;	// FEATURE: the answer Escape picks, which GameAskChoice sets after the answers. Taken from the Classic 3.2.3.
+#endif
 
 ULONG	TimerSample ;
 
 // save players games
 
 #define	MAX_PLAYER	50
+
+#ifndef	DOS
+/*
+ * FEATURE: LBA2's MAX_PLAYER, as many names and their 4-byte pointers as
+ * a 640x480 buffer holds. Taken from LBA2.
+ */
+#define	MAX_PLAYER_LIST	((640*480)/(MAX_SIZE_PLAYER_NAME+1+4))
+
+#define	SCREEN_SAVE_WIDTH	160	// l'image d'une sauvegarde
+#define	SCREEN_SAVE_HEIGHT	120
+
+#define	Y_START_CHOICE		205	// la première ligne de la liste
+#define	TEMPO_REPEAT_KEY	8	// les 150 ms de LBA2, en 50èmes de seconde
+
+WORD	ZoomSaveX = -1 ;	// d'où ZoomSavedGame agrandit la partie chargée, -1 sans zoom
+WORD	ZoomSaveY = -1 ;
+
+WORD	CursorActif = FALSE ;	// le curseur de saisie, affiché par DrawOneString
+WORD	CursorX, CursorY ;
+#endif
 
 UBYTE	NumVersion = 0 ;
 
@@ -1284,7 +1352,24 @@ void	CopyBlockPhysMCGA( LONG x0, LONG y0, LONG x1, LONG y1 )
  *══════════════════════════════════════════════════════════════════════════*/
 /*──────────────────────────────────────────────────────────────────────────*/
 
+#ifndef	DOS
+/*
+ * FEATURE: the saves listed in the order of their names, as LBA2 lists
+ * them. Taken from LBA2.
+ */
+int	my_sort_function( const void *a, const void *b )
+{
+	return( stricmp( *(char**)a, *(char**)b ) ) ;
+}
+
+/*──────────────────────────────────────────────────────────────────────────*/
+#endif
+
+#ifdef	DOS
 WORD	PlayerGameList( UBYTE **ptrlistname, UBYTE *listname )
+#else
+WORD	PlayerGameList( UBYTE **ptrlistname, UBYTE *listname, WORD flagnew )
+#endif
 {
 	struct	find_t	fileinfo ;
 	ULONG	rc ;
@@ -1295,6 +1380,18 @@ WORD	PlayerGameList( UBYTE **ptrlistname, UBYTE *listname )
 #endif
 	WORD	nb = 0 ;
 	ULONG	handle ;
+#ifndef	DOS
+	UBYTE	**startptrlist = ptrlistname ;
+	LONG	maxplayer = MAX_PLAYER ;
+	LONG	n ;
+
+	/*
+	 * FEATURE: with SaveAnywhere, the list of LBA2's GAMEMENU.CPP: its
+	 * bound, current.lba and autosave.lba left out, the names sorted,
+	 * autosave.lba's last to be loaded. Taken from LBA2.
+	 */
+	if( FlagSaveAnywhere )	maxplayer = MAX_PLAYER_LIST ;
+#endif
 
 	strcpy( pathname, PATH_RESSOURCE"*.LBA" ) ;
 
@@ -1303,6 +1400,16 @@ WORD	PlayerGameList( UBYTE **ptrlistname, UBYTE *listname )
 	{
 		strcpy( pathname, PATH_RESSOURCE ) ;
 		strcat( pathname,  fileinfo.name ) ;
+#ifndef	DOS
+		// On ne liste pas l'autosave ni la currentsave
+		if( FlagSaveAnywhere
+		AND (!stricmp( pathname, AUTOSAVE_FILENAME )
+		OR   !stricmp( pathname, CURRENTSAVE_FILENAME )) )
+		{
+			rc = _dos_findnext( &fileinfo ) ;
+			continue ;
+		}
+#endif
 		handle = OpenRead( pathname ) ;
 		if( handle )
 		{
@@ -1312,6 +1419,30 @@ WORD	PlayerGameList( UBYTE **ptrlistname, UBYTE *listname )
 			entry = listname ;
 #endif
 			*ptrlistname++ = listname ;
+#ifndef	DOS
+			if( FlagSaveAnywhere )
+			{
+				/*
+				 * FIXED: LBA2 reads the name up to its 0, past the
+				 * room it has for one and past the file's end, as
+				 * LBA.EXE does. It reads MAX_SIZE_PLAYER_NAME bytes
+				 * at most, and stops at the file's end.
+				 */
+				n = 0 ;
+				do
+				{
+					if( (n == MAX_SIZE_PLAYER_NAME)
+					OR  (Read( handle, &wbyte, 1 ) != 1) )
+					{
+						wbyte = 0 ;
+					}
+					*listname++ = wbyte ;
+					n++ ;
+
+				} while( wbyte != 0 ) ;
+			}
+			else
+#endif
 			do
 			{
 				Read( handle, &wbyte, 1 ) ;
@@ -1333,10 +1464,57 @@ WORD	PlayerGameList( UBYTE **ptrlistname, UBYTE *listname )
 #endif
 
 			nb++ ;
+#ifdef	DOS
 			if( nb == MAX_PLAYER )	return nb ;
+#else
+			if( nb == maxplayer )	return nb ;
+#endif
 		}
 		rc = _dos_findnext( &fileinfo ) ;
 	}
+#ifndef	DOS
+	if( FlagSaveAnywhere )
+	{
+		qsort(	(void *)startptrlist,
+			nb,
+			sizeof( UBYTE * ),
+			my_sort_function ) ;
+
+		/*
+		 * FIXED: LBA2 reads autosave.lba's name through PlayerName and
+		 * GamePathname, which each caller then puts back,
+		 * ChoosePlayerName the name alone. It is read straight into
+		 * the list.
+		 */
+		if( !flagnew AND nb<maxplayer AND FileSize( AUTOSAVE_FILENAME ) )
+		{
+			handle = OpenRead( AUTOSAVE_FILENAME ) ;
+			if( handle )
+			{
+				Read( handle, &wbyte, 1 ) ;	// num version
+
+				entry = listname ;
+				*ptrlistname = listname ;
+				n = 0 ;
+				do
+				{
+					if( (n == MAX_SIZE_PLAYER_NAME)
+					OR  (Read( handle, &wbyte, 1 ) != 1) )
+					{
+						wbyte = 0 ;
+					}
+					*listname++ = wbyte ;
+					n++ ;
+
+				} while( wbyte != 0 ) ;
+
+				Close( handle ) ;
+				strcpy( entry+MAX_SIZE_PLAYER_NAME+1, AUTOSAVE_FILENAME ) ;
+				nb++ ;
+			}
+		}
+	}
+#endif
 	return nb ;
 }
 
@@ -1351,6 +1529,9 @@ WORD	FindPlayerFile()
 	UBYTE	*ptr ;
 	ULONG	handle ;
 	UBYTE	wbyte ;
+#ifndef	DOS
+	LONG	n ;
+#endif
 
 	strcpy( pathname, PATH_RESSOURCE"*.LBA" ) ;
 
@@ -1365,6 +1546,31 @@ WORD	FindPlayerFile()
 		Read( handle, &wbyte, 1 ) ;	// num version
 
 		ptr = playername ;
+#ifndef	DOS
+		if( FlagSaveAnywhere )
+		{
+			/*
+			 * FIXED: as LBA.EXE, LBA2 reads the name up to its 0, past
+			 * playername's room and past the file's end, and from
+			 * handle 0 when the file cannot be opened. It reads
+			 * MAX_SIZE_PLAYER_NAME bytes at most, from a file open.
+			 */
+			n = 0 ;
+			do
+			{
+				if( (handle == 0)
+				OR  (n == MAX_SIZE_PLAYER_NAME)
+				OR  (Read( handle, &wbyte, 1 ) != 1) )
+				{
+					wbyte = 0 ;
+				}
+				*ptr++ = wbyte ;
+				n++ ;
+
+			} while( wbyte != 0 ) ;
+		}
+		else
+#endif
 		do
 		{
 			Read( handle, &wbyte, 1 ) ;
@@ -1383,6 +1589,19 @@ WORD	FindPlayerFile()
 
 		rc = _dos_findnext( &fileinfo ) ;
 	}
+#ifndef	DOS
+	/*
+	 * FIXED: LBA2 lets a player name a save AUTOSAVE while autosave.lba
+	 * is missing, and the list then shows two AUTOSAVE once the first
+	 * scene's autosave is made. AUTOSAVE names autosave.lba, whether it
+	 * exists or not.
+	 */
+	if( FlagSaveAnywhere AND !stricmp( PlayerName, AUTOSAVE_NAME ) )
+	{
+		strcpy( GamePathname, AUTOSAVE_FILENAME ) ;
+		return TRUE ;
+	}
+#endif
 	return FALSE ;
 }
 
@@ -1472,7 +1691,11 @@ void	LoadGame()
 	if( !handle )	return ;
 #endif
 
+#ifdef	DOS
 	Read( handle, &wbyte, 1 ) ;	// num version
+#else
+	Read( handle, &NumVersion, 1 ) ;	// num version
+#endif
 
 	ptr = PlayerName ;
 	do
@@ -1524,6 +1747,11 @@ void	LoadGame()
 	Read( handle, &NbFourLeafClover, 1 ) ;
 	Read( handle, &Weapon, 2 ) ;
 
+#ifndef	DOS
+// scène en cours (SaveAnywhere)
+	LoadGameContexte( handle, NumVersion ) ;
+#endif
+
 	Close( handle ) ;
 
 	NumCube = -1 ;
@@ -1550,6 +1778,14 @@ void	DrawOneString( WORD x, WORD y, UBYTE *playername, WORD draw )
 	y0 = y - HAUTEUR_STANDARD/2 ;
 	y1 = y + HAUTEUR_STANDARD/2 ;
 
+#ifndef	DOS
+	/*
+	 * FEATURE: draw's low bits alone, the list passing its arrows in the
+	 * high ones. Taken from LBA2.
+	 */
+	draw &= 0x0F ;
+#endif
+
 	// fond
 
 	if( draw == 0 )
@@ -1575,10 +1811,40 @@ void	DrawOneString( WORD x, WORD y, UBYTE *playername, WORD draw )
 //	if( playername[0] != 0 )
 		Font( x - SizeFont( playername )/2, y-18, playername ) ;
 
+#ifndef	DOS
+	/*
+	 * FEATURE: the cursor of the name typed, which LBA2 draws as a sprite
+	 * of its own sprite file, a bar here. Taken from LBA2.
+	 */
+	if( CursorActif )	Box( CursorX+4, CursorY-16, CursorX+6, CursorY+14, COUL_TEXT_MENU ) ;
+#endif
+
 	// flip
 
 	CopyBlockPhys( x0,y0, x1,y1 ) ;
 }
+
+#ifndef	DOS
+/*──────────────────────────────────────────────────────────────────────────*/
+/*
+ * FEATURE: a line of the list put back as the background has it. Taken
+ * from LBA2.
+ */
+void	ClearOneString( WORD x, WORD y )
+{
+	WORD	x0,y0,x1,y1 ;
+
+	x0 = x - LargeurMenu/2 ;
+	x1 = x + LargeurMenu/2 ;
+
+	y0 = y - HAUTEUR_STANDARD/2 ;
+	y1 = y + HAUTEUR_STANDARD/2 ;
+
+	// fond
+	CopyBlock( x0, y0, x1, y1, Screen, x0, y0, Log ) ;
+	CopyBlockPhys( x0,y0, x1,y1 ) ;
+}
+#endif
 
 /*──────────────────────────────────────────────────────────────────────────*/
 
@@ -1704,7 +1970,24 @@ void	DrawAllLetters()
 /*──────────────────────────────────────────────────────────────────────────*/
 /*──────────────────────────────────────────────────────────────────────────*/
 
+#ifndef	DOS
+/*
+ * FEATURE: LBA2's characters of a name, any but those of a file's path.
+ * Taken from LBA2.
+ */
+/*
+ * FIXED: LBA2's form gives strchr the whole word, so that a key's word
+ * whose low byte is 0, Left among them, finds the string's end and comes
+ * out invalid, and its case is never reached. Such a word holds no letter.
+ */
+#define	IsValidChar(c)	(!((c) & 0xFF) OR !strchr( "<>:\"|\\/", (c) ))
+#endif
+
+#ifdef	DOS
 WORD	InputPlayerName( WORD nummess )
+#else
+WORD	InputPlayerName( WORD nummess, UBYTE *name )
+#endif
 {
 	WORD	flag = 1 ;
 	UBYTE	string[256] ;
@@ -1715,6 +1998,152 @@ WORD	InputPlayerName( WORD nummess )
 	WORD	car = 0 ;
 	WORD	retval = FALSE ;
 	UBYTE	incar ;
+
+#ifndef	DOS
+	/*
+	 * FEATURE: with SaveAnywhere, LBA2's InputPlayerName: the name typed
+	 * on the list's line nummess, from name, its cursor blinking, Escape
+	 * giving the name back, Return refused on an empty name or one
+	 * another save has. Taken from LBA2.
+	 */
+	if( FlagSaveAnywhere )
+	{
+		UBYTE	memoplayername[MAX_SIZE_PLAYER_NAME+1] ;
+		WORD	x, y ;
+		LONG	akey ;
+		ULONG	timeraff, timernoaff ;
+
+		while( Key OR Fire ) idle() ;
+
+		memoasciimode = AsciiMode ;
+		AsciiMode = TRUE ;
+		while( GetAscii() ) ;
+
+		strcpy( memoplayername, name ) ;
+		/*
+		 * FIXED: LBA2's ChoosePlayerName gives PlayerName as name, which
+		 * strcpy then copies onto itself.
+		 */
+		if( name != PlayerName )	strcpy( PlayerName, name ) ;
+
+		len = strlen( PlayerName ) ;
+
+		y = Y_START_CHOICE+nummess*60 ;
+		/*
+		 * FIXED: LBA2 places the cursor from x before it sets it, in the
+		 * loop's first turn.
+		 */
+		x = 320+SizeFont(PlayerName)/2 ;
+
+		timeraff = TimerRef+20 ;
+		timernoaff = 0 ;
+		CursorActif = TRUE ;
+
+		while( flag!=-1 )
+		{
+			if( TimerRef<timeraff )
+			{
+				CursorX = x-4 ;
+				CursorY = y+2 ;
+
+				if( !len )	CursorX -= 16 ;
+
+				CursorActif = TRUE ;
+				timernoaff = TimerRef+10 ;
+			}
+			else
+			{
+				if( TimerRef>=timernoaff )
+				{
+					timeraff = TimerRef+20 ;
+					CursorActif = TRUE ;
+					CursorX = x-4 ;
+					CursorY = y+2 ;
+
+					if( !len )	CursorX -= 16 ;
+				}
+				else	CursorActif = FALSE ;
+			}
+
+			DrawOneString( 320, y, PlayerName, 1 ) ;
+
+			if( flag==1 )
+			{
+				x = 320+SizeFont(PlayerName)/2 ;
+				flag = 0 ;
+			}
+
+			do
+			{
+			akey = GetAscii() ;
+
+			if( !IsValidChar(akey) )	akey = 0 ;
+
+			switch( akey )
+			{
+				case A_ESC:
+					strcpy( PlayerName, memoplayername ) ;
+					retval = FALSE ;
+					flag = -1 ;
+					break ;
+
+				case A_RETURN:
+					if( strcmp(PlayerName,"")
+					AND ((FindPlayerFile()==FALSE)
+					OR (!strcmp(PlayerName,memoplayername))) )
+					{
+						retval = TRUE ;
+						flag = -1 ;
+					}
+					else
+					{
+						strcpy( PlayerName, memoplayername ) ;
+						len = strlen( PlayerName ) ;
+						flag = 1 ;
+					}
+					break ;
+
+				case A_LEFT:
+				case A_BACKSPACE:
+					if( len>0 )
+					{
+						PlayerName[--len] = '\0' ;
+						flag = 1 ;
+					}
+					break ;
+
+				default:
+					akey &= 0xFF ;
+
+					/*
+					 * FIXED: LBA2 bounds the name by the line's width
+					 * alone, past the room PlayerName has, and LBA.EXE
+					 * reads 30 bytes of it. It takes
+					 * MAX_SIZE_PLAYER_NAME characters at most.
+					 */
+					if( x<550
+					AND len<MAX_SIZE_PLAYER_NAME
+					AND akey>=32 AND akey<=122 )
+					{
+						PlayerName[len++] = (char)akey ;
+						PlayerName[len] = '\0' ;
+						x = 320+SizeFont(PlayerName)/2 ;
+					}
+					break ;
+			}// end_switch
+			}
+			while( akey ) ;	// Tant que Buffer Clavier non vide
+		}
+
+		AsciiMode = memoasciimode ;
+
+		while( Key OR Fire ) idle() ;
+
+		CursorActif = FALSE ;
+
+		return retval ;
+	}
+#endif
 
 try_again:
 
@@ -1877,9 +2306,201 @@ try_again:
 /*──────────────────────────────────────────────────────────────────────────*/
 /*──────────────────────────────────────────────────────────────────────────*/
 
+#ifndef	DOS
+#define	NB_SAVE_CHOICE	5	// le NB_GAME_CHOICE de LBA2: lignes de la liste
+
+#define	ARROW_SG	(1<<4)	// Flèche Supérieur Gauche des cadres
+#define	ARROW_ID	(1<<6)	// Flèche Inférieur Droit des cadres
+
+#define	TIME_ZOOM_SAVE	30	// les 600 ms de LBA2, en 50èmes de seconde
+
+/*──────────────────────────────────────────────────────────────────────────*/
+/*
+ * FEATURE: a save's picture, ptr, framed at x, y. Taken from LBA2.
+ */
+void	DrawScreenSave( UBYTE *ptr, WORD x, WORD y )
+{
+	WORD	x1, y1 ;
+
+	x1 = x + SCREEN_SAVE_WIDTH - 1 ;
+	y1 = y + SCREEN_SAVE_HEIGHT - 1 ;
+
+	Box( x, y, x1, y1, 0 ) ;
+	RestoreBlock( Log, ptr, x, y, x1, y1 ) ;
+	DrawCadre( x-1, y-1, x1+1, y1+1 ) ;
+	CopyBlockPhys( x-1, y-1, x1+1, y1+1 ) ;
+}
+
+/*──────────────────────────────────────────────────────────────────────────*/
+/*
+ * FEATURE: the frame of a save's picture, empty, at x, y: a version 3's
+ * or the New Game line's. Taken from LBA2.
+ */
+void	DrawCadreSave( WORD x, WORD y )
+{
+	WORD	x1, y1 ;
+
+	x1 = x + SCREEN_SAVE_WIDTH - 1 ;
+	y1 = y + SCREEN_SAVE_HEIGHT - 1 ;
+
+	Box( x, y, x1, y1, 0 ) ;
+	DrawCadre( x-1, y-1, x1+1, y1+1 ) ;
+	CopyBlockPhys( x-1, y-1, x1+1, y1+1 ) ;
+}
+
+/*──────────────────────────────────────────────────────────────────────────*/
+/*
+ * FEATURE: PlayerName's save shown with its picture, then deleted if
+ * Destroy is chosen and kept on Cancel or Escape, as LBA2 deletes one:
+ * whether it was. Taken from LBA2.
+ */
+WORD	DeleteSavedGame()
+{
+	UBYTE	*ptr ;
+	WORD	ret = -1 ;
+	WORD	select ;
+
+	DrawOneString( 320, 80, PlayerName, 2 ) ;
+	ptr = LoadGameScreen() ;
+	if( ptr )	DrawScreenSave( ptr, 240, 130 ) ;
+	else		DrawCadreSave( 240, 130 ) ;
+
+	SavedDeleteMenu[0] = 0 ;
+
+	while( ret==-1 )
+	{
+		select = DoGameMenu( SavedDeleteMenu ) ;
+
+		switch( select )	// num mess
+		{
+			case 24|0x4000:	// annuler
+			case 1000:	// <ESC>
+				ret = 0 ;
+				break ;
+
+			case 48|0x4000: // detruire
+				// retourne 0 si Pb -> pas effacé
+				//          1 si Ok
+				ret = Delete( GamePathname ) ;
+				break ;
+		}
+	}
+
+	while( Key OR Fire OR Joy )	idle() ;
+
+	return ret ;
+}
+
+/*──────────────────────────────────────────────────────────────────────────*/
+/*
+ * FEATURE: the scene of a game loaded, drawn in Log, grown over black
+ * out of its save's picture at x, y to the whole screen, in
+ * TIME_ZOOM_SAVE ticks of game time held, as LBA2 shows a game loaded.
+ * Taken from LBA2.
+ *
+ * FEATURE: x, y are the picture's place in the window of 640x480, and
+ * the scene grows to the whole screen, however wide, in its
+ * coordinates. The port's own.
+ */
+void	ZoomSavedGame( WORD x, WORD y )
+{
+	LONG	x0, y0, x1, y1 ;
+	ULONG	time, savetimer ;
+	UBYTE	*ptr ;
+
+	/*
+	 * FIXED: ScaleBox reads a pixel and a line past its source where the
+	 * box's size divides it exactly, 120 lines of 480 on the port's
+	 * screen, which LBA2 leaves past its block. That line here repeats
+	 * the last.
+	 */
+	ptr = Malloc( LARGEUR_ECRAN*(HAUTEUR_ECRAN+1) + 1 ) ;
+	if( !ptr )	TheEnd( NOT_ENOUGH_MEM, "ZoomSavedGame" ) ;
+
+	SaveTimer() ;
+
+	x += FENETRE_X ;
+	pushscreen() ;
+
+	CopyScreen( Log, ptr ) ;
+	memcpy( ptr+LARGEUR_ECRAN*HAUTEUR_ECRAN, ptr+LARGEUR_ECRAN*(HAUTEUR_ECRAN-1), LARGEUR_ECRAN ) ;
+	ptr[LARGEUR_ECRAN*(HAUTEUR_ECRAN+1)] = ptr[LARGEUR_ECRAN*(HAUTEUR_ECRAN+1)-1] ;
+	Cls() ;
+	Flip() ;
+	if( FlagPalettePcx )	Palette( PalettePcx ) ;
+	else			Palette( PtrPal ) ;
+	/*
+	 * FIXED: the palette is set here over the black that InitGame's
+	 * fade left, and FlagBlackPal kept saying black, so that the next
+	 * fade to black, at a change of scene, a picture or a load, cut to
+	 * black at once. It is cleared, as FadeToPal clears it.
+	 */
+	FlagBlackPal = FALSE ;
+
+	savetimer = TimerRef ;
+
+	while( TRUE )
+	{
+		time = TimerRef-savetimer ;
+
+		x0 = RegleTrois32( x, 0, TIME_ZOOM_SAVE, time ) ;
+		x1 = RegleTrois32( x+SCREEN_SAVE_WIDTH-1, LARGEUR_ECRAN-1, TIME_ZOOM_SAVE, time ) ;
+		y0 = RegleTrois32( y, 0, TIME_ZOOM_SAVE, time ) ;
+		y1 = RegleTrois32( y+SCREEN_SAVE_HEIGHT-1, HAUTEUR_ECRAN-1, TIME_ZOOM_SAVE, time ) ;
+
+		if( x0<=0 OR y0<=0 OR x1>=LARGEUR_ECRAN-1 OR y1>=HAUTEUR_ECRAN-1 )	break ;
+
+		ScaleBox( 0, 0, LARGEUR_ECRAN-1, HAUTEUR_ECRAN-1, ptr, x0, y0, x1, y1, Log ) ;
+		Vsync() ;
+		CopyBlockPhys( x0, y0, x1, y1 ) ;
+	}
+
+	CopyScreen( ptr, Log ) ;
+	Flip() ;
+
+	Free( ptr ) ;
+
+	poparea() ;
+	RestoreTimer() ;
+}
+
+/*──────────────────────────────────────────────────────────────────────────*/
+/*
+ * FEATURE: whether a save is listed, for the main menu. Taken from
+ * LBA2.
+ */
+WORD	IsExistSavedGame()
+{
+	UBYTE	*listplayername ;
+	UBYTE	**ptrlist ;
+	WORD	nb ;
+
+	listplayername = Malloc( MAX_PLAYER_LIST * SIZE_PLAYER_ENTRY ) ;
+	ptrlist = (UBYTE**)HostMalloc( MAX_PLAYER_LIST * sizeof(UBYTE*) ) ;
+
+	if( !listplayername OR !ptrlist )
+	{
+		TheEnd( NOT_ENOUGH_MEM, "IsExistSavedGame" ) ;
+	}
+
+	nb = PlayerGameList( ptrlist, listplayername, FALSE ) ;
+
+	Free( ptrlist ) ;
+	Free( listplayername ) ;
+
+	return nb ;
+}
+
+/*──────────────────────────────────────────────────────────────────────────*/
+#endif
+
 #define	NB_GAME_CHOICE	6
 
+#ifdef	DOS
 WORD	ChoosePlayerName( WORD mess )
+#else
+WORD	ChoosePlayerName( WORD mess, WORD flagflip, WORD flagnew )
+#endif
 {
 	WORD	flag = 1 ;
 	UBYTE	*listplayername ;
@@ -1890,6 +2511,459 @@ WORD	ChoosePlayerName( WORD mess )
 	WORD	ys = 50 ;
 	WORD	retval = 0 ;
 	UBYTE	string[256] ;
+
+#ifndef	DOS
+	/*
+	 * FEATURE: with SaveAnywhere, LBA2's list of saves, five lines at a
+	 * time under the selected save's picture: Up and Down, Page Up and
+	 * Page Down, Home and End move, D, Backspace or Del delete the save
+	 * selected, Return or any fire key but Del chooses. To save
+	 * (flagnew), its last line is New Game, a save chosen is named
+	 * again on its line (InputPlayerName), and the list gives 2, the
+	 * game then saved to GamePathname under PlayerName. To load, it
+	 * gives 1, PlayerName and GamePathname the save's. Escape gives 0,
+	 * the names as they were. Taken from LBA2.
+	 */
+	if( FlagSaveAnywhere )
+	{
+		UBYTE	memoplayername[MAX_SIZE_PLAYER_NAME+1] ;
+		UBYTE	memogamepathname[_MAX_PATH] ;
+		UBYTE	memoname[_MAX_PATH] ;
+		UBYTE	newgametxt[256] ;
+		UBYTE	*ptr ;
+		ULONG	timeranotherkey = 0 ;
+		WORD	timerdraw = 1 ;
+		WORD	draw = 1 ;
+		WORD	oldselect ;
+		WORD	nbsave ;	// les sauvegardes de la liste, sans la ligne Nouvelle partie
+		WORD	mykey = 0, myjoy = 0, myfire = 0 ;
+		LONG	flagpcx = FlagPalettePcx ;
+
+		flag = 3 ;
+		ys = Y_START_CHOICE ;
+
+		strcpy( memoplayername, PlayerName ) ;
+		strcpy( memogamepathname, GamePathname ) ;
+
+		while( Key OR Fire OR Joy )	idle() ;
+
+		// le plasma du feu, à la place de la voix en jeu
+		Load_HQR( PATH_RESSOURCE"ress.hqr", BufSpeak, RESS_INIT_PLASMA ) ;
+
+		CopyScreen( Screen, Log ) ;
+		Flip() ;
+		if( flagpcx )	Palette( PtrPal ) ;
+
+		listplayername = Malloc( MAX_PLAYER_LIST * SIZE_PLAYER_ENTRY ) ;
+		ptrlist = (UBYTE**)HostMalloc( MAX_PLAYER_LIST * sizeof(UBYTE*) ) ;
+
+		if( !listplayername OR !ptrlist )
+		{
+			TheEnd( NOT_ENOUGH_MEM, "Choose Player Name" ) ;
+		}
+
+		nb = PlayerGameList( ptrlist, listplayername, flagnew ) ;
+
+		if( !nb AND !flagnew )
+		{
+			Free( ptrlist ) ;
+			Free( listplayername ) ;
+			if( flagpcx )	Palette( PalettePcx ) ;
+			return FALSE ;
+		}
+
+		InitDial( 0 ) ;
+		GetMultiText( 71|0x4000, newgametxt ) ;	// Nouvelle partie
+
+		if( flagnew AND nb<MAX_PLAYER_LIST-1 )
+		{
+			ptrlist[nb] = newgametxt ;
+			nb++ ;
+		}
+		else	flagnew = 0 ;
+
+		if( strcmp(PlayerName,"") )
+		{
+			/*
+			 * FIXED: LBA2 selects the first save of the player's
+			 * name, which of two saves of one name may be another
+			 * file than the game's, and Return then saves over that
+			 * file. The save of the game's own file, GamePathname,
+			 * is selected first, each line keeping its file.
+			 */
+			nbsave = flagnew ? nb-1 : nb ;
+			for( select=0; select<nbsave; select++ )
+			{
+				if( !stricmp(GamePathname,ptrlist[select]+MAX_SIZE_PLAYER_NAME+1) )
+					break ;
+			}
+			if( select == nbsave )
+			{
+				for( select=0; select<nb-1; select++ )
+				{
+					if( !stricmp(PlayerName,ptrlist[select]) )
+						break ;
+				}
+			}
+
+			while( select >= (start + NB_SAVE_CHOICE) )
+			{
+				if( start < (nb-1) )
+				{
+					start++ ;
+				}
+			}
+		}
+
+		while( mykey != K_ESC )
+		{
+			if( flag == 3 )
+			{
+				DrawSingleString( 320, 25, (UBYTE*)GetMultiText( mess,string ) ) ;
+				flag = 1 ;
+			}
+
+			if( flag == 1 )
+			{
+				for( n=0; n<NB_SAVE_CHOICE; n++ )
+				{
+					if( n+start >= nb )	break ;
+
+					draw = ((n+start) == select) ;
+
+					if( (n+start) == select )
+					{
+						ys = Y_START_CHOICE+60*n ;
+					}
+
+					if( start>0 AND n==0 )	draw |= ARROW_SG ;
+					else if( (start+NB_SAVE_CHOICE<nb) AND (n==NB_SAVE_CHOICE-1) )
+							draw |= ARROW_ID ;
+
+					DrawOneString( 320, Y_START_CHOICE+60*n, ptrlist[n+start], draw ) ;
+				}
+
+				draw = 1 ;
+
+				if( start>0 AND select==start )	draw |= ARROW_SG ;
+				else if( (start+NB_SAVE_CHOICE<nb) AND (select==start+NB_SAVE_CHOICE-1) )
+						draw |= ARROW_ID ;
+
+				timeranotherkey = TimerRef + TEMPO_REPEAT_KEY ;
+				mykey = myjoy = myfire = 0 ;
+				flag = 0 ;
+			}
+
+			if( timerdraw )
+			{
+				strcpy( PlayerName, ptrlist[select] ) ;
+
+				if( !flagnew OR select<nb-1 )
+				{
+					strcpy( GamePathname, ptrlist[select]+MAX_SIZE_PLAYER_NAME+1 ) ;
+					ptr = LoadGameScreen() ;
+					if( ptr )	DrawScreenSave( ptr, 240, 50 ) ;
+					else		DrawCadreSave( 240, 50 ) ;
+				}
+				else	// Nouvelle partie
+				{
+					DrawCadreSave( 240, 50 ) ;
+				}
+
+				timerdraw = 0 ;
+			}
+
+			if( TimerRef>timeranotherkey )
+			{
+				mykey = Key ;
+				myjoy = Joy ;
+				myfire = Fire ;
+			}
+
+			DrawOneString( 320, ys, ptrlist[select], draw ) ;
+
+			oldselect = select ;
+
+			switch( myjoy & (J_UP|J_DOWN|J_LEFT|J_RIGHT) )
+			{
+				case J_DOWN:
+					if( select < (nb-1) )
+					{
+						select++ ;
+						if( select >= (start + NB_SAVE_CHOICE) )
+						{
+							if( start < (nb-1) )
+							{
+								start++ ;
+							}
+						}
+						else
+						{
+							DrawOneString( 320, ys, ptrlist[select-1], (draw&0xFFFE) ) ;
+						}
+						flag = 1 ;
+						timerdraw = 1 ;
+					}
+					break ;
+
+				case J_UP:
+					if( select > 0 )
+					{
+						select-- ;
+
+						if( select < start )
+						{
+							start-- ;
+						}
+						else
+						{
+							DrawOneString( 320, ys, ptrlist[select+1], (draw&0xFFFE) ) ;
+						}
+						flag = 1 ;
+						timerdraw = 1 ;
+					}
+					break ;
+
+				case J_DOWN|J_RIGHT:	// page suivante
+					if( select < (nb-1) )
+					{
+						select+=NB_SAVE_CHOICE ;
+						if( select>=nb )	select = nb-1 ;
+
+						if( select >= (start + NB_SAVE_CHOICE) )
+						{
+							start += NB_SAVE_CHOICE ;
+							if( start >= (nb-(NB_SAVE_CHOICE-1)) )	start = nb-NB_SAVE_CHOICE ;
+						}
+						else
+						{
+							DrawOneString( 320, ys, ptrlist[oldselect], (draw&0xFFFE) ) ;
+						}
+						flag = 1 ;
+						timerdraw = 1 ;
+					}
+					break ;
+
+				case J_UP|J_RIGHT:	// page précédente
+					if( select > 0 )
+					{
+						select-=NB_SAVE_CHOICE ;
+						if( select<0 )	select=0 ;
+
+						if( select < start )
+						{
+							start=select ;
+						}
+						else
+						{
+							DrawOneString( 320, ys, ptrlist[oldselect], (draw&0xFFFE) ) ;
+						}
+						flag = 1 ;
+						timerdraw = 1 ;
+					}
+					break ;
+
+				case J_UP|J_LEFT:	// début
+					if( select > 0 )
+					{
+						select = 0 ;
+
+						if( start==0 )
+						{
+							DrawOneString( 320, ys, ptrlist[oldselect], (draw&0xFFFE) ) ;
+						}
+						else	start = 0 ;
+
+						flag = 1 ;
+						timerdraw = 1 ;
+					}
+					break ;
+
+				case J_DOWN|J_LEFT:	// fin
+					if( select < (nb-1) )
+					{
+						select = nb-1 ;
+
+						if( start==(nb-NB_SAVE_CHOICE) )
+						{
+							DrawOneString( 320, ys, ptrlist[oldselect], (draw&0xFFFE) ) ;
+						}
+						else
+						{
+							start = nb-NB_SAVE_CHOICE ;
+							if( start<0 )	start = 0 ;
+						}
+
+						flag = 1 ;
+						timerdraw = 1 ;
+					}
+					break ;
+			}
+
+			// Effacement d'une sauvegarde
+			/*
+			 * FIXED: LBA2 deletes the save whose picture was shown
+			 * last, on the New Game line too, and before the picture
+			 * of a save moved to in the same frame. The save selected
+			 * is looked up again, and D on the New Game line ignored.
+			 */
+			if( (mykey==K_D
+			OR   mykey==K_BACKSPACE
+			OR   (myfire & F_SUPPR))
+			AND (!flagnew OR select<nb-1) )
+			{
+				CopyScreen( Screen, Log ) ;
+				Flip() ;
+
+				strcpy( PlayerName, ptrlist[select] ) ;
+				strcpy( GamePathname, ptrlist[select]+MAX_SIZE_PLAYER_NAME+1 ) ;
+
+				if( DeleteSavedGame() )
+				{
+					if( nb>1 AND select<nb-1 )
+					{
+						/*
+						 * FIXED: LBA2 moves the names that follow by
+						 * memcpy, onto the place they overlap.
+						 */
+						memmove( &ptrlist[select], &ptrlist[select+1], ((nb-1)-select)*sizeof(UBYTE*) ) ;
+					}
+
+					// recharge list player
+					nb-- ;
+
+					if( select>=nb )
+					{
+						select = nb-1 ;
+						if( select<0 )		select = 0 ;
+
+						if( select<start )
+						{
+							start = select ;
+							if( start<0 )	start = 0 ;
+						}
+					}
+
+					if( !nb )	break ;	// plus de sauvegarde
+				}
+
+				CopyScreen( Screen, Log ) ;
+				Flip() ;
+
+				flag = 1 ;	// redraw menu
+				timerdraw = 1 ;
+			}
+
+			if( myfire & ~F_SUPPR )
+			{
+				if( timerdraw )
+				{
+					strcpy( PlayerName, ptrlist[select] ) ;
+
+					if( !flagnew OR select<nb-1 )
+					{
+						strcpy( GamePathname, ptrlist[select]+MAX_SIZE_PLAYER_NAME+1 ) ;
+						ptr = LoadGameScreen() ;
+						if( ptr )	DrawScreenSave( ptr, 240, 50 ) ;
+						else		DrawCadreSave( 240, 50 ) ;
+					}
+					else	// Nouvelle partie
+					{
+						DrawCadreSave( 240, 50 ) ;
+					}
+
+					timerdraw = 0 ;
+				}
+
+				if( flagnew )	// Nouvelle partie
+				{
+					if( select==nb-1 )	strcpy( PlayerName, "" ) ;
+					else
+					{
+						strcpy( GamePathname, ptrlist[select]+MAX_SIZE_PLAYER_NAME+1 ) ;
+						strcpy( memoname, GamePathname ) ;
+					}
+
+					while( Fire )	idle() ;
+
+					if( InputPlayerName( select-start, PlayerName ) )
+					{
+						if( select==nb-1 )
+						{
+							do
+							{
+								strcpy( GamePathname, PATH_RESSOURCE"S" ) ;
+								strcat( GamePathname, Itoa( Rnd(10000) ) ) ;
+								strcat( GamePathname, ".LBA" ) ;
+							}
+							while( FileSize( GamePathname ) != 0 ) ;
+						}
+						else	// renommer une sauvegarde
+						{
+							strcpy( GamePathname, memoname ) ;
+						}
+
+						retval = 2 ;
+						break ;
+					}
+					else
+					{
+						while( Fire )	idle() ;
+						if( select==nb-1 )	strcpy( PlayerName, newgametxt ) ;
+						timerdraw = 1 ;
+						flag = 3 ;	// Rafraichissement ecran
+						mykey = 0 ;
+					}
+				}
+				else
+				{
+					retval = 1 ;
+					break ;
+				}
+			}
+		}
+
+		if( retval==0 )	// <ESC>, ou plus de sauvegarde
+		{
+			/*
+			 * FIXED: LBA2 puts PlayerName back after Escape alone, and
+			 * leaves GamePathname naming the last save the list looked
+			 * up, the player's file then another player's. Both are
+			 * put back, after the last save deleted too.
+			 */
+			strcpy( PlayerName, memoplayername ) ;
+			strcpy( GamePathname, memogamepathname ) ;
+		}
+		else if( retval==1 )
+		{
+			strcpy( PlayerName, ptrlist[select] ) ;
+			strcpy( GamePathname, ptrlist[select]+MAX_SIZE_PLAYER_NAME+1 ) ;
+
+			for( n=0; n<NB_SAVE_CHOICE; n++ )
+			{
+				if( (n+start) != select )
+				{
+					ClearOneString( 320, Y_START_CHOICE+60*n ) ;
+				}
+			}
+		}
+
+		Free( ptrlist ) ;
+		Free( listplayername ) ;
+
+		if( flagflip )
+		{
+			CopyScreen( Screen, Log ) ;
+			Flip() ;
+		}
+
+		while( Key OR Fire OR Joy )	idle() ;
+
+		if( flagpcx )	Palette( PalettePcx ) ;
+
+		return retval ;
+	}
+#endif
 
 	CopyScreen( Screen, Log ) ;
 	Flip() ;
@@ -1906,7 +2980,11 @@ WORD	ChoosePlayerName( WORD mess )
 		TheEnd( NOT_ENOUGH_MEM, "Choose Player Name" ) ;
 	}
 
+#ifdef	DOS
 	nb = PlayerGameList( ptrlist, listplayername ) ;
+#else
+	nb = PlayerGameList( ptrlist, listplayername, FALSE ) ;
+#endif
 
 	if( !nb )	return FALSE ;
 
@@ -2187,6 +3265,18 @@ void	SetVolumes(LONG Music, LONG Sample, LONG Line, LONG CD, LONG Master )
 }
 
 /*──────────────────────────────────────────────────────────────────────────*/
+#ifndef	DOS
+/*
+ * FEATURE: the entry Escape picks in a menu, the word after its entries,
+ * 0xFFFF for none. Taken from the Classic 3.2.3.
+ */
+UWORD	GetEscMenuEntry( UWORD *ptrmenu )
+{
+	return ptrmenu[4+ptrmenu[1]*2] ;
+}
+
+/*──────────────────────────────────────────────────────────────────────────*/
+#endif
 
 WORD	DoGameMenu( UWORD *ptrmenu )
 {
@@ -2195,11 +3285,28 @@ WORD	DoGameMenu( UWORD *ptrmenu )
 	LONG	flagVol = 0 ;
 	UWORD	*ptr ;
 	ULONG	chrono ;
+#ifndef	DOS
+	UWORD	escentry = 0xFFFF ;
+	WORD	flagesc = FALSE ;
+#endif
 
 	Load_HQR( PATH_RESSOURCE"ress.hqr", BufSpeak, RESS_INIT_PLASMA ) ;
 
 	selected = ptrmenu[0] ;
 	nb = ptrmenu[1] ;
+
+#ifndef	DOS
+	/*
+	 * FEATURE: with SaveAnywhere, a question's menu takes the answer
+	 * Escape picks from after its answers, and waits for the keys held
+	 * at its start to be released. Taken from the Classic 3.2.3.
+	 */
+	if( FlagSaveAnywhere AND (ptrmenu == GameChoiceMenu) )
+	{
+		escentry = GetEscMenuEntry( ptrmenu ) ;
+		while( Key OR Joy ) idle() ;
+	}
+#endif
 
 	chrono = TimerRef ;
 
@@ -2215,6 +3322,20 @@ WORD	DoGameMenu( UWORD *ptrmenu )
 			Save( "f:\\projet\\lba\\datas\\initplas.ma", BufSpeak, 16*1024 ) ;
 		}
 */
+
+#ifndef	DOS
+		/*
+		 * FEATURE: Escape makes that answer the selection, drawn as
+		 * chosen once the keys are released, then gives it. Taken from
+		 * the Classic 3.2.3.
+		 */
+		if( (Key == K_ESC) AND (escentry != 0xFFFF) )
+		{
+			selected = escentry ;
+			flag = 1 ;
+			flagesc = TRUE ;
+		}
+#endif
 
 		// rustine credits ...
 		if( ptrmenu == GameMainMenu )
@@ -2382,6 +3503,26 @@ WORD	DoGameMenu( UWORD *ptrmenu )
 		{
 			ptrmenu[0] = selected ;
 			DrawGameMenu( ptrmenu, FALSE ) ;
+#ifndef	DOS
+			/*
+			 * FEATURE: with SaveAnywhere, the main menu shows the
+			 * picture of current.lba, which Resume Game loads, above its
+			 * entries. Taken from LBA2.
+			 */
+			if( FlagSaveAnywhere AND (ptrmenu == GameMainMenu) )
+			{
+				UBYTE	memogamepathname[_MAX_PATH] ;
+				UBYTE	*ptr ;
+
+				strcpy( memogamepathname, GamePathname ) ;
+				strcpy( GamePathname, CURRENTSAVE_FILENAME ) ;
+
+				ptr = LoadGameScreen() ;
+				if( ptr )	DrawScreenSave( ptr, 240, 10 ) ;
+
+				strcpy( GamePathname, memogamepathname ) ;
+			}
+#endif
 			while( Joy OR Fire OR Key )
 				DrawGameMenu( ptrmenu, TRUE ) ;
 			flag = 0 ;
@@ -2428,6 +3569,23 @@ WORD	DoGameMenu( UWORD *ptrmenu )
 		{
 			return ptrmenu[4 + 1 + selected*2] ; // num mess
 		}
+
+#ifndef	DOS
+		if( flagesc )	return ptrmenu[4 + 1 + selected*2] ; // <ESC>
+
+		/*
+		 * FEATURE: with SaveAnywhere, Escape gives 1000 in every menu
+		 * but a question's, which each menu takes as its way back, the
+		 * main menu going on with the game in play, or selecting Quit
+		 * with none. Taken from LBA2.
+		 */
+		if( FlagSaveAnywhere
+		AND (ptrmenu != GameChoiceMenu)
+		AND (Key == K_ESC) )
+		{
+			return 1000 ;
+		}
+#endif
 
 //		if( Key == K_ESC )	break ;
 	}
@@ -2630,6 +3788,11 @@ LONG	LanguageOptions()
 		switch( select )	// num mess
 		{
 			case 26: // menu prec.
+			/*
+			 * FEATURE: with SaveAnywhere, Escape leaves as the first
+			 * entry does. Taken from the LBA2 Classic 3.2.4.
+			 */
+			case 1000: // <ESC>
 				flag = 1 ;
 				break ;
 
@@ -2731,7 +3894,8 @@ LONG	OptionsMenu()
 	 * walls. Its entry says ON while LbaWinSettings has 2 and OFF
 	 * without, and its choice turns 2 over and writes the settings to
 	 * lba.cfg at once. Taken from the Classic 3.2.3. The entry is found
-	 * by its text.
+	 * by its text, the menu's entries before it being as lba.cfg sets
+	 * them.
 	 */
 	ptrhitwalls = GameOptionMenu+4 ;
 	while( (ptrhitwalls[1] != 0x100A) AND (ptrhitwalls[1] != 0x100B) )
@@ -2766,6 +3930,13 @@ LONG	OptionsMenu()
 */
 			case 15: // retour au jeu
 			case 26: // menu prec.
+#ifndef	DOS
+			/*
+			 * FEATURE: with SaveAnywhere, Escape leaves as the first
+			 * entry does. Taken from LBA2.
+			 */
+			case 1000: // <ESC>
+#endif
 				flag = 1 ;
 				break ;
 
@@ -2804,10 +3975,11 @@ LONG	OptionsMenu()
 			 * FEATURE: the screen's width moved and the scene's centre
 			 * with the screen's middle, which keeps a script's
 			 * projection, iso or 3D. Over a scene in play, F6's options
-			 * (Return to game), the scene is drawn again at the new width
-			 * under the menu, its origin and the numbers over a find
-			 * moving with it, and over the main menu its picture is laid
-			 * out again, black around it. The port's own.
+			 * (Return to game) or LBA2's menu over a game Escape left
+			 * (EscTimer), the scene is drawn again at the new width under
+			 * the menu, its origin and the numbers over a find moving
+			 * with it, and over the main menu its picture is laid out
+			 * again, black around it. The port's own.
 			 */
 			case 0x2000:	// Widescreen display: ON
 			case 0x2001:	// Widescreen display: OFF
@@ -2815,7 +3987,7 @@ LONG	OptionsMenu()
 				writewide( Screen ) ;
 				XCentre += CENTRE_ECRAN_X - dx ;
 				ptrwide[1] = FlagWideScreen ? 0x2000 : 0x2001 ;
-				if( GameOptionMenu[5] == 15 )
+				if( (GameOptionMenu[5] == 15) OR EscTimer )
 				{
 					RedrawScene() ;
 					CopyScreen( Log, Screen ) ;
@@ -2855,6 +4027,13 @@ LONG	OptionsMenu()
 #ifdef	FIXES
 	if( select == 15 )	while( Key OR Fire ) idle() ;
 #endif
+#ifndef	DOS
+	/*
+	 * FEATURE: with SaveAnywhere, the menu left by Escape waits for the
+	 * keys' release before the game reads them. Taken from LBA2.
+	 */
+	if( select == 1000 )	while( Key OR Fire OR Joy ) idle() ;
+#endif
 
 	return FALSE ;
 }
@@ -2889,6 +4068,14 @@ void	VolumeOptions()
 				break ;
 */
 			case 26: // quitter
+#ifndef	DOS
+			/*
+			 * FEATURE: with SaveAnywhere, Escape leaves as the first
+			 * entry does, the music and the volumes set as it sets
+			 * them. Taken from LBA2.
+			 */
+			case 1000: // <ESC>
+#endif
 #ifdef	CDROM
 				FadeMusicMidi( 1 ) ;
 #endif
@@ -2931,7 +4118,11 @@ void	SavedGameManagement()
 				break ;
 
 			case 41: // copier
+#ifdef	DOS
 				if( ChoosePlayerName( 41 ) )
+#else
+				if( ChoosePlayerName( 41, FALSE, FALSE ) )
+#endif
 				{
 					UBYTE	*ptr,*ptrs ;
 					LONG	size ;
@@ -2944,7 +4135,11 @@ void	SavedGameManagement()
 					num = *ptr++ ;		// num version
 					n = strlen( ptr ) + 1 ; // size player name
 
+#ifdef	DOS
 					if( InputPlayerName( 44 ) )
+#else
+					if( InputPlayerName( 44, PlayerName ) )
+#endif
 					{
 						do
 						{
@@ -2969,7 +4164,11 @@ void	SavedGameManagement()
 				break ;
 
 			case 45: // detruire
+#ifdef	DOS
 				if( ChoosePlayerName( 45 ) )
+#else
+				if( ChoosePlayerName( 45, FALSE, FALSE ) )
+#endif
 				{
 					CopyScreen( Screen, Log ) ;
 
@@ -3015,6 +4214,13 @@ void	AdvancedOptions()
 		switch( select )	// num mess
 		{
 			case 26:
+#ifndef	DOS
+			/*
+			 * FEATURE: with SaveAnywhere, Escape leaves as the first
+			 * entry does. Taken from LBA2.
+			 */
+			case 1000: // <ESC>
+#endif
 				flag = 1 ;
 				break ;
 
@@ -3074,6 +4280,85 @@ void	AdvancedOptions()
 	Flip() ;
 }
 
+#ifndef	DOS
+/*══════════════════════════════════════════════════════════════════════════*/
+/*
+ * FEATURE: the main menu as LBA2 builds it from RealGameMainMenu,
+ * firstloop TRUE with no game in play, 2 to select Quit: Resume Game
+ * kept while current.lba holds a game, its entries then centred lower
+ * under the game's picture, Load Game while a save is listed, Save Game
+ * with a game in play that may be saved (SavingEnable). Taken from LBA2.
+ *
+ * FIXED: LBA2 keeps Resume Game while current.lba exists alone, which
+ * Escape writes only while the game may be saved, and a game left by
+ * Escape before any such save could not be gone on with. With a game in
+ * play Resume Game is kept, the entries lowered under current.lba's
+ * picture while it exists.
+ */
+void	BuildGameMainMenu( LONG firstloop )
+{
+	UWORD	*ptrreal = RealGameMainMenu ;
+	UWORD	*ptrmain = GameMainMenu ;
+	UWORD	nb = 0 ;
+	UWORD	ycenter = 275 ;
+
+	*ptrmain++ = *ptrreal++ ;	// selected
+	*ptrmain++ = *ptrreal++ ;	// nb entries
+	*ptrmain++ = *ptrreal++ ;	// y center
+	*ptrmain++ = *ptrreal++ ;	// .dia num
+
+	// reprendre partie
+
+	if( !firstloop
+	OR  FileSize( CURRENTSAVE_FILENAME ) )
+	{
+		*ptrmain++ = *ptrreal ;
+		*ptrmain++ = *(ptrreal+1) ;
+		nb++ ;
+		if( FileSize( CURRENTSAVE_FILENAME ) )	ycenter = 335 ;
+	}
+
+	ptrreal += 2 ;	// nouvelle partie
+	*ptrmain++ = *ptrreal++ ;
+	*ptrmain++ = *ptrreal++ ;
+	nb++ ;
+
+	// charger partie
+
+	if( IsExistSavedGame() )
+	{
+		*ptrmain++ = *ptrreal ;
+		*ptrmain++ = *(ptrreal+1) ;
+		nb++ ;
+	}
+
+	ptrreal += 2 ;	// sauver partie
+
+	if( !firstloop
+	AND SavingEnable )
+	{
+		*ptrmain++ = *ptrreal ;
+		*ptrmain++ = *(ptrreal+1) ;
+		nb++ ;
+	}
+
+	ptrreal += 2 ;	// Options
+
+	*ptrmain++ = *ptrreal++ ;
+	*ptrmain++ = *ptrreal++ ;
+	nb++ ;
+
+	// Quitter
+	*ptrmain++ = *ptrreal++ ;
+	*ptrmain++ = *ptrreal++ ;
+	nb++ ;
+
+	if( firstloop==2 ) GameMainMenu[0] = (UWORD)(nb-1) ;	// selected
+	GameMainMenu[1] = nb ;		// nb entries
+	GameMainMenu[2] = ycenter ;	// y center
+}
+#endif
+
 /*══════════════════════════════════════════════════════════════════════════*/
 /*══════════════════════════════════════════════════════════════════════════*/
 /*──────────────────────────────────────────────────────────────────────────*/
@@ -3094,6 +4379,198 @@ LONG	MainGameMenu()
 */
 
 	CopyScreen( Log, Screen ) ;
+
+#ifndef	DOS
+	/*
+	 * FEATURE: with SaveAnywhere, LBA2's MainGameMenu, which runs the
+	 * game (gogame) and comes back to the menu over it when the main
+	 * loop ends: there Escape saves the game into current.lba while it
+	 * may be saved (SavingEnable), the end plays the credits and its
+	 * movie, and after a game over, the end or the demo no game is left
+	 * in play (firstloop). Resume Game goes on with the game in play, or
+	 * loads current.lba, New Game starts one at once, Load Game and
+	 * Save Game open the list of saves, Quit ends the program,
+	 * current.lba keeping the game. Escape on the menu goes on with the
+	 * game, or selects Quit with none. Over a scene in a palette of its
+	 * own (FlagPalettePcx) the menu takes the normal one, and the
+	 * scene's comes back with the game. The actors' loops are set aside
+	 * under the menu, as under the screens over the game, where LBA2
+	 * fades every sample out and pauses it. Taken from LBA2.
+	 */
+	if( FlagSaveAnywhere )
+	{
+		LONG	firstloop = TRUE ;
+		LONG	gogame = FALSE ;
+		LONG	ret ;
+
+		while( !flag )
+		{
+			if( gogame )
+			{
+				ret = MainLoop() ;
+
+				switch( ret )
+				{
+					case 0: // <ESC>
+						if( SavingEnable )	CurrentSaveGame() ;	// sauve dans current.lba
+						break ;
+
+					case 1: // Gagné !!!!
+						Credits() ;
+						PlayAnimFla( "The_End" ) ;
+						Cls() ;
+						Flip() ;
+						Palette( PtrPal ) ;
+						firstloop = TRUE ;
+						EscTimer = 0 ;
+						break ;
+
+					case 2: // GameOver :(
+						// Pour ne pouvoir ni reprendre la partie
+						// ni la sauver
+						firstloop = TRUE ;
+						EscTimer = 0 ;
+						break ;
+				}
+
+				CopyScreen( Log, Screen ) ;
+				gogame = FALSE ;
+			}
+
+			BuildGameMainMenu( firstloop ) ;
+
+			InitDial( 0 )		;//	SYS
+
+			PlayCdTrack( 9 ) ;
+			HQ_SaveSamples() ;	// les boucles du jeu mises de côté
+
+			GetMultiText( 49, PleaseWait ) ;
+
+			// la palette normale sous le menu, comme LBA2
+			if( FlagPalettePcx )	Palette( PtrPal ) ;
+
+			select = DoGameMenu( GameMainMenu ) ;
+			switch( select )	// num mess
+			{
+				case 9999:	// menu demo
+					/*
+					 * FIXED: LBA2's demo enters the main loop with the
+					 * EscTimer of the game Escape left, which puts that
+					 * game's clock back and resumes its music in the
+					 * demo. It is cleared, and the demo, which LBA1
+					 * plays over the game in play, leaves none, as a
+					 * game over does.
+					 */
+					EscTimer = 0 ;
+					firstloop = TRUE ;
+
+					MenuDemo() ;
+					Load_HQR( PATH_RESSOURCE"ress.hqr", Screen, RESS_MENU_PCR ) ;
+					windowpicture( Screen ) ;
+					CopyScreen( Screen, Log ) ;
+					SetBlackPal() ;
+					Flip() ;
+					FadeToPal( PtrPal ) ;
+					break ;
+
+				case 1000: // <ESC>, on reprend la partie en cours
+					if( firstloop )
+					{
+						firstloop = 2 ;
+						break ;
+					}
+
+				case 70|0x4000: // reprendre partie
+					if( !firstloop )
+					{
+						InitDial( START_FILE_ISLAND+Island ) ;
+						StopMusicCD() ;		// la musique du menu
+						while( Key OR Fire OR Joy )	idle() ;
+						if( FlagPalettePcx )	Palette( PalettePcx ) ;	// celle du jeu
+						gogame = TRUE ;
+					}
+					else if( FileSize( CURRENTSAVE_FILENAME ) )
+					{
+						UBYTE	memoplayername[MAX_SIZE_PLAYER_NAME+1] ;
+						UBYTE	memogamepathname[_MAX_PATH] ;
+
+						strcpy( memoplayername, PlayerName ) ;
+						strcpy( memogamepathname, GamePathname ) ;
+
+						firstloop = FALSE ;
+						strcpy( PlayerName, CURRENTSAVE_NAME ) ;
+						strcpy( GamePathname, CURRENTSAVE_FILENAME ) ;
+
+						ZoomSaveX = 240 ;
+						ZoomSaveY = 10 ;
+						InitGame( -1, 0 ) ;
+						Introduction() ;
+
+						strcpy( PlayerName, memoplayername ) ;
+						strcpy( GamePathname, memogamepathname ) ;
+
+						gogame = TRUE ;
+						EscTimer = 0 ;
+					}
+					break ;
+
+				case 71|0x4000: // newgame
+					// AUTOSAVE, dans autosave.lba, jusqu'a ce qu'une
+					// sauvegarde la nomme
+					firstloop = FALSE ;
+					strcpy( PlayerName, AUTOSAVE_NAME ) ;
+					strcpy( GamePathname, AUTOSAVE_FILENAME ) ;
+					InitGame( 1, 0 ) ;
+					Introduction() ;
+					gogame = TRUE ;
+					EscTimer = 0 ;
+					break ;
+
+				case 72|0x4000: // load
+					if( ChoosePlayerName( 41|0x4000, FALSE, FALSE ) )
+					{
+						firstloop = FALSE ;
+						ZoomSaveX = 240 ;
+						ZoomSaveY = 50 ;
+						InitGame( -1, 0 ) ;
+						Introduction() ;
+						gogame = TRUE ;
+						EscTimer = 0 ;
+					}
+					else
+					{
+						CopyScreen( Screen, Log ) ;
+						Flip() ;
+					}
+					break ;
+
+				case 73|0x4000: // Save Game
+					if( !firstloop )
+					{
+						if( ChoosePlayerName( 42|0x4000, FALSE, TRUE ) == 2 )
+						{
+							if( !WriteSaveGame( TRUE ) )	SaveGame() ;
+						}
+						CopyScreen( Screen, Log ) ;
+						Flip() ;
+					}
+					break ;
+
+				case 74|0x4000: // Options
+					CopyScreen( Screen, Log ) ;
+					Flip() ;
+					GameOptionMenu[5] = 26 ; // retour prec
+					OptionsMenu() ;
+					break ;
+
+				case 75|0x4000: // quitter
+					flag = 1 ;
+					break ;
+			}
+		}
+		return FALSE ;
+	}
+#endif
 
 	while( !flag )
 	{
@@ -3129,7 +4606,11 @@ LONG	MainGameMenu()
 
 			case 20: // newgame
 
+#ifdef	DOS
 				if( !InputPlayerName( 42 ) )	break ;
+#else
+				if( !InputPlayerName( 42, PlayerName ) )	break ;
+#endif
 
 				do
 				{
@@ -3162,7 +4643,11 @@ LONG	MainGameMenu()
 
 			case 21: // load
 
+#ifdef	DOS
 				if( !ChoosePlayerName( 21 ) ) break ;
+#else
+				if( !ChoosePlayerName( 21, FALSE, FALSE ) ) break ;
+#endif
 
 				InitGame( -1, 0 ) ;
 				Introduction() ;
@@ -3276,6 +4761,51 @@ void	GameAskChoice( WORD nummess )
 
 	GameChoiceMenu[0] = 0 ;
 	GameChoiceMenu[1] = GameNbChoices ;
+#ifndef	DOS
+	/*
+	 * FEATURE: with SaveAnywhere, Escape picks the last answer, the one
+	 * that declines, and none in the four questions whose last answer
+	 * says something: the prison's and the library's two on Principal
+	 * Island, and Bab Lapi's in Funky Town. Taken from the Classic 3.2.3.
+	 */
+	if( FlagSaveAnywhere )
+	{
+		GameChoiceMenu[4+GameNbChoices*2] = GameNbChoices-1 ;
+
+		switch( nummess )
+		{
+			case 7:		// Bab Lapi, à Funky Town
+			case 40:
+				/*
+				 * FIXED: the Classic tests Bab Lapi's question on
+				 * island 1, Principal Island, where scene 74 lies on
+				 * island 7, so that there Escape takes the last
+				 * answer, the Cloning center. It is tested on
+				 * island 7.
+				 */
+				if( (Island == 7) AND (NumCube == 74) )
+				{
+					GameChoiceMenu[4+GameNbChoices*2] = 0xFFFF ;
+				}
+				break ;
+
+			case 93:	// la prison
+				if( (Island == 1) AND (NumCube == 11) )
+				{
+					GameChoiceMenu[4+GameNbChoices*2] = 0xFFFF ;
+				}
+				break ;
+
+			case 132:	// la bibliothèque
+			case 141:
+				if( (Island == 1) AND (NumCube == 10) )
+				{
+					GameChoiceMenu[4+GameNbChoices*2] = 0xFFFF ;
+				}
+				break ;
+		}
+	}
+#endif
 	/*
 	 * FIXED: LBA.EXE puts a menu's first box 35 from the top whatever
 	 * its answers, so that the sixth box, from 290 to 340, covers the

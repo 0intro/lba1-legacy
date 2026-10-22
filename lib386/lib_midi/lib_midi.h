@@ -18,3 +18,7 @@ extern void WaitFadeMidi(void);
 extern void VolumeMidi(int16_t );
 extern void SetLoopMidi(int16_t );
 extern void DoLoopMidi(void);
+#ifndef	DOS
+extern void PauseMidi(void);
+extern void ResumeMidi(void);
+#endif

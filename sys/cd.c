@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -33,6 +34,7 @@ struct Track
 	FILE	*f;	/* a host's file, */
 	Image	*img;	/* or the image whose sound it is */
 	int32_t	audio;	/* the image's audio track the sound lies in */
+	int32_t	num;	/* the CD's track the game plays, 0 for none */
 	uint32_t	n;	/* its frames */
 	uint64_t	fed;	/* frames handed */
 	uint64_t	start;	/* ns */
@@ -52,6 +54,8 @@ static uint32_t cdsize;	/* its bytes */
 static Track track;
 static uint64_t now;
 static uint64_t played;	/* frames, every track's */
+static int32_t pausedtrack;	/* LBA2's PausedTrack: the track PauseCD stopped, 0 for none */
+static uint64_t pausedframe;	/* LBA2's Cur: the frame it stopped at */
 
 /*
  * InitCDR is cdrom.asm's: whether the CD's root holds the file name, the
@@ -167,6 +171,16 @@ trackread(Track *t, uint8_t *buf, size_t n)
 	t->at += n;
 }
 
+/* t's sound read from its byte at on: 0, or -1. */
+static int
+trackseek(Track *t, uint64_t at)
+{
+	if (t->img == NULL && (t->base + at > LONG_MAX || fseek(t->f, (long)(t->base + at), SEEK_SET) != 0))
+		return -1;
+	t->at = at;
+	return 0;
+}
+
 /* Whether t is open. */
 static int
 trackon(Track *t)
@@ -213,8 +227,53 @@ PlayTrackCDR(int32_t t)
 		return 1;
 	StopCDR();
 	track = nt;
+	track.num = t;
 	track.start = now;
 	return 0;
+}
+
+/*
+ * FEATURE: PauseCD is LBA2's CD.CPP PauseCD: the track playing stopped,
+ * the frame the clock had reached kept, for ResumeCD. Taken from LBA2.
+ *
+ * FIXED: LBA2's PauseCD returns at once when no track plays, keeping an
+ * older pause, which a ResumeCD then played again. That pause is
+ * forgotten.
+ */
+void
+PauseCD(void)
+{
+	pausedtrack = 0;
+	if (!trackon(&track))
+		return;
+	pausedtrack = track.num;
+	pausedframe = (now - track.start) * 75 / 1000000000;
+	StopCDR();
+}
+
+/*
+ * FEATURE: ResumeCD is LBA2's CD.CPP ResumeCD: the track PauseCD stopped
+ * played on from its frame to its end, as from the time the clock had
+ * then reached. Taken from LBA2.
+ */
+void
+ResumeCD(void)
+{
+	Track nt;
+
+	if (pausedtrack == 0)
+		return;
+	StopCDR();
+	if (trackopen(pausedtrack, &nt) == 0) {
+		if (pausedframe < nt.n && trackseek(&nt, pausedframe*Frame) == 0) {
+			track = nt;
+			track.num = pausedtrack;
+			track.fed = pausedframe;
+			track.start = now - (pausedframe*1000000000 + 74) / 75;
+		} else
+			trackclose(&nt);
+	}
+	pausedtrack = 0;
 }
 
 /*

@@ -1,0 +1,54 @@
+# Save anywhere, SaveAnywhere: ON (fixtures/snapcfg: the CD's LBA.CFG
+# with the key): a new game, its text and movie cut, a walk in the cell.
+# Escape writes current.lba and opens the main menu over the game, under
+# its picture: Resume Game, New Game, Load Game, Save Game, Options
+# Menu, Quit. Save Game opens the list of saves, whose New Game line
+# names the save abc, which holds the scene as Escape left it, and the
+# menu comes back. Resume Game goes on with the game. A walk, Escape,
+# and Load Game lists abc and AUTOSAVE: abc loads, grown out of its
+# picture, Twinsen where he stood at the first Escape.
+
+sleep 40
+key Return
+sleep 20
+key Escape
+sleep 15
+key Escape
+sleep 10
+shot cell
+down Up
+sleep 1.2
+up Up
+key Left
+sleep 2
+shot walked
+key Escape
+sleep 3
+shot menu
+key Down Down Down Return
+sleep 3
+shot list
+key Return
+sleep 1
+key a b c
+sleep 0.5
+key Return
+sleep 3
+shot saved
+key Return
+sleep 2
+down Right
+sleep 0.6
+up Right
+sleep 1
+shot moved
+key Escape
+sleep 3
+key Down Down Return
+sleep 3
+shot choose
+key Return
+sleep 0.3
+shot zoom
+sleep 10
+shot loaded

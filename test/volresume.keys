@@ -1,0 +1,35 @@
+# Resume Game after the volumes, SaveAnywhere: ON (fixtures/menumusic:
+# soundout's lba.cfg, the samples and the music on the OPL3, with the
+# key, and the outside save). The save loads from the list, and the
+# scene's tune 19, XMIDI, plays. Escape pauses it under the main menu,
+# Options Menu and its volumes play tune 9 in its place, and their first
+# entry fades tune 9. Back on the main menu, Resume Game plays tune 19
+# again from its start, where tune 9 came back at full volume.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 15
+shot playing
+key Escape
+sleep 6
+shot menu
+hold 0.05
+key Down Down Down Down Return
+sleep 3
+shot options
+key Down Return
+sleep 6
+shot volume
+key Return
+sleep 3
+shot back
+key Up Return
+sleep 3
+shot main
+key Return
+sleep 10
+shot resumed

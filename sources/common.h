@@ -337,6 +337,15 @@ typedef struct	{	WORD	Num ;
 
 #define	Rnd(n)	(rand()%n)
 
+#ifndef	DOS
+/*
+ * FEATURE: the end playing, whose scenes the saves leave out: LBA2's
+ * PLAY_THE_END, as the PlayStation's test of the end's scenes. Taken
+ * from LBA2 and the PlayStation.
+ */
+#define	PLAY_THE_END		((NumCube == 116) OR (NumCube == 117))
+#endif
+
 #define	NUM_PERSO	0
 
 #define	C_NORMAL	0

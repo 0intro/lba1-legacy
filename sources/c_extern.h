@@ -26,6 +26,7 @@
 #include	"playfla.def"
 #ifndef	DOS
 #include	"porttext.def"
+#include	"savegame.def"
 #endif
 
 /* prototype */
@@ -60,6 +61,7 @@ LONG	ComputeTime( void ) ;
 LONG	GetHDFreeSize( void ) ;
 void	ShadeBox( LONG x0, LONG y0, LONG x1, LONG y1, LONG deccoul ) ;
 void	SmallSort( void *objetlist, LONG nbobjets, LONG structsize ) ;
+UBYTE	SearchBoundColRGB( UBYTE rouge, UBYTE vert, UBYTE bleu, UBYTE *palette, UBYTE coulmin, UBYTE coulmax ) ;
 void	CopyBlockMCGA(	LONG x0, LONG y0, LONG x1, LONG y1, void *src,
 			LONG xd, LONG yd, void *dst ) ;
 #endif
@@ -113,8 +115,17 @@ extern	LONG	FlagVsync ;
 extern	WORD	FlagMCGA ;
 extern	LONG	FlagCredits ;
 #ifndef	DOS
+extern	LONG	FlagSaveAnywhere ;
+extern	LONG	FlagLoadGame ;
+extern	LONG	RestartMusic ;
+extern	UBYTE	SavingEnable ;
 extern	LONG	FlagPal ;
 extern	LONG	FlagSkipLogo ;
+extern	LONG	EscTimer ;
+extern	WORD	LoadKeyFrame[] ;
+extern	ULONG	LoadKeyTime[] ;
+extern	WORD	ZoomSaveX, ZoomSaveY ;
+extern	WORD	FlagAutoSave, FlagCurrentSave, FlagMainAff ;
 extern	LONG	LastFileInit ;
 #endif
 
@@ -210,6 +221,13 @@ extern	UBYTE	*ListTypeZone[] ;
 
 extern	T_TRACK	*ListBrickTrack ;
 extern	WORD	NbBrickTrack ;
+#ifndef	DOS
+extern	T_PATCH	TabPatches[] ;
+extern	UWORD	IndexPatches[] ;
+extern	LONG	NbIndexPatches ;
+extern	T_PATCH	*ListPatches ;
+extern	LONG	NbPatches ;
+#endif
 
 extern	WORD	IndexBrickTrack ;
 extern	WORD	EditNumTrack ;

@@ -19,12 +19,14 @@
 # music through AIL/32 and the CD's A32SP2FM.DLL on a model of the OPL3
 # and the PIT against sys/midi.c (ailoracle.c), the eight on pc.c's PC,
 # asmoracle, a DOS build's assembly against its translations into C
-# (asmoracle.c, abi.c), and asmoracle-asan, the same under
-# AddressSanitizer. On a DOS target with the fixes, make test runs
-# oracle, asmoracle, waveoracle and the eight but mixoracle and
-# ailoracle, which make check adds, and on LBA.EXE's code (CC=watcom
-# without FIXES) oracle, waveoracle and memoracle, make check adding
-# mixoracle.
+# (asmoracle.c, abi.c), asmoracle-asan, the same under
+# AddressSanitizer, lba2oracle, LBA2's packer of the saves and its
+# search of the nearest colour against ours (lba2oracle.c), LBA2's side
+# built for oraclecheck alone, from LBA2's sources (LBA2) with JWasm.
+# On a DOS target with the fixes, make test runs oracle, asmoracle,
+# waveoracle and the eight but mixoracle and ailoracle, which make check
+# adds, and on LBA.EXE's code (CC=watcom without FIXES) oracle,
+# waveoracle and memoracle, make check adding mixoracle.
 
 ORACLE=build/oracle
 # -Werror lies in ORACLECC: a build that gives a compiler of its own
@@ -180,15 +182,26 @@ ASMSRC=\
 	lib386/lib_svga/s_fillv.c\
 	lib386/lib_svga/texture.c\
 
+LBA2SRC=\
+	tools/oracle/lba2oracle.c\
+	lib386/lib_sys/lzss.c\
+	lib386/lib_sys/compress.c\
+	sources/func.c\
+	lib386/lib_sys/expand.c\
+
 # the headers the oracles read, the game's, the port's and their own,
 # so that a change of one builds every oracle again
 ORACLEHDR=$(wildcard sources/*.h sources/*.def sys/*.h sys/nuked/*.h lib386/*/*.h tools/oracle/*.h)
+LBA2=$(abspath ../lba2-classic/SOURCES)
+# jwasm, which make fetch installs, reads options from JWASM
+unexport JWASM
 
-# oracles builds the oracles.
+# oracles builds the oracles, lba2oracle's own side but its side of
+# LBA2's.
 oracles: $(ORACLE)/oracle $(ORACLE)/fmoracle $(ORACLE)/aweoracle $(ORACLE)/waveoracle\
 	$(ORACLE)/cdoracle $(ORACLE)/keyoracle $(ORACLE)/timeoracle $(ORACLE)/vgaoracle\
 	$(ORACLE)/fileoracle $(ORACLE)/mixoracle $(ORACLE)/memoracle $(ORACLE)/ailoracle\
-	$(ORACLE)/asmoracle
+	$(ORACLE)/asmoracle $(ORACLE)/lba2/ours.o
 
 # asan builds asmoracle-asan.
 asan: $(ORACLE)/asmoracle-asan
@@ -266,13 +279,38 @@ $(ORACLE)/asan/%.o: %.c
 $(ORACLE)/asmoracle-asan: $(ASANOBJ)
 	$(ORACLECC) $(ORACLELDFLAGS) $(ASANFLAGS) -o $@ $(ASANOBJ) -lm
 
+# lba2oracle's own side, ours and the oracle, linked into one object
+$(ORACLE)/lba2/ours.o: $(LBA2SRC) $(ORACLEHDR)
+	mkdir -p $(ORACLE)/lba2
+	$(ORACLECC) $(ORACLECFLAGS) $(ORACLEPORTFLAGS) -r -nostdlib -o $@ $(LBA2SRC)
+
+# LBA2's side, its symbols prefixed lba2_: LZSS.CPP as C, over a
+# c_extern.h that gives it LZSS.H alone, COMPRESS.ASM in the flat model
+# with MASM 5.1's structures, FUNC.ASM as it is
+$(ORACLE)/lba2/lba2.o: $(LBA2)/LZSS.CPP $(LBA2)/LZSS.H $(LBA2)/COMPRESS.ASM $(LBA2)/FUNC.ASM $(JWASM_OK)
+	mkdir -p $(ORACLE)/lba2
+	printf '#include "LZSS.H"\n' >$(ORACLE)/lba2/c_extern.h
+	$(ORACLECC) -m32 -w -O2 -fno-strict-aliasing -I$(ORACLE)/lba2 -I$(LBA2) -x c -c -o $(ORACLE)/lba2/lzss.o $(LBA2)/LZSS.CPP
+	sed -e 's/\.MODEL\tSMALL,SYSCALL/.MODEL\tFLAT,SYSCALL/'\
+		-e '0,/^\t\t\t\.386$$/s//&\n\t\t\tOPTION\tOLDSTRUCTS/' $(LBA2)/COMPRESS.ASM >$(ORACLE)/lba2/compress.asm
+	$(JWASMEXE) -q -Cx -Zg -W0 -Djumps= -elf -Fo$(ORACLE)/lba2/compress.o $(ORACLE)/lba2/compress.asm
+	$(JWASMEXE) -q -Cx -Zg -W0 -Djumps= -elf -Fo$(ORACLE)/lba2/func.o $(LBA2)/FUNC.ASM
+	ld -m elf_i386 -r -o $(ORACLE)/lba2/both.o $(ORACLE)/lba2/lzss.o $(ORACLE)/lba2/compress.o $(ORACLE)/lba2/func.o
+	objcopy --prefix-symbols=lba2_ $(ORACLE)/lba2/both.o $@
+
+# JWasm's objects lack .note.GNU-stack: the stack kept unexecutable
+$(ORACLE)/lba2oracle: $(ORACLE)/lba2/ours.o $(ORACLE)/lba2/lba2.o
+	$(ORACLECC) $(ORACLELDFLAGS) -Wl,-z,noexecstack -o $@ $(ORACLE)/lba2/ours.o $(ORACLE)/lba2/lba2.o
+
 # oraclecheck runs the oracles on the game's files in LBATMP: LBA.EXE's
 # image and the CD's drivers as tools/extract writes them.
-oraclecheck: $(ORACLE)/oracle $(ORACLE)/fmoracle $(ORACLE)/aweoracle $(ORACLE)/waveoracle
+oraclecheck: $(ORACLE)/oracle $(ORACLE)/fmoracle $(ORACLE)/aweoracle $(ORACLE)/waveoracle\
+	$(ORACLE)/lba2oracle
 	$(ORACLE)/oracle $(LBATMP)/elf/lba.elf re/lba.exe.sym
 	$(ORACLE)/fmoracle $(LBATMP)/elf/dll/a32sp2fm.elf $(LBATMP)/pc/LBA/MIDI_SB.HQR $(LBATMP)/pc/LBA/SAMPLE.OPL
 	$(ORACLE)/aweoracle $(LBATMP)/elf/dll/a32gfx.elf $(LBATMP)/pc/LBA/MIDI_MI.HQR $(LBATMP)/pc/LBA/MIDI_SB.HQR -
 	$(ORACLE)/waveoracle -g $(LBATMP)/pc/LBA $(LBATMP)/elf/dll/w_sb16.elf re/w_sb16.dll.sym
+	$(ORACLE)/lba2oracle -g $(LBATMP)/pc/LBA
 
 # emu8kdiff: our EMU8000 against 86Box's, built from its sources in
 # $(LBATMP)/downloads/86box (commit 9ce8877f) with

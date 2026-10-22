@@ -1,0 +1,64 @@
+# Save anywhere by an open door, SaveAnywhere: ON (fixtures/snapdoor:
+# the outside save, fixtures/outside, with Twinsen put outside the
+# prison's back door, facing it: SceneStartX, Y, Z at bytes 270-275,
+# 26880 768 24300, his heading at 276-277, 512). He walks into the
+# door's zone, the action key opens the door and he walks in on his own.
+# Escape while it stands open, Save Game, and the list's New Game line
+# names the save dor, which holds the scene as Escape left it. Resume
+# Game: he goes on through the door into the prison, whose first frame
+# saves into autosave.lba. Escape, Load Game and dor: the door open
+# again, Twinsen in its frame walking in, and in the prison again.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 12
+shot start
+down Up
+sleep 0.8
+up Up
+sleep 1
+key space
+sleep 0.5
+key Escape
+sleep 3
+shot pause
+key Down Down Down Return
+sleep 2
+hold 0.05
+key End
+sleep 1
+key Return
+sleep 1
+key d o r
+sleep 0.5
+key Return
+hold 0.15
+sleep 3
+shot saved
+key Return
+sleep 6
+shot inside
+key Escape
+sleep 3
+key Down Down Return
+sleep 3
+hold 0.05
+key Home
+sleep 1
+key Down
+sleep 1
+shot load
+key Return
+hold 0.15
+sleep 1
+shot loaded1
+sleep 1
+shot loaded2
+sleep 1
+shot loaded3
+sleep 6
+shot inside2

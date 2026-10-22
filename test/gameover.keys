@@ -1,0 +1,27 @@
+# A game over: the outside save (fixtures/outside) put back in the cell
+# (byte 261, the scene, 0, and byte 6, the holomap's flag, 0), with one
+# life point and no clover (bytes 264 and 460, for a three-letter name).
+# With SaveAnywhere: ON (fixtures/gameover-on, the record's) the save
+# loads from the list, past the introduction, which a new game alone
+# plays, and its first frame saves into current.lba. Twinsen runs in the
+# sportif behaviour into the cell's wall: the bump takes his last point,
+# he dies, the game is over, and the save and current.lba stay as they
+# were.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 12
+shot cell
+key F2
+sleep 1
+down Up
+sleep 4
+up Up
+sleep 8
+shot dead
+sleep 12
+shot over

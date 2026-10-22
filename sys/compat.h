@@ -61,6 +61,9 @@ int	watcomrand(void);
 void	watcomsrand(unsigned);
 void	watcomqsort(void*, size_t, size_t, int (*)(const void*, const void*));
 
+/* rand's seed, which the saves keep (sources/savegame.c) */
+unsigned	watcomseed(void);
+
 /* The program starts in sys/sdl.c, which calls the game's main. */
 #define main		lbamain
 

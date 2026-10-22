@@ -697,10 +697,35 @@ void	FadeRedToPal( UBYTE *ptrpal )
  *══════════════════════════════════════════════════════════════════════════*/
 /*──────────────────────────────────────────────────────────────────────────*/
 
+#ifndef	DOS
+/*
+ * FEATURE: with SaveAnywhere, the tune a new scene holds for the save
+ * of its first frame (RestartMusic) starts here, after the save, as
+ * LBA2's main loop starts the scene's tune after that frame. Taken from
+ * LBA2.
+ */
+void	RestartCubeMusic( void )
+{
+	if( !RestartMusic )	return ;
+
+	RestartMusic = FALSE ;
+	PlayMusic( CubeJingle ) ;
+}
+
+/*──────────────────────────────────────────────────────────────────────────*/
+#endif
+
 #ifdef	CDROM
 
 void	StopMusicCD( void )
 {
+#ifndef	DOS
+	/*
+	 * FEATURE: with SaveAnywhere, a tune the scene holds for its save
+	 * starts first, as LBA.EXE had it playing by then. The port's own.
+	 */
+	RestartCubeMusic() ;
+#endif
 	StopCDR() ;
 	CurrentMusicCD = -1 ;
 }
@@ -711,14 +736,34 @@ void	StopMusicCD( void )
 
 void	FadeMusicMidi( ULONG t )
 {
+#ifndef	DOS
+	/*
+	 * FEATURE: with SaveAnywhere, a tune the scene holds for its save
+	 * starts first, as LBA.EXE had it playing by then. The port's own.
+	 */
+	RestartCubeMusic() ;
+#endif
 	FadeMidiDown( t ) ;
 	NumXmi = -1 ;
 }
 
 /*──────────────────────────────────────────────────────────────────────────*/
 
+#ifndef	DOS
+static	WORD	PausedXmi = -1 ;	// le XMIDI en pause
+static	LONG	StoppedXmi ;		// et arrêté depuis, par l'air d'un menu
+#endif
+
 void	StopMusicMidi()
 {
+#ifndef	DOS
+	/*
+	 * FEATURE: with SaveAnywhere, a tune the scene holds for its save
+	 * starts first, as LBA.EXE had it playing by then. The port's own.
+	 */
+	RestartCubeMusic() ;
+	if( PausedXmi != -1 )	StoppedXmi = TRUE ;
+#endif
 	StopMidi() ;
 	NumXmi = -1 ;
 }
@@ -758,6 +803,13 @@ void	PlayMusic( WORD num )
 
 void	PlayMidiFile( WORD num )
 {
+#ifndef	DOS
+	/*
+	 * FEATURE: with SaveAnywhere, a tune the scene holds for its save
+	 * starts first, as LBA.EXE had it playing by then. The port's own.
+	 */
+	RestartCubeMusic() ;
+#endif
 	if( !Midi_Driver_Enable )	return ;// hum si on peut
 
 #ifdef	CDROM
@@ -790,6 +842,13 @@ void	PlayCdTrack( WORD num )
 {
 	LONG	t ;
 
+#ifndef	DOS
+	/*
+	 * FEATURE: with SaveAnywhere, a tune the scene holds for its save
+	 * starts first, as LBA.EXE had it playing by then. The port's own.
+	 */
+	RestartCubeMusic() ;
+#endif
 	SaveTimer() ;
 
 	FadeMusicMidi( 1 ) ;
@@ -837,4 +896,78 @@ void	PlayAllMusic( WORD num )
 
 /*──────────────────────────────────────────────────────────────────────────*/
 
+#endif
+
+#ifndef	DOS
+/*──────────────────────────────────────────────────────────────────────────*/
+/*
+ * FEATURE: the game's music paused under the main menu in play and
+ * resumed where it stood when the game goes on (MainLoop, EscTimer): the
+ * CD's track at its frame (PauseCD) and the XMIDI (PauseMidi), as LBA2's
+ * MUSIC.CPP pauses its CD and its stream. LBA1 times the CD's track by
+ * TimerSystem (CurrentMusicCD, EndMusicCD), carried across the pause,
+ * and the menu's tune fades the XMIDI, whose number and volume come
+ * back. Taken from LBA2.
+ */
+
+static	LONG	PausedMusicCD = -1 ;	// LBA1: la track en pause
+static	ULONG	PausedTimeCD ;		// et ce qu'il lui restait
+
+void	PauseMusic( void )
+{
+	SaveTimer() ;
+
+#ifdef	CDROM
+	PausedMusicCD = GetMusicCD() ;
+	PausedTimeCD = EndMusicCD - TimerSystem ;
+	PauseCD() ;
+	CurrentMusicCD = -1 ;
+#endif
+	PausedXmi = NumXmi ;
+	StoppedXmi = FALSE ;
+	PauseMidi() ;
+
+	RestoreTimer() ;
+}
+
+/*──────────────────────────────────────────────────────────────────────────*/
+
+void	ResumeMusic( void )
+{
+	SaveTimer() ;
+
+#ifdef	CDROM
+	StopMusicCD() ;		// la musique du menu
+
+	ResumeCD() ;
+	if( PausedMusicCD != -1 )
+	{
+		CurrentMusicCD = PausedMusicCD ;
+		EndMusicCD = TimerSystem + PausedTimeCD ;
+	}
+	PausedMusicCD = -1 ;
+#endif
+	ResumeMidi() ;
+	if( PausedXmi != -1 )
+	{
+		/*
+		 * FEATURE: where the volumes' page took the XMIDI from the game's
+		 * tune, that tune plays again from its start, as the PlayStation's
+		 * pause menu asks for the scene's tune again on its exit. Taken
+		 * from the PlayStation.
+		 */
+		if( StoppedXmi )
+		{
+			PlayMidiFile( PausedXmi ) ;
+		}
+		else
+		{
+			NumXmi = PausedXmi ;
+			VolumeMidi( 100 ) ;
+		}
+	}
+	PausedXmi = -1 ;
+
+	RestoreTimer() ;
+}
 #endif

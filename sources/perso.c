@@ -14,6 +14,10 @@ extern	UBYTE	*BufMemoSeek	;
 
 ULONG	SpriteMem, SampleMem, AnimMem ;
 
+#ifndef	DOS
+LONG	EscTimer ;	// FEATURE: the clock Escape left the game at, which Resume Game puts back. Taken from LBA2.
+#endif
+
 //WORD	Lig=0 ;
 /*══════════════════════════════════════════════════════════════════════════*/
 #ifdef	DEBUG_TOOLS
@@ -187,11 +191,18 @@ void	InitGame( int argc, UBYTE *argv[] )
 	 */
 	MemoComportement = -1 ;
 
-	FlagPal = FALSE ;		// la palette d'un premier affichage
+	FlagAutoSave = FALSE ;		// les sauvegardes d'un premier affichage
+	FlagCurrentSave = FALSE ;	// d'une partie finie avant lui
+	RestartMusic = FALSE ;		// et la musique qui les attendait
+	FlagPal = FALSE ;		// et sa palette
 #endif
 
 	if( argc == -1 )
 	{
+#ifndef	DOS
+		/* FEATURE: with SaveAnywhere a save runs on from where it stood. Taken from LBA2. */
+		FlagLoadGame = FlagSaveAnywhere ;
+#endif
 		LoadGame() ;
 
 		if( SceneStartX == -1 )
@@ -221,7 +232,12 @@ void	Introduction()
 //	FadeMusicMidi( 1 ) ;
 #endif
 
+#ifdef	DOS
 	if( (NewCube == 0) AND (Chapitre == 0) )
+#else
+	/* FEATURE: with SaveAnywhere a new game alone plays the introduction. Taken from LBA2. */
+	if( (NewCube == 0) AND (Chapitre == 0) AND (!FlagLoadGame) )
+#endif
 	{
 #ifdef	CDROM
 		LONG	memoflagdisplaytext ;
@@ -310,9 +326,30 @@ LONG	MainLoop()
 #ifdef	FIXES
 	WORD	returnheld = FALSE ;
 #endif
+#ifndef	DOS
+	LONG	choice ;
+#endif
 
 	FirstTime = TRUE ;
+#ifdef	DOS
 	FlagFade = TRUE ;
+#else
+	/*
+	 * FEATURE: with SaveAnywhere, the main menu's Resume Game enters the
+	 * loop again where Escape left it (EscTimer): the game's clock put
+	 * back, its music resumed and its actors' loops played on, the scene
+	 * drawn whole without the fade of a scene's start. Taken from LBA2.
+	 */
+	if( EscTimer )
+	{
+		TimerRef = EscTimer ;
+		ResumeMusic() ;
+		HQ_RestoreSamples() ;	// les boucles reprises
+	}
+	else	FlagFade = TRUE ;
+
+	EscTimer = 0 ;
+#endif
 
 /*-------------------------------------------------------------------------*/
 
@@ -422,13 +459,41 @@ startloop:
 #else
 	/*
 	 * FIXED: a scene come in without a fade (LbaWinSettings's 0x10)
-	 * reads the keys before its first frame is drawn, where Escape would
-	 * show the scene left. The keys wait for that frame, as they wait
-	 * for a fade in.
+	 * reads the keys before its first frame is drawn, where S, F8 and
+	 * Escape would save or show the scene left. The keys wait for that
+	 * frame, as they wait for a fade in.
 	 */
 	if( !FlagFade AND !FlagPal )
 #endif
 	{
+#ifndef	DOS
+		/*
+		 * FEATURE: with SaveAnywhere, Escape leaves the loop for LBA2's
+		 * main menu over the game (MainGameMenu), the music paused and
+		 * the clock kept (EscTimer), the game to be saved while Twinsen
+		 * is alive and seen, outside the end (SavingEnable). Taken from
+		 * LBA2.
+		 */
+		if( (MyKey == K_ESC) AND FlagSaveAnywhere )
+		{
+			TestRestoreModeSVGA( TRUE ) ;
+			PauseMusic() ;
+			EscTimer = TimerRef ;
+
+			if( (ListObjet[NUM_PERSO].LifePoint > 0)
+			AND (ListObjet[NUM_PERSO].Body != -1)
+			AND (!(ListObjet[NUM_PERSO].Flags&INVISIBLE))
+			AND !PLAY_THE_END )
+			{
+				SavingEnable = TRUE ;
+			}
+			else
+			{
+				SavingEnable = FALSE ;
+			}
+			break ;
+		}
+#endif
 		if( (MyKey == K_ESC)
 		AND (ListObjet[NUM_PERSO].LifePoint > 0)
 		AND (ListObjet[NUM_PERSO].Body != -1)
@@ -456,6 +521,88 @@ startloop:
 			}
 		}
 
+#ifndef	DOS
+		/*
+		 * FEATURE: with SaveAnywhere, S and F8 open the list of saves to
+		 * save the game into, where the scene may be saved, and L the
+		 * list of saves to load, as LBA2's F2 or S and F3 or L do. Each
+		 * list loads the system's texts as LBA2's does, the island's put
+		 * back after, and sets the actors' loops aside, as the screens
+		 * over the game do, where LBA2 fades every sample out and pauses
+		 * it. Taken from LBA2.
+		 */
+		if( ((MyKey == K_S) OR (MyKey == K_F8))
+		AND FlagSaveAnywhere
+		AND (ListObjet[NUM_PERSO].LifePoint > 0)
+		AND (ListObjet[NUM_PERSO].Body != -1)
+		AND (!(ListObjet[NUM_PERSO].Flags&INVISIBLE))
+		AND !PLAY_THE_END )
+		{
+			LONG	memoflagspeak = FlagSpeak ;
+
+			TestRestoreModeSVGA( TRUE ) ;
+			SaveTimer() ;
+
+			if( TakeSaveGame() )	// la scène sans menu dessus
+			{
+				CopyScreen( Log, Screen ) ;
+				HQ_SaveSamples() ;	// les boucles mises de côté
+
+				FlagSpeak = FALSE ;
+				if( ChoosePlayerName( 42|0x4000, FALSE, TRUE ) == 2 )
+				{
+					if( !WriteSaveGame( TRUE ) )	SaveGame() ;
+				}
+				FlagSpeak = memoflagspeak ;
+
+				InitDial( START_FILE_ISLAND+Island ) ;
+				HQ_RestoreSamples() ;	// et reprises
+			}
+
+			RestoreTimer() ;
+			AffScene( TRUE ) ;
+		}
+
+		if( (MyKey == K_L)
+		AND FlagSaveAnywhere )
+		{
+			LONG	memoflagspeak = FlagSpeak ;
+
+			TestRestoreModeSVGA( TRUE ) ;
+			SaveTimer() ;
+
+			CopyScreen( Log, Screen ) ;
+			HQ_SaveSamples() ;	// les boucles mises de côté
+
+			FlagSpeak = FALSE ;
+			choice = ChoosePlayerName( 41|0x4000, FALSE, FALSE ) ;
+			FlagSpeak = memoflagspeak ;
+
+			if( !choice )	HQ_RestoreSamples() ;	// et reprises
+
+			RestoreTimer() ;
+
+			if( choice )	// charger une partie
+			{
+				ZoomSaveX = 240 ;
+				ZoomSaveY = 10 ;
+				InitGame( -1, NULL ) ;
+				Introduction() ;
+				/*
+				 * FEATURE: L enters the loop as the menus' loads do,
+				 * with the fade in that ZoomSavedGame's growth out of
+				 * the save's picture replaces, which ChangeCube gives
+				 * with LbaWinSettings's 0x10 alone. The port's own.
+				 */
+				FlagFade = TRUE ;
+				goto startloop ;
+			}
+
+			InitDial( START_FILE_ISLAND+Island ) ;
+			AffScene( TRUE ) ;
+		}
+
+#endif
 		if( MyKey == K_F6 )		// options menu
 		{
 			LONG	memoflagspeak = FlagSpeak ;
@@ -1033,10 +1180,18 @@ startloop:
 						NumCube = GameOverCube ;
 						SceneStartX = SceneStartY = SceneStartZ = -1 ; // mean use startpos
 					}
+#ifdef	DOS
 					SaveGame() ;
+#else
+					/* FEATURE: with SaveAnywhere the last save and current.lba stay. Taken from LBA2. */
+					if( !FlagSaveAnywhere )	SaveGame() ;
+#endif
 
 					GameOver() ;
 
+#ifndef	DOS
+					if( FlagSaveAnywhere )	return 2 ;	// GameOver, comme dans LBA2
+#endif
 					return 0 ;
 				    }
 				}
@@ -1117,7 +1272,13 @@ Text( 10,70, "%FMemoLabelTrack: %d ", ptrobj->MemoLabelTrack ) ;
 /*-------------------------------------------------------------------------*/
 /* affiche tout */
 
+#ifndef	DOS
+		FlagMainAff = TRUE ;	// les sauvegardes d'une nouvelle scène
+#endif
 		AffScene( FirstTime ) ;
+#ifndef	DOS
+		FlagMainAff = FALSE ;
+#endif
 
 		FirstTime = FALSE ;
 
@@ -1259,6 +1420,31 @@ void	InitProgram()
 	InitVoiceFile()	;
 #endif
 #ifndef	DOS
+
+//	sauvegarde de la scène en cours: SaveAnywhere ON
+
+	if( gamekey( PathConfigFile, "SaveAnywhere" ) )
+	{
+		FlagSaveAnywhere = TRUE ;
+
+		/*
+		 * FEATURE: LBA2 manages its saves in their list alone, and
+		 * Saved games management leaves the option menu. Taken from
+		 * LBA2.
+		 */
+		for( n=4; n<4+2*GameOptionMenu[1]; n+=2 )
+		{
+			if( GameOptionMenu[n+1] == 46 )	// gestion saved game
+			{
+				for( ; n<4+2*GameOptionMenu[1]-2; n++ )
+				{
+					GameOptionMenu[n] = GameOptionMenu[n+2] ;
+				}
+				GameOptionMenu[1]-- ;
+				break ;
+			}
+		}
+	}
 
 	/*
 	 * FEATURE: lba.cfg's SkipLogo, ON for a key that passes the logo at

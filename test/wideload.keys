@@ -1,0 +1,17 @@
+# A save made on a screen of 640x480 loaded on a wide one of 852x480
+# (fixtures/wideload: snapshot's save abc and snapcfg's lba.cfg with
+# WideScreen: ON, SaveAnywhere ON, recorded with -D 1920x1080). Load
+# Game lists abc in the window, its picture the one snapshot showed, and
+# it loads, grown out of its picture's place in the window to the whole
+# screen.
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+shot list
+key Return
+hold 0.15
+sleep 0.3
+shot zoom
+sleep 12
+shot loaded

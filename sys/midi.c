@@ -55,6 +55,7 @@ static uint8_t *gtl;
 static uint8_t *state;
 static uint8_t *cache;
 static int32_t hseq = -1;
+static int midipaused;	/* LBA2's MidiPaused: the pauses ResumeMidi has still to end */
 static int heard;		/* the chip's samples handed on */
 static uint64_t ticks;		/* served */
 static uint64_t samples;	/* handed on */
@@ -330,6 +331,7 @@ PlayMidi(unsigned char *xmi)
 
 	if (!Midi_Driver_Enable)
 		return;
+	midipaused = 0;
 	if (hseq != -1) {
 		stopseq(hseq);
 		releaseseqhandle(hseq);
@@ -346,15 +348,48 @@ PlayMidi(unsigned char *xmi)
 	startseq(hseq);
 }
 
-/* StopMidi is midi.c's. */
+/* StopMidi is midi.c's, the pauses forgotten as LBA2's MIDI.CPP StopMidi forgets them. */
 void
 StopMidi(void)
 {
+	midipaused = 0;
 	if (hseq != -1) {
 		stopseq(hseq);
 		releaseseqhandle(hseq);
 		hseq = -1;
 	}
+}
+
+/*
+ * FEATURE: PauseMidi is LBA2's MIDI.CPP PauseMidi: the sequence playing
+ * stopped where it stands, the pauses counted, the first only while it
+ * plays. Taken from LBA2.
+ */
+void
+PauseMidi(void)
+{
+	if (!Midi_Driver_Enable)
+		return;
+	if (midipaused == 0) {
+		if (hseq == -1 || seqstatus(hseq) != 1)
+			return;
+		stopseq(hseq);
+	}
+	midipaused++;
+}
+
+/*
+ * FEATURE: ResumeMidi is LBA2's MIDI.CPP ResumeMidi: the sequence played
+ * on from where PauseMidi stopped it, at the last pause's end. Taken from
+ * LBA2.
+ */
+void
+ResumeMidi(void)
+{
+	if (!Midi_Driver_Enable || midipaused == 0)
+		return;
+	if (--midipaused == 0)
+		resumeseq(hseq);
 }
 
 /* IsMidiPlaying is midi.c's. */

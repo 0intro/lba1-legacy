@@ -1,0 +1,51 @@
+# The protopack's hum across a save, SaveAnywhere: ON (fixtures/protoload:
+# fixtures/proto's lba.cfg with the key, and its save). The protopack put
+# on from the inventory, Twinsen flies and is saved in flight on New
+# Game's line as zed. L loads zed, the hum playing again, Up keeps him in
+# flight, whose end alone would stop it, and F1 takes the protopack off,
+# which stops it.
+
+hold 0.15
+sleep 40
+key Down Return
+sleep 3
+key Return
+sleep 15
+key Shift_L
+sleep 2
+key Right
+sleep 1
+key Right
+sleep 1
+key Right
+sleep 1
+key Return
+sleep 4
+down Up
+sleep 3
+shot flying
+hold 0.05
+key s
+up Up
+sleep 2
+key End
+sleep 1
+key Return
+sleep 1
+key z e d
+sleep 0.5
+key Return
+sleep 3
+shot saved
+key l
+sleep 2
+shot list
+key Return
+hold 0.15
+down Up
+sleep 12
+shot loaded
+key F1
+up Up
+sleep 6
+shot off

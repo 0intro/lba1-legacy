@@ -1841,8 +1841,9 @@ char    *GetMultiText( LONG text, char *dst )
 
 #ifndef	DOS
 	/*
-	 * FEATURE: a text numbered from 0x4000 is one of LBA2's own,
-	 * Display text's. Taken from LBA2.
+	 * FEATURE: a text numbered from 0x4000 is one of LBA2's own, those
+	 * of its main menu, its lists of saves, its delete page and its
+	 * Display text. Taken from LBA2.
 	 */
 	if( text & 0x4000 )
 	{

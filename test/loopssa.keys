@@ -1,0 +1,36 @@
+# The loops kept over LBA2's screens in play (fixtures/loopssa: the
+# sweep's save of scene 54 and soundout's lba.cfg with SaveAnywhere: ON).
+# The protopack, actor 2, flies its route with its hum looping. Escape
+# opens LBA2's main menu over the game and Resume Game goes back, S opens
+# the list to save into and Escape leaves it, and L opens the list to
+# load from and Escape leaves it, one after the other while the hum
+# plays, some 21 seconds after the load, the screens holding the clock.
+# In the 1994 code the first screen stops the hum for good. Set aside and
+# played on after each screen, it hums until the protopack lands.
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 3
+shot start
+sleep 12.5
+shot flight
+key Escape
+sleep 1.5
+shot menu2
+key Return
+sleep 1
+key s
+sleep 1.5
+shot save
+key Escape
+sleep 1
+key l
+sleep 1.5
+shot load
+key Escape
+sleep 1.5
+shot after
+sleep 6
+shot end

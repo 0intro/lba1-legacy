@@ -1,0 +1,55 @@
+# LBA2's saves on a wide screen of 852x480 (fixtures/widesaves: the
+# saves of fixtures/saves, outside the prison's back door, and its
+# lba.cfg with WideScreen: ON, recorded with -D 1920x1080). The main
+# menu's Load Game lists them in the window, and Cyd loads, grown out of
+# its frame's place in the window to the whole screen. S saves the game
+# on the list's New Game line as zed, its picture the window's middle of
+# the scene. Twinsen walks and opens the door, and L lists the saves,
+# zed's picture in the window: zed loads, grown out of it to the whole
+# screen, Twinsen back outside the door.
+hold 0.05
+sleep 40
+shot menu
+key Down Return
+sleep 3
+shot list
+key Down Down
+sleep 1
+key Return
+hold 0.15
+sleep 0.3
+shot zoom
+sleep 12
+shot start
+key s
+sleep 2
+shot slist
+key End
+sleep 1
+key Return
+sleep 1
+key z e d
+sleep 0.5
+key Return
+sleep 3
+shot saved
+down Up
+sleep 0.8
+up Up
+sleep 1
+key space
+sleep 8
+shot inside
+key l
+sleep 2
+shot llist
+key End
+sleep 1
+key Up
+sleep 1
+shot zed
+key Return
+sleep 0.3
+shot zoom2
+sleep 8
+shot loaded

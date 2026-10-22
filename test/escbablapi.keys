@@ -1,0 +1,32 @@
+# Escape in Bab Lapi's question, SaveAnywhere: ON (fixtures/escbablapi:
+# the sweep's save of scene 74, Funky Town, with Twinsen put on Bab
+# Lapi's track, its point 8 (SceneStartX, Y, Z at bytes 270-275, 28160
+# 2304 10752), 100 kashes at bytes 265-266, and snapcfg's lba.cfg). The
+# save loads from the list, and Bab Lapi comes to face Twinsen. The
+# action key says "Good day.", and Bab Lapi offers to tell him about
+# FunFrock for 10 kashes. Return takes "Sold!", and he asks which
+# factory: Escape leaves that question as it was, its last answer, the
+# Cloning center, being an answer. Return takes the mutant factory.
+
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 15
+shot start
+key space
+sleep 3
+shot greeting
+key space
+sleep 4
+shot question
+key Return
+sleep 4
+shot factories
+key Escape
+sleep 2
+shot still
+key Return
+sleep 6
+shot answer

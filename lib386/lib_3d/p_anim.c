@@ -484,3 +484,34 @@ CopyInterAnim(void *ptrobjs, void *ptrobjd)
 		n = m;
 	copygroups(gd, Group, gs, Group, n);
 }
+
+/*
+ * FEATURE: for the saves of the running scene (sources/savegame.c), the
+ * frame a body comes from (NULL for none) and the time it left it, NULL
+ * and 0 for a body without animation, and both set again. The port's
+ * own.
+ */
+void*
+bodyframe(void *ptrobj, ULONG *time)
+{
+	uint8_t *o;
+
+	o = ptrobj;
+	*time = 0;
+	if ((get16(o) & INFO_ANIM) == 0)
+		return NULL;
+	*time = get32(o + Info + 4);
+	return getframe(o);
+}
+
+void
+setbodyframe(void *ptrobj, void *frame, ULONG time)
+{
+	uint8_t *o;
+
+	o = ptrobj;
+	if ((get16(o) & INFO_ANIM) == 0)
+		return;
+	setframe(o, frame);
+	put32(o + Info + 4, time);
+}

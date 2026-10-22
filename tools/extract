@@ -15,8 +15,9 @@
 # adeline_202401 in $LBAISO: ADELINE.BIN and its cue sheet go into
 # $LBATMP/iso/adeline, where make check reads it as the CD. ps is the
 # PlayStation's disc, SLES-00698, the Redump image in $LBAISO: its texts
-# (TEXT.HQR) go into $LBATMP/ps, where make check reads them. By default
-# extract makes pc.
+# (TEXT.HQR) and its scenes (GAME.HQR, SCENES.BLK) go into $LBATMP/ps,
+# where make check reads the texts and tools/patches.py the scenes. By
+# default extract makes pc.
 
 set -Eeuo pipefail
 
@@ -77,11 +78,15 @@ disc() {
 }
 
 ps() {
+	local f
+
 	[[ -f $PSBIN ]] || fail "no $PSBIN"
 	rm -rf -- "$LBATMP/ps.new"
 	mkdir -p "$LBATMP/ps.new"
-	python3 -I "$TOOLS/isocat.py" -o "$LBATMP/ps.new" "$PSBIN" /TEXT.HQR
-	[[ -s $LBATMP/ps.new/TEXT.HQR ]] || fail "$PSBIN: no TEXT.HQR"
+	python3 -I "$TOOLS/isocat.py" -o "$LBATMP/ps.new" "$PSBIN" /TEXT.HQR /GAME.HQR /SCENES.BLK
+	for f in TEXT.HQR GAME.HQR SCENES.BLK; do
+		[[ -s $LBATMP/ps.new/$f ]] || fail "$PSBIN: no $f"
+	done
 	rm -rf -- "$LBATMP/ps"
 	mv -- "$LBATMP/ps.new" "$LBATMP/ps"
 }

@@ -265,4 +265,25 @@ typedef	struct
 	WORD	Z ;		}	T_TRACK ;
 #pragma pack(pop)
 
+#ifndef	DOS
+/*
+ * FEATURE: a place of a scene's data its scripts rewrite as they run,
+ * which a save of the running scene keeps. Taken from LBA2.
+ */
+typedef	struct
+{
+	WORD	Size ;
+	WORD	Offset ;	}	T_PATCH ;
+
+/*
+ * FEATURE: the two saves the game makes itself, the scene's as it starts
+ * and the game's as Escape leaves it, which the lists of saves leave
+ * out. Taken from LBA2.
+ */
+#define	AUTOSAVE_NAME		"AUTOSAVE"
+#define	AUTOSAVE_FILENAME	PATH_RESSOURCE"autosave.lba"
+#define	CURRENTSAVE_NAME	"CURRENT"
+#define	CURRENTSAVE_FILENAME	PATH_RESSOURCE"current.lba"
+#endif
+
 #pragma pack(pop)

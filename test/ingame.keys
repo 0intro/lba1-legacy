@@ -1,0 +1,88 @@
+# The main menu in play, SaveAnywhere: ON (fixtures/snapcfg: the CD's
+# LBA.CFG with the key): a new game, its text and movie cut, a walk in
+# the cell. Escape opens the main menu over the game, and its Options
+# Menu the options, which Return to previous menu leaves. Escape on the
+# main menu goes on with the game. S and the list's New Game line name
+# a save abc. A walk, then F8 and Return on abc save over it. A walk,
+# then Escape, Save Game and Return on abc save over it again, and
+# Resume Game goes on. A walk, then Escape, Load Game and abc: the scene
+# as at the last save.
+
+sleep 40
+key Return
+sleep 20
+key Escape
+sleep 15
+key Escape
+sleep 10
+down Up
+sleep 1
+up Up
+sleep 1
+key Escape
+sleep 3
+shot menu
+key Down Down Down Down Return
+sleep 3
+shot options
+key Return
+sleep 3
+shot back
+key Escape
+sleep 2
+shot resumed
+key s
+sleep 2
+key End
+sleep 1
+key Return
+sleep 1
+key a b c
+sleep 0.5
+key Return
+sleep 3
+down Right
+sleep 0.6
+up Right
+down Up
+sleep 1
+up Up
+sleep 1
+key F8
+sleep 2
+shot f8list
+key Return
+sleep 1
+key Return
+sleep 3
+down Left
+sleep 0.6
+up Left
+down Up
+sleep 1
+up Up
+sleep 1
+key Escape
+sleep 3
+key Down Down Down Return
+sleep 3
+shot savelist
+key Return
+sleep 1
+key Return
+sleep 3
+shot saved
+key Return
+sleep 2
+down Up
+sleep 1
+up Up
+sleep 1
+key Escape
+sleep 3
+key Down Down Return
+sleep 3
+shot choose
+key Return
+sleep 12
+shot loaded

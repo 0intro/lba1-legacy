@@ -22,3 +22,10 @@ watcomsrand(unsigned seed)
 {
 	randseed = seed;
 }
+
+/* FEATURE: watcomseed, for the saves of the running scene: the seed as rand left it, which srand puts back. The port's own. */
+unsigned
+watcomseed(void)
+{
+	return randseed;
+}

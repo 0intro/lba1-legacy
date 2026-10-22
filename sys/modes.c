@@ -77,6 +77,7 @@ struct Gamekey
  * (cfgtest holds the two to each other)
  */
 static Gamekey	gamekeys[] = {
+	{"SaveAnywhere", 1},
 	{"SkipLogo", 1},
 };
 

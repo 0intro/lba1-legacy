@@ -1,0 +1,29 @@
+# The main menu in play over a scene in a palette of its own,
+# SaveAnywhere: ON (fixtures/darkmenu: the CD's LBA.CFG with the key, and
+# the sweep's save of scene 43, the museum, with the game's flag 41 set,
+# byte 47, which makes it the museum by night, in its dark palette). The
+# save loads from the list. Escape opens the menu in the normal palette,
+# current.lba's picture in its colours, and the menu keeps that palette
+# after Save Game's list. Resume Game goes on with the game in the dark
+# palette.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 4
+shot dark
+key Escape
+sleep 3
+shot menu
+key Down Down Down Return
+sleep 3
+shot list
+key Escape
+sleep 2
+shot menu2
+key Return
+sleep 3
+shot resumed

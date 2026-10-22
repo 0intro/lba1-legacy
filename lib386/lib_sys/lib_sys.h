@@ -204,6 +204,9 @@ ULONG	Write( LONG handle, void *buffer, ULONG lenwrite  )	;
 void	Close( LONG handle )					;
 LONG	Seek( LONG handle, LONG position,LONG mode )		;
 LONG	Delete( char *name )					;
+#ifndef	DOS
+LONG	renamefile( char *from, char *to )			;
+#endif
 ULONG	FileSize( char *name )					;
 /*──────────────────────────────────────────────────────────────────────────*/
 /*				LOADSAVE.C				    */
@@ -289,6 +292,11 @@ char	*Itoa( LONG value )	;
 /*				EXPAND.ASM				*/
 #ifndef	DOS
 void	Expand( void *src, void *dest, ULONG count )	;
+#endif
+#ifndef	DOS
+/*──────────────────────────────────────────────────────────────────────────*/
+/*				LZSS.C					*/
+unsigned long	Compress_LZSS( char *input, char *output, unsigned long length ) ;
 #endif
 /*──────────────────────────────────────────────────────────────────────────*/
 /*				FILES_A.ASM				*/

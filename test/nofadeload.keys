@@ -1,0 +1,24 @@
+# A game loaded in play without the fade, LbaWinSettings: 194 and
+# SaveAnywhere: ON (fixtures/nofadeload: snapcfg's lba.cfg with that
+# key and the save of fixtures/snapdoor). The main menu's Load Game
+# loads it, grown out of its frame, and L in play lists it and loads it
+# again, grown out of its frame too.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 0.3
+shot zoom
+sleep 12
+shot start
+key l
+sleep 2
+shot llist
+key Return
+sleep 0.3
+shot zoom2
+sleep 6
+shot reloaded

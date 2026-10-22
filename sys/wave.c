@@ -54,6 +54,7 @@ struct Voice
 	uint32_t	info0;
 	uint8_t	interpol;
 	uint8_t	last;	/* the byte before addr's, for interpolating */
+	uint16_t	asked[4];	/* FEATURE: the repeat, pitch and volumes WavePlay was given, for waveloop. The port's own. */
 };
 
 typedef struct Snap Snap;
@@ -365,8 +366,37 @@ WavePlay(uint16_t handle, uint16_t pitch, uint16_t repeat, uint8_t plug, uint16_
 	v->last = 0x80;
 	v->volleft = volleft >> Volshift;
 	v->volright = volright >> Volshift;
+	v->asked[0] = repeat;
+	v->asked[1] = pitch;
+	v->asked[2] = volleft;
+	v->asked[3] = volright;
 	v[1].addr = NULL;
 	return follow;
+}
+
+/*
+ * FEATURE: waveloop, for the saves of the running scene
+ * (sources/savegame.c): the nth sample playing for ever (asked to
+ * repeat 0 times) as WavePlay was given it, and its info, or 0 past the
+ * last. The port's own.
+ */
+int32_t
+waveloop(int32_t n, uint16_t *handle, uint16_t *pitch, uint16_t *volleft, uint16_t *volright, uint32_t *info0)
+{
+	Voice *v;
+
+	if (!Wave_Driver_Enable)
+		return 0;
+	for (v = current; v->addr != NULL; v++)
+		if (v->asked[0] == 0 && n-- == 0) {
+			*handle = (uint16_t)v->handle;
+			*pitch = v->asked[1];
+			*volleft = v->asked[2];
+			*volright = v->asked[3];
+			*info0 = v->info0;
+			return 1;
+		}
+	return 0;
 }
 
 /* n bytes of v, the lowest first. */

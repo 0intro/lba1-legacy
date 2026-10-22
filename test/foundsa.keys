@@ -1,0 +1,27 @@
+# A found object on a loaded game's first frame, SaveAnywhere: ON
+# (fixtures/foundsa: found's save of scene 98, Twinsen in the scene's
+# zone 0 by actor 2, and snapcfg's lba.cfg, the CD's LBA.CFG with
+# SaveAnywhere: ON). LBA2's main menu opens its list of saves, and Space
+# loads the save. Space pressed again as the list leaves, and held, is
+# down in the game's first frame, where the action key runs Twinsen's
+# script in the zone: it takes actor 2 away and gives object 14, the
+# scene drawn again around Twinsen, hidden, the Meca-Penguin turning in
+# its box over his head. Return ends it, and current.lba holds the game
+# after the sequence: Twinsen shown, the game's flag 14 set.
+sleep 40
+shot menu
+key Down Return
+sleep 3
+shot list
+key space
+sleep 0.3
+hold 3
+key space
+hold 0.15
+sleep 2
+shot found
+sleep 5
+shot text
+key Return
+sleep 4
+shot end

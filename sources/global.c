@@ -27,6 +27,11 @@ LONG	FlagVsync = 0 ;
 WORD	FlagMCGA = FALSE ;
 LONG	FlagCredits = FALSE ;
 #ifndef	DOS
+/* FEATURE: lba.cfg's SaveAnywhere, and a game loading from LBA2's save of a running scene. Taken from LBA2. */
+LONG	FlagSaveAnywhere = FALSE ;
+LONG	FlagLoadGame = FALSE ;
+LONG	RestartMusic = FALSE ;	// FEATURE: the scene's tune held for its first frame's save. Taken from LBA2.
+UBYTE	SavingEnable = TRUE ;	// FEATURE: whether Escape left a game to save. Taken from LBA2.
 LONG	FlagPal = FALSE ;	// FIXED: the Classic leaves a scene come in without a fade the palette of the scene left. FlagPal has the scene's own palette set at its first frame, as LBA2's does.
 LONG	FlagSkipLogo = TRUE ;	// FEATURE: lba.cfg's SkipLogo, a key passing the logo at the start, ON unless the file says OFF. Taken from the Classic 3.2.3.
 #endif

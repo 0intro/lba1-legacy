@@ -1,0 +1,31 @@
+# Escape on the first frame of a scene come in without the fade,
+# LbaWinSettings: 194 and SaveAnywhere: ON (fixtures/nofadeload). The
+# save loads from the main menu, Twinsen walks into the prison's back
+# door's zone and Space opens the door, whose script walks him in, and
+# Escape opens LBA2's menu over the prison, Return resuming the game.
+# The record's input is this script's played, then Escape's press
+# moved by hand to the pump between the zone's change of scene and the
+# prison's first frame: the keys wait for that frame, so that the menu
+# and current.lba show the prison, not the yard.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 12
+shot start
+down Up
+sleep 0.8
+up Up
+sleep 1
+key space
+sleep 10
+shot inside
+key Escape
+sleep 3
+shot menu
+key Return
+sleep 3
+shot end

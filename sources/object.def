@@ -7,6 +7,9 @@ extern void SetComportement(int16_t );
 extern void RestartPerso(void);
 extern void ClearFlagsCube(void);
 extern void ClearScene(void);
+#ifndef	DOS
+extern void InitLoadedGame(void);
+#endif
 extern void ChangeCube(void);
 extern void HitObj(int16_t ,int16_t ,int16_t ,int16_t );
 extern int32_t CheckZvOnZv(int16_t ,int16_t );

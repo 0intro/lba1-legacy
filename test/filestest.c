@@ -54,8 +54,8 @@
  * preferences' file, renamefile moves it. A write the disk refuses is
  * printed and keeps its bytes for the run, a rename whose write fails
  * keeps its source on the disk, and a run's private files are removed
- * as the root is first read. Def_WriteValue's writes and the save
- * manager's copy run as the 1994 code runs them. A
+ * as the root is first read. LBA2's WriteSaveGame, Def_WriteValue's
+ * writes and the save manager's copy run as their own code runs them. A
  * file in memory fills a hole with zeros, refuses the reads and writes
  * its open leaves out, seeks before 0 and past 2^31-1 and writes past
  * 64 MB, and the port's handles stop at 32, LoadMalloc giving its block
@@ -981,9 +981,9 @@ dates(void)
 }
 
 /*
- * A save written through a .TMP: the record into the .TMP, its version
- * byte and tail written through OpenReadWrite, the .TMP renamed over the
- * save.
+ * WriteSaveGame's sequence (sources/savegame.c): the record into the
+ * .TMP, its version byte and tail written through OpenReadWrite, the
+ * .TMP renamed over the save.
  */
 static void
 savegame(char *name, const char *rec, char ver, const char *tail)
@@ -1027,7 +1027,7 @@ settlewithout(const char *name)
 }
 
 /*
- * A save written through a .TMP, seen at once and its .TMP gone.
+ * A save as WriteSaveGame writes it, seen at once and its .TMP gone.
  * With the jobs run when the test says, the .TMP's writes are dropped
  * for its rename, so that the disk holds the save alone. Then saved
  * again with the jobs done and still to be taken back, and twice before

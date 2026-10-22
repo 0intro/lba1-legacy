@@ -1,0 +1,13 @@
+# Resume Game at the next start, SaveAnywhere: ON (fixtures/continue:
+# the CD's LBA.CFG with the key, and the current.lba resume leaves when
+# it quits): the main menu opens on Resume Game under current.lba's
+# picture, and Resume Game grows the game out of it, Twinsen where he
+# stood at resume's last Escape.
+
+sleep 40
+shot menu
+key Return
+sleep 0.3
+shot zoom
+sleep 8
+shot loaded

@@ -1,0 +1,33 @@
+# Escape in the list's question before a delete, SaveAnywhere: ON
+# (fixtures/saves: snapdoor's lba.cfg and seven copies of its save,
+# named fay, Cyd, ada, Gus, Bob, eve and Dan). The main menu's Load
+# Game lists them, D on Bob's save asks whether to delete it, and Escape
+# answers Cancel: the list comes back with Bob's save. D again, Down to
+# Destroy, and Escape answers Cancel too. Escape leaves the list
+# for the main menu, the seven saves kept.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Return
+sleep 3
+shot list
+key Down
+sleep 1
+key d
+sleep 2
+shot delete
+key Escape
+sleep 2
+shot kept
+key d
+sleep 2
+key Down
+sleep 1
+shot delete2
+key Escape
+sleep 2
+shot kept2
+key Escape
+sleep 3
+shot menu2
