@@ -62,20 +62,20 @@ put32(uint8_t *p, uint32_t v)
 }
 
 /*
- * The frame a body comes from, as it keeps it in 4 bytes: where the
- * assembly kept its address, its offset in the game's memory
- * (MemOffset), which fits on every build.
+ * The frame a body comes from, its address in 4 bytes, as the assembly
+ * keeps it: the game's memory lies below 2 GB (sys/mem.c), so that a
+ * 64-bit host keeps it too.
  */
 static uint8_t*
 getframe(uint8_t *body)
 {
-	return MemPointer(get32(body + Info));
+	return (uint8_t*)(intptr_t)(int32_t)get32(body + Info);
 }
 
 static void
 setframe(uint8_t *body, uint8_t *frame)
 {
-	put32(body + Info, MemOffset(frame));
+	put32(body + Info, (uint32_t)(uintptr_t)frame);
 }
 
 /* The body's first group's animated words, and *n the count of its groups. */

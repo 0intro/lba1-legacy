@@ -1,0 +1,390 @@
+#!/usr/bin/env bash
+#
+# e2e: record the port playing a scenario, and replay the records to
+# check that a build shows the same screens and leaves the same files.
+#
+#     test/e2e record [-f dir] [-c cd]... [-g game]... [-s scenario] [-x exe] name
+#     test/e2e check [-x exe] [name...]
+#     test/e2e keep [-x exe] [name...]
+#     test/e2e derive [-c cd]... [-g game]... [-k 'key: value']... [-x exe] from name
+#
+# record plays test/name.keys (tools/xkeys), or test/scenario.keys with
+# -s, on the port in our Xephyr, its preferences starting as a copy of
+# dir (else empty), and keeps in $LBATMP/e2e the input (name.in), the
+# sums of the screens shown (name.sums), the preferences it started from
+# (name.pref) and the files it left there (name.out: its saves, *.LBA,
+# and lba.cfg). Those sums and files are the reference: replayed, the
+# input must show the same screens and leave the same bytes, whatever
+# the build or the system.
+#
+# check replays each record (all by default) on exe, as fast as it
+# goes, and compares its sums with the reference, then the files it
+# left: same, the screens' count and the files', or the first screen or
+# the file that differs. With none named and none in the records'
+# directory, check says so and passes.
+# keep replays each record and keeps the files it left as its reference,
+# where the replay shows its screens: one that differs, or whose directory
+# is missing, is said so and ends the run.
+# A Linux exe replays without a window (SDL's dummy video), and a
+# Windows exe under Wine (tools/winerun), beside the SDL3.dll that make
+# puts beside it, in our Xephyr. record refuses a Windows exe:
+# tools/xkeys starts its program as it is, which binfmt gives to Wine in
+# the caller's prefix.
+#
+# exe is build/linux-amd64-gcc/lba by default, lba.cfg beside it. Each
+# run stages a copy of exe in the records' run directory with that
+# lba.cfg beside it, which the port reads past the preferences and the
+# game's directories. The game's files are those tools/extract unpacked
+# from the CD into $LBATMP/pc. A record plays on that CD, or with -c on
+# cd, another directory of $LBATMP holding the CD, -c given again for
+# each CD more, read in turn, which the record keeps (name.cd, a line
+# each) and replays on, or with -c - alone on the port's own default,
+# the first game directory's parent. The game's directory is the CD's,
+# pc/LBA, or with -g game, another directory of $LBATMP holding the
+# game's files, -g given again for each directory more, read in turn,
+# which the record keeps (name.game, a line each). A record whose
+# directory is missing is said so. derive makes the record name from the
+# input and preferences of from, replayed on cd and game, each key of -k
+# set in their lba.cfg: the replay must show from's screens, and its sums
+# and the files it left are kept as name's reference. E2E, if set, names
+# the records' directory in place of
+# $LBATMP/e2e.
+
+set -Eeuo pipefail
+
+TEST=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPO=$(cd -- "$TEST/.." && pwd)
+LBATMP=${LBATMP:-$(cd -- "$REPO/.." && pwd)/lba1-tmp}
+TOOLS=$REPO/tools
+E2E=${E2E:-$LBATMP/e2e}
+RUN=$E2E/run
+
+usage() {
+	echo "usage: e2e record [-f dir] [-c cd]... [-g game]... [-s scenario] [-x exe] name" >&2
+	echo "       e2e check [-x exe] [name...]" >&2
+	echo "       e2e keep [-x exe] [name...]" >&2
+	echo "       e2e derive [-c cd]... [-g game]... [-k 'key: value']... [-x exe] from name" >&2
+	exit 2
+}
+
+# inlbatmp dir: whether dir names a directory of $LBATMP, below it
+inlbatmp() {
+	[[ $1 != /* && $1 != *..* && -d $LBATMP/$1 ]]
+}
+
+# incd cd: whether cd names a CD of $LBATMP, below it
+incd() {
+	[[ $1 != /* && $1 != *..* && -d $LBATMP/$1 ]]
+}
+
+(( $# )) || usage
+cmd=$1
+shift
+fixture=
+cdirs=()
+gdirs=()
+scenario=
+lines=()
+exe=$REPO/build/linux-amd64-gcc/lba
+while (( $# )); do
+	case $1 in
+	-f) fixture=$(cd -- "${2:?}" && pwd); shift 2 ;;
+	-c) cdirs+=("${2:?}"); shift 2 ;;
+	-g) gdirs+=("${2:?}"); shift 2 ;;
+	-s) scenario=${2:?}; shift 2 ;;
+	-k) [[ ${2:-} =~ ^[A-Za-z][A-Za-z0-9]*: ]] || usage; lines+=("$2"); shift 2 ;;
+	-x) exe=$(cd -- "$(dirname -- "${2:?}")" && pwd)/$(basename -- "$2"); shift 2 ;;
+	-*) usage ;;
+	*) break ;;
+	esac
+done
+[[ -x $exe ]] || { echo "e2e: no $exe; build it first" >&2; exit 1; }
+dll=$(dirname -- "$exe")/SDL3.dll
+[[ $exe != *.exe || -f $dll ]] || { echo "e2e: no $dll beside $exe" >&2; exit 1; }
+[[ -d $LBATMP/pc/LBA ]] || { echo "e2e: no $LBATMP/pc; run tools/extract" >&2; exit 1; }
+(( ${#cdirs[@]} )) || cdirs=(pc)
+[[ ${cdirs[*]} == pc || $cmd == record || $cmd == derive ]] || usage
+[[ ${#cdirs[@]} == 1 || " ${cdirs[*]} " != *" - "* ]] || usage
+(( ${#gdirs[@]} == 0 )) || [[ $cmd == record || $cmd == derive ]] || usage
+[[ -z $scenario || $cmd == record ]] || usage
+(( ${#lines[@]} == 0 )) || [[ $cmd == derive ]] || usage
+(( ${#gdirs[@]} )) || gdirs=(pc/LBA)
+for c in "${cdirs[@]}"; do
+	[[ $c == - ]] || incd "$c" || { echo "e2e: no CD $LBATMP/$c" >&2; exit 1; }
+done
+for g in "${gdirs[@]}"; do
+	inlbatmp "$g" || { echo "e2e: no game $LBATMP/$g" >&2; exit 1; }
+done
+
+# fresh pref: the run's preferences, from a record's or nothing
+fresh() {
+	rm -rf -- "$RUN/pref"
+	mkdir -p "$RUN/pref"
+	if [[ -n ${1:-} && -d $1 ]]; then
+		cp -R "$1/." "$RUN/pref/"
+	fi
+}
+
+# win path: a path of ours as Wine's Z: sees it
+win() {
+	printf 'Z:%s' "${1//\//\\}"
+}
+
+# cfgof dir: the lba.cfg in dir, whatever its case, or nothing
+cfgof() {
+	find -L "$1" -maxdepth 1 -type f -iname 'lba.cfg' | head -n 1
+}
+
+# screens sums: the screens a sums file holds
+screens() {
+	grep -c '^[0-9]' "$1" || true
+}
+
+# stage dir name: exe copied into dir as name, the lba.cfg beside exe
+# beside it
+stage() {
+	[[ -f $(dirname -- "$exe")/lba.cfg ]] || { echo "e2e: no lba.cfg beside $exe" >&2; exit 1; }
+	mkdir -p "$1"
+	cp "$exe" "$1/$2"
+	cp "$(dirname -- "$exe")/lba.cfg" "$1/lba.cfg"
+}
+
+# setcd name: the CDs the record plays on, a line each, kept beside it unless they are pc alone
+setcd() {
+	if [[ ${cdirs[*]} == pc ]]; then
+		rm -f -- "$E2E/$1.cd"
+	else
+		printf '%s\n' "${cdirs[@]}" > "$E2E/$1.cd"
+	fi
+}
+
+# cdof name: the CDs the record plays on, a line each
+cdof() {
+	if [[ -f $E2E/$1.cd ]]; then
+		cat -- "$E2E/$1.cd"
+	else
+		echo pc
+	fi
+}
+
+# setgame name: the game's directories the record plays on, a line
+# each, kept beside it unless they are the CD's alone
+setgame() {
+	if [[ ${gdirs[*]} == pc/LBA ]]; then
+		rm -f -- "$E2E/$1.game"
+	else
+		printf '%s\n' "${gdirs[@]}" > "$E2E/$1.game"
+	fi
+}
+
+# gameof name: the game's directories the record plays on, a line each
+gameof() {
+	if [[ -f $E2E/$1.game ]]; then
+		cat -- "$E2E/$1.game"
+	else
+		echo pc/LBA
+	fi
+}
+
+# winof path: a directory of $LBATMP as the Windows build names it, the
+# CD's own on L:, which winerun gives it
+winof() {
+	case $1 in
+	pc) printf 'L:\\' ;;
+	pc/*) printf 'L:\\%s' "${1#pc/}" | tr / '\\' ;;
+	*) win "$LBATMP/$1" ;;
+	esac
+}
+
+# missing name: the directory of the record that is not there, if one is
+missing() {
+	local c d
+	while read -r c; do
+		if [[ $c != - ]] && ! incd "$c"; then
+			echo "$c"
+			return
+		fi
+	done < <(cdof "$1")
+	while read -r d; do
+		if ! inlbatmp "$d"; then
+			echo "$d"
+			return
+		fi
+	done < <(gameof "$1")
+}
+
+# setkey file line: the key of line, "key: value", set in file, an
+# lba.cfg, its line, the key read as def_file.c reads it, replaced by
+# line, or line added last
+setkey() {
+	local f=$1 key=${2%%:*}
+	{
+		grep -aiv "^[[:space:]]*${key}[[:space:]]*:" "$f" || true
+		printf '%s\r\n' "$2"
+	} > "$f.new"
+	mv -- "$f.new" "$f"
+}
+
+# left dir out: the saves and the lba.cfg a run left in dir, copied to out
+left() {
+	rm -rf -- "$2"
+	mkdir -p "$2"
+	find "$1" -maxdepth 1 -type f \( -iname '*.lba' -o -iname 'lba.cfg' \) -exec cp {} "$2/" \;
+}
+
+record() {
+	local name=$1 keys=$TEST/${scenario:-$1}.keys d args=()
+	[[ $exe != *.exe ]] || { echo "e2e: $exe: record plays Linux builds alone" >&2; exit 1; }
+	[[ -f $keys ]] || { echo "e2e: no $keys" >&2; exit 1; }
+	mkdir -p "$E2E"
+	fresh "$fixture"
+	rm -rf -- "$E2E/$name.pref"
+	cp -R "$RUN/pref" "$E2E/$name.pref"
+	setcd "$name"
+	setgame "$name"
+	for d in "${gdirs[@]}"; do
+		args+=(-g "$LBATMP/$d")
+	done
+	for c in "${cdirs[@]}"; do
+		[[ $c == - ]] || args+=(-c "$LBATMP/$c")
+	done
+	stage "$RUN/prog" lba
+	"$TOOLS/xkeys" -c lba -o "$LBATMP/cap/e2e/$name" "$keys" "$RUN/prog/lba" \
+		"${args[@]}" -p "$RUN/pref" -r "$E2E/$name.in" -s "$E2E/$name.sums"
+	left "$RUN/pref" "$E2E/$name.out"
+	echo "$name: recorded, $(screens "$E2E/$name.sums") screens, $(ls "$E2E/$name.out" | wc -l) files"
+}
+
+# replay name sums: the record played on exe, its sums into sums, and a
+# replay that fails, or hangs and is ended (sdl.c's watchdog), leaves
+# them short, which check reports
+replay() {
+	local name=$1 out=$2 c d args=()
+	fresh "$E2E/$name.pref"
+	: > "$out"
+	if [[ $exe == *.exe ]]; then
+		stage "$RUN/win" lba.exe
+		cp "$dll" "$RUN/win/"
+		while read -r d; do
+			args+=(-g "$(winof "$d")")
+		done < <(gameof "$name")
+		while read -r c; do
+			[[ $c == - ]] || args+=(-c "$(winof "$c")")
+		done < <(cdof "$name")
+		"$TOOLS/winerun" -q "$RUN/win/lba.exe" "${args[@]}" \
+			-p "$(win "$RUN/pref")" -i "$(win "$E2E/$name.in")" -s "$(win "$out")" > /dev/null || true
+	else
+		while read -r d; do
+			args+=(-g "$LBATMP/$d")
+		done < <(gameof "$name")
+		while read -r c; do
+			[[ $c == - ]] || args+=(-c "$LBATMP/$c")
+		done < <(cdof "$name")
+		stage "$RUN/prog" lba
+		(cd -- "$RUN" && SDL_VIDEO_DRIVER=dummy "$RUN/prog/lba" "${args[@]}" \
+			-p "$RUN/pref" -i "$E2E/$name.in" -s "$out" > /dev/null) || true
+	fi
+}
+
+check() {
+	local names=("$@") name out bad=0 msg line ref got gone
+	if (( ${#names[@]} == 0 )); then
+		for f in "$E2E"/*.in; do
+			[[ -e $f ]] || { echo "e2e: no records in $E2E, none checked"; return 0; }
+			names+=("$(basename -- "$f" .in)")
+		done
+	fi
+	for name in "${names[@]}"; do
+		[[ -f $E2E/$name.in && -f $E2E/$name.sums ]] || { echo "e2e: no record $name" >&2; exit 1; }
+		out=$RUN/$name.sums
+		gone=$(missing "$name")
+		if [[ -n $gone ]]; then
+			echo "$name: no $LBATMP/$gone"
+			bad=1
+			continue
+		fi
+		replay "$name" "$out"
+		if cmp -s "$E2E/$name.sums" "$out"; then
+			left "$RUN/pref" "$RUN/out"
+			if [[ ! -d $E2E/$name.out ]]; then
+				echo "$name: same, $(screens "$out") screens; no files kept (e2e keep $name)"
+				bad=1
+			elif ! msg=$(diff -r -q "$E2E/$name.out" "$RUN/out" 2>&1); then
+				echo "$name: same, $(screens "$out") screens; files differ: $msg"
+				bad=1
+			else
+				echo "$name: same, $(screens "$out") screens, $(ls "$RUN/out" | wc -l) files"
+			fi
+		else
+			# the first line that differs (past the end of the shorter, its count)
+			msg=$(cmp "$E2E/$name.sums" "$out" 2>&1 || true)
+			line=$(sed -n 's/.*line \([0-9]*\).*/\1/p' <<< "$msg")
+			[[ $msg == *EOF* ]] && line=$((line + 1))
+			ref=$(sed -n "${line}p" "$E2E/$name.sums")
+			got=$(sed -n "${line}p" "$out")
+			echo "$name: differs at line $line: reference ${ref:-none}, replay ${got:-none}"
+			bad=1
+		fi
+	done
+	return "$bad"
+}
+
+keep() {
+	local names=("$@") name gone
+	if (( ${#names[@]} == 0 )); then
+		for f in "$E2E"/*.in; do
+			[[ -e $f ]] || { echo "e2e: no records in $E2E" >&2; exit 1; }
+			names+=("$(basename -- "$f" .in)")
+		done
+	fi
+	for name in "${names[@]}"; do
+		[[ -f $E2E/$name.in ]] || { echo "e2e: no record $name" >&2; exit 1; }
+		gone=$(missing "$name")
+		[[ -z $gone ]] || { echo "e2e: $name: no $LBATMP/$gone" >&2; exit 1; }
+		replay "$name" "$RUN/$name.sums"
+		cmp -s "$E2E/$name.sums" "$RUN/$name.sums" ||
+			{ echo "e2e: $name: its replay differs from its sums, its files kept as they were" >&2; exit 1; }
+		left "$RUN/pref" "$E2E/$name.out"
+		echo "$name: kept $(ls "$E2E/$name.out" | wc -l) files"
+	done
+}
+
+# derive from name: the record name made from from's input and
+# preferences, replayed on the CDs and game directories
+# given, which must show from's screens
+derive() {
+	local from=$1 name=$2 out=$RUN/$2.sums k
+	[[ -f $E2E/$from.in && -f $E2E/$from.sums && -d $E2E/$from.pref ]] ||
+		{ echo "e2e: no record $from" >&2; exit 1; }
+	[[ $name != "$from" ]] || usage
+	if (( ${#lines[@]} )) && [[ -z $(cfgof "$E2E/$from.pref") ]]; then
+		echo "e2e: $from: no lba.cfg in its preferences to set keys in" >&2
+		exit 1
+	fi
+	cp "$E2E/$from.in" "$E2E/$name.in"
+	rm -rf -- "$E2E/$name.pref" "$E2E/$name.out"
+	cp -R "$E2E/$from.pref" "$E2E/$name.pref"
+	for k in "${lines[@]}"; do
+		setkey "$(cfgof "$E2E/$name.pref")" "$k"
+	done
+	setcd "$name"
+	setgame "$name"
+	replay "$name" "$out"
+	if ! cmp -s <(grep '^[0-9]' "$E2E/$from.sums") <(grep '^[0-9]' "$out"); then
+		echo "e2e: $name: the screens differ from $from's" >&2
+		rm -rf -- "$E2E/$name.in" "$E2E/$name.pref" "$E2E/$name.cd" "$E2E/$name.game"
+		exit 1
+	fi
+	cp "$out" "$E2E/$name.sums"
+	left "$RUN/pref" "$E2E/$name.out"
+	echo "$name: derived from $from on ${cdirs[*]}, $(grep -c '^[0-9]' "$out") screens," \
+		"$(ls "$E2E/$name.out" | wc -l) files"
+}
+
+case $cmd in
+record) (( $# == 1 )) || usage; record "$1" ;;
+check) check "$@" ;;
+keep) keep "$@" ;;
+derive) (( $# == 2 )) || usage; derive "$1" "$2" ;;
+*) usage ;;
+esac

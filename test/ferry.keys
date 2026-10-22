@@ -1,0 +1,27 @@
+# The ferry's question of six answers (fixtures/ferry: the sweep's save
+# of scene 4, Citadel Island's harbour, with the game's flag 68 set,
+# which brings the ferry, Twinsen put on its landing in zone 16 facing
+# the boat (SceneStartX, Y, Z at bytes 270-275, 22528 512 29296, Beta at
+# 276-277, 256), 100 kashes at bytes 265-266, and the CD's LBA.CFG). The
+# save loads from the list, and the camera follows the boat in. Up walks
+# Twinsen into it, and the ferryman asks "Where do you want to go?",
+# whose six answers stand above the dialogue's window. Up takes the
+# last, "I'm staying here!", and Return gives it.
+
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 15
+shot start
+down Up
+sleep 1.2
+up Up
+sleep 5
+shot question
+key Up
+sleep 1
+key Return
+sleep 4
+shot end

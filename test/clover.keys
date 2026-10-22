@@ -1,0 +1,29 @@
+# A clover used from the inventory (fixtures/clover: the outside save
+# with 20 life points, byte 264, and the CD's LBA.CFG). Shift opens the
+# inventory, Right six times and Down three times go to the clover, and
+# Return uses it after the inventory has been open some 8 seconds: its
+# picture shows over the scene. In LBA.EXE the picture's end is set by
+# the clock the inventory held, so that it shows for the time the
+# inventory was open and 3 seconds more, some 11 seconds. Set by the
+# clock given back, it shows for 3.
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 12
+shot start
+key Shift_L
+sleep 2
+key Right Right Right Right Right Right
+sleep 1
+key Down Down Down
+sleep 5
+shot inventory
+key Return
+sleep 2
+shot used
+sleep 3
+shot after
+sleep 6
+shot end

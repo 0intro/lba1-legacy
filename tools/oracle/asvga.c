@@ -37,7 +37,7 @@ enum
 	Model,	/* farline's: LBA.EXE's model, drawn on our screen */
 };
 
-/* ours, which the game's global.c and its assembly define */
+/* ours, which the port's video.c and the game's global.c define */
 uint8_t	*Log, *Screen, *Phys;
 uint32_t	TabOffLine[Height];
 int32_t	Screen_X, Screen_Y;
@@ -174,7 +174,7 @@ setup(void)
 	nsvga = nelem(svga);
 }
 
-/* Side i's pointers, line table and size as the game sets them. */
+/* Side i's pointers, line table and size as the port sets them. */
 static void
 setside(int i)
 {

@@ -1,0 +1,24 @@
+# Scene 42's rabbibunny (fixtures/bunny42: the sweep's save of scene 42,
+# Twinsen put where the museum's door sets him down, SceneStartX, Y, Z
+# 15104 3584 3328 at bytes 270-275, in zone 39, which keeps actor 22,
+# and the CD's LBA.CFG). The rabbibunny stands on the harbour building's
+# roof, 1792 above the walkway, in LBA.EXE: his walk takes him off its
+# edge, and where he falls, before the door, he greets Twinsen at once.
+# Put on the walkway as the PlayStation puts him, he walks his track's
+# length along it and greets Twinsen when he comes within 1250.
+
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 12
+shot start
+down Up
+sleep 1.5
+up Up
+sleep 2
+shot greeting
+key space
+sleep 4
+shot end

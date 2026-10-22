@@ -1,0 +1,25 @@
+# A new game: the name, the introduction's text and movie, both cut
+# short, then the cell, and a step forward.
+
+sleep 40
+shot menu
+key Return
+sleep 4
+shot name
+key a b c
+sleep 1
+shot typed
+key Return
+sleep 6
+shot text
+key Escape
+sleep 8
+shot movie
+key Escape
+sleep 10
+shot scene
+down Up
+sleep 1
+up Up
+sleep 1
+shot walked

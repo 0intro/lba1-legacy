@@ -1,0 +1,449 @@
+# tools/twins.py's list: the differences the two ports keep, a line each,
+# the file (LBA1's name), the item, lba1, lba2 or apart, a tab, the reason.
+sys/cd.c * apart	game: LBA1's cdrom.asm's CD in C, LBA2's MSS redbook from track files
+sys/cd.c * lba1	game: LBA1's cdrom.asm's CD in C, LBA2's MSS redbook from track files
+sys/cd.c * lba2	game: LBA1's cdrom.asm's CD in C, LBA2's MSS redbook from track files
+sys/compat.c #else lba1	game: the C library calls each game makes
+sys/compat.c #endif lba1	game: the C library calls each game makes
+sys/compat.c #ifdef _WIN32 lba1	game: the C library calls each game makes
+sys/compat.c #include "dat.h" lba1	game: the C library calls each game makes
+sys/compat.c #include "dos.h" lba1	game: the C library calls each game makes
+sys/compat.c #include "fns.h" lba1	game: the C library calls each game makes
+sys/compat.c #include <direct.h> lba1	game: the C library calls each game makes
+sys/compat.c #include <stdarg.h> lba2	game: the C library calls each game makes
+sys/compat.c #include <stdio.h> lba2	game: the C library calls each game makes
+sys/compat.c #include <unistd.h> lba1	game: the C library calls each game makes
+sys/compat.c _dos_getdrive lba1	game: the C library calls each game makes
+sys/compat.c _dos_setdrive lba1	game: the C library calls each game makes
+sys/compat.c watcomchdir lba1	game: the C library calls each game makes
+sys/compat.c watcomgetcwd lba1	game: the C library calls each game makes
+sys/compat.c watcommakepath lba2	game: the C library calls each game makes
+sys/compat.c watcommemicmp lba2	game: the C library calls each game makes
+sys/compat.c watcomvbprintf lba2	game: the C library calls each game makes
+sys/compat.h * lba1	game: the C library, Watcom's names and DOS's calls each game's code was written for
+sys/compat.h * lba2	game: the C library, Watcom's names and DOS's calls each game's code was written for
+sys/dat.h * apart	game: each port's data, its game's modules' among them, which follow their files
+sys/dat.h * lba1	game: each port's data, its game's modules' among them, which follow their files
+sys/dat.h * lba2	game: each port's data, its game's modules' among them, which follow their files
+sys/dos.h * apart	game: the DOS structures each game's code reads
+sys/dos.h * lba2	game: the DOS structures each game's code reads
+sys/files.c #define O_BINARY lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c #endif#2 lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c #ifndef O_BINARY lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c #include <fcntl.h> lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c #include <sys/types.h> lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c #include <sys/utime.h> lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c AddExt lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c Close lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c Delete apart	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c FileReadOnly lba2	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
+sys/files.c FileSize lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c OpenRead lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c OpenReadWrite lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c OpenWrite lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c Read lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c Seek lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c Touch lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c Write lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c _dos_findfirst apart	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
+sys/files.c _dos_getdrive lba2	game: DOS's drives and current directories, which the 1997 code moves through
+sys/files.c _dos_setdrive lba2	game: DOS's drives and current directories, which the 1997 code moves through
+sys/files.c _harderr lba2	game: DOS's drives and current directories, which the 1997 code moves through
+sys/files.c absolute lba2	game: DOS's drives and current directories, which the 1997 code moves through
+sys/files.c bindconfig apart	game: LBA2's MSS reads an MP3 or Ogg Vorbis file bound alone as a WAV file (coded)
+sys/files.c bindfile apart	game: LBA2's MSS reads an MP3 or Ogg Vorbis file bound alone as a WAV file (coded)
+sys/files.c cdir lba2	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
+sys/files.c cdlabel lba2	game: DOS's drives and current directories, which the 1997 code moves through
+sys/files.c classic lba2	game: the CD's tracks and the Classic's jingles as WAV files, which MSS streams
+sys/files.c codedplaces lba2	game: LBA2's port gives the CD's tracks as WAV files, decoded where the sheet names MP3 or OGG files
+sys/files.c codedread lba2	game: the CD's tracks and the Classic's jingles as WAV files, which MSS streams
+sys/files.c copyplace lba2	game: LBA2's C library updates a bound file in place, which the port first copies into the preferences
+sys/files.c curdir lba2	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
+sys/files.c ddir lba2	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
+sys/files.c decoded lba2	game: LBA2's port gives the CD's tracks as WAV files, decoded where the sheet names MP3 or OGG files
+sys/files.c diskhandle lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c dosdir lba2	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
+sys/files.c drive lba2	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
+sys/files.c enum Hfree lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c enum N83 lba2	game: each game's saves, LBA1's at the root, its CD's letter for the voices, LBA2's in SAVE
+sys/files.c enum Nfile lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c enum Nfound lba1	game: each game's saves, LBA1's at the root, its CD's letter for the voices, LBA2's in SAVE
+sys/files.c enum Npath lba2	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
+sys/files.c enum Wnone lba2	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
+sys/files.c file lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c files lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c freeslot lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c grow apart	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c havecd lba1	game: the CD's drive for cd.c, LBA1's
+sys/files.c havefile lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c inbinds lba1	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
+sys/files.c ingame lba2	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
+sys/files.c ispref apart	game: DOS's drives and current directories, which the 1997 code moves through
+sys/files.c locate apart	game: each game's CD audio, LBA2's tracks and the Classic's music as WAV files for MSS
+sys/files.c memhandle apart	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c ondisk lba2	game: the C library calls each game makes
+sys/files.c own lba2	game: LBA2's C library updates a bound file in place, which the port first copies into the preferences
+sys/files.c pfclose lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c pfile lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c pfiles lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c pfopen lba2	game: the CD's tracks and the Classic's jingles as WAV files, which MSS streams
+sys/files.c pfread lba2	game: the CD's tracks and the Classic's jingles as WAV files, which MSS streams
+sys/files.c placebytes lba2	game: the C library calls each game makes
+sys/files.c portclose lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c portcoded lba2	game: LBA2's port gives the CD's tracks as WAV files, decoded where the sheet names MP3 or OGG files
+sys/files.c portfclose lba2	game: the C library calls each game makes
+sys/files.c portfopen lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c porthandle lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c portlseek lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c portopen lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c portread lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c portremove lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c portutime lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c portwrite lba2	game: the C library calls each game makes
+sys/files.c prefbytes lba2	game: the C library calls each game makes
+sys/files.c put16 lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c put32 lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c readpath lba1	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
+sys/files.c readplace lba2	game: LBA2's C library updates a bound file in place, which the port first copies into the preferences
+sys/files.c renamefile lba1	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
+sys/files.c scanbinds lba2	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
+sys/files.c setcdletter lba1	game: the CD's drive for cd.c, LBA1's
+sys/files.c setpref apart	game: each game's saves, LBA1's at the root, its CD's letter for the voices, LBA2's in SAVE
+sys/files.c settle lba2	game: the C library calls each game makes
+sys/files.c splitgame lba1	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
+sys/files.c streams lba2	game: the C library calls each game makes
+sys/files.c struct Bind apart	game: each game's CD audio, LBA2's tracks and the Classic's music as WAV files for MSS
+sys/files.c struct Dirs apart	game: each game's saves, LBA1's at the root, its CD's letter for the voices, LBA2's in SAVE
+sys/files.c struct File lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c struct Pfile lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c struct Place apart	game: each game's CD audio, LBA2's tracks and the Classic's music as WAV files for MSS
+sys/files.c struct Stream lba2	game: the C library calls each game makes
+sys/files.c textat lba1	game: lib386's file calls read a text of the port's bound at a root's name, LBA2's C library through its handles
+sys/files.c typedef File lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c typedef Pfile lba2	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c typedef Stream lba2	game: the C library calls each game makes
+sys/files.c watcomchdir lba2	game: DOS's drives and current directories, which the 1997 code moves through
+sys/files.c watcomgetcwd lba2	game: DOS's drives and current directories, which the 1997 code moves through
+sys/files.c watcommkdir lba2	game: DOS's drives and current directories, which the 1997 code moves through
+sys/files.c wavhead lba2	game: the CD's tracks and the Classic's jingles as WAV files, which MSS streams
+sys/files.c where lba2	game: DOS's drives and current directories, which the 1997 code moves through
+sys/fns.h * apart	game: each port's functions, its game's modules' among them, which follow their files
+sys/fns.h * lba1	game: each port's functions, its game's modules' among them, which follow their files
+sys/fns.h * lba2	game: each port's functions, its game's modules' among them, which follow their files
+sys/keyb.c #include <stddef.h> lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c #include <stdlib.h> lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c #include <system/adeline.h> lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c #include <system/initimer.h> lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c #include <system/keybdos.h> lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c AsciiMode apart	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c ClearAsciiBuffer apart	game: each game's declarations, lib_sys.h's in LBA1, keybdos.h's in LBA2
+sys/keyb.c ClearKeyboard lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c Fire lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c FlagExtendScan lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c FuncKey lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c GetAscii apart	game: each game's declarations, lib_sys.h's in LBA1, keybdos.h's in LBA2
+sys/keyb.c InitKeyboard lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c Joy lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c Key apart	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c KeyOff lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c KeybCodeEnd lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c KeybCodeStart lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c KeybDataEnd lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c KeybDataStart lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c Old_PM09_Off lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c Old_PM09_Sel lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c PadKeyMap lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c PadKeyMapAscii lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c PadKeyMapMenu lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c PadMenuMode lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c PatchExtended lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c Stack lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c TabKeys lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c enum Firstrepeat lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c enum Nbios apart	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c extended lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c func lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c padkey lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c padword lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c repeatat lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c repeatkey lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c setbyte lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c special lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c xtcode apart	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/lba.manifest * apart	game: each program's name
+sys/lba.rc * apart	game: each program's name
+sys/mem.c DOSVer lba2	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
+sys/mem.c DosAvailableMem lba2	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
+sys/mem.c DosMalloc lba1	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
+sys/mem.c Free lba1	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
+sys/mem.c GetMemInfo lba2	game: the DOS memory calls the 1997 code makes
+sys/mem.c HostMalloc apart	game: the DOS memory calls the 1997 code makes
+sys/mem.c Malloc lba1	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
+sys/mem.c Mshrink lba1	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
+sys/mem.c NormDosFree lba2	game: the DOS memory calls the 1997 code makes
+sys/mem.c NormDosMalloc lba2	game: the DOS memory calls the 1997 code makes
+sys/mem.c NormDosMshrink lba2	game: the DOS memory calls the 1997 code makes
+sys/mem.c SmartMalloc lba1	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
+sys/mem.c arenafree lba2	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
+sys/mem.c arenamalloc lba2	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
+sys/mem.c dosblock lba2	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
+sys/mem.c dosget lba2	game: the DOS memory calls the 1997 code makes
+sys/mem.c dosput lba2	game: the DOS memory calls the 1997 code makes
+sys/mem.c enum Arenasize apart	game: each game's arena, 128 MB for LBA1, 256 MB for LBA2
+sys/mem.c hostmalloc lba2	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
+sys/mem.c largest lba2	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
+sys/mem.c tohost lba2	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
+sys/mem.c typedef MEMINFO lba2	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
+sys/mem.c watcomexpand lba2	game: each game's memory calls on the one arena, lib_sys's Malloc, Free, Mshrink, SmartMalloc and DosMalloc in LBA1, the 1997 library's arenamalloc, arenafree, hostmalloc, watcomexpand and DOS's memory in LBA2
+sys/replay.c keyin apart	game: LBA2's DisableAltF4, which refuses Alt+F4 as the keys come
+sys/replay.c next apart	game: LBA2's display and frame in a record's header, and its pad's buttons in p lines
+sys/replay.c replay apart	game: LBA2's DisableAltF4, which refuses Alt+F4 as the keys come, and its pad's buttons in p lines
+sys/replay.c summed apart	game: mode 13h's screens in LBA1, 320x200 and the mode summed
+sys/replay.c writebmp apart	game: mode 13h's screens in LBA1, 320x200 and the mode summed
+sys/sdl.c lastw lba2	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, LBA2's one mode, its texture made again at each width
+sys/sdl.c main apart	game: each program's start, LBA1's in InitAdelineSystem, LBA2's display, wide screen and clock in main before the 1997 game's parameters
+sys/sdl.c maketexture lba2	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, LBA2's one mode, its texture made again at each width
+sys/sdl.c prefapp apart	game: the preferences' names
+sys/sdl.c prefapp#2 apart	game: the preferences' names
+sys/sdl.c sdlclose apart	game: LBA1's ClearAdelineSystem, the 1994 code's end, closes SDL first, LBA2's 1997 code ends through exit alone
+sys/sdl.c sdlinit apart	game: each program's name
+sys/sdl.c sdlpoll apart	game: LBA2's mouse, which the 1997 code reads in its editor
+sys/sdl.c sdlshow apart	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, LBA2's one mode, its texture made again at each width
+sys/sdl.c usage apart	game: each program's start, LBA1's in InitAdelineSystem, LBA2's display, wide screen and clock in main before the 1997 game's parameters
+sys/sys.c #include <stdio.h> lba1	game: LBA1's sys.c stands for lib386's adeline.c
+sys/sys.c #include <system/adeline.h> lba2	game: LBA2's sys.c stands for dossys.c's ManageEvents
+sys/sys.c #include <system/deffile.h> lba2	game: LBA2 reads the port's keys of lba2.cfg through the game's deffile
+sys/sys.c #include <system/dossys.h> lba2	game: LBA2's sys.c stands for dossys.c's ManageEvents
+sys/sys.c #include <time.h> lba1	game: LBA1's sys.c stands for lib386's adeline.c
+sys/sys.c ClearAdelineSystem lba1	game: LBA1's sys.c stands for lib386's adeline.c
+sys/sys.c ComputeTime lba1	game: LBA1's sys.c stands for lib386's adeline.c
+sys/sys.c InitAdelineSystem lba1	game: LBA1's sys.c stands for lib386's adeline.c
+sys/sys.c ManageEvents lba2	game: LBA2's sys.c stands for dossys.c's ManageEvents
+sys/sys.c ManageProc lba2	game: LBA2's sys.c stands for dossys.c's ManageEvents
+sys/sys.c MidiFM lba1	game: LBA1's sys.c stands for lib386's adeline.c
+sys/sys.c PathConfigFile lba1	game: LBA1's sys.c stands for lib386's adeline.c
+sys/sys.c readdisplaynum lba2	game: each game's settings
+sys/sys.c readplatform lba2	game: LBA2 reads the port's keys, spelt 1 and 0, from ReadConfigFile
+sys/timer.c CmptFrame lba1	game: timer_a.asm's counts at the PIT's 50 Hz
+sys/timer.c Cmpt_18 lba1	game: timer_a.asm's counts at the PIT's 50 Hz
+sys/timer.c LockVMMTimer lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
+sys/timer.c NbFramePerSecond lba1	game: timer_a.asm's counts at the PIT's 50 Hz
+sys/timer.c TimerRef lba1	game: timer_a.asm's counts at the PIT's 50 Hz
+sys/timer.c TimerSystem lba1	game: timer_a.asm's counts at the PIT's 50 Hz
+sys/timer.c WaitNbTicks lba1	game: timer_a.asm's counts at the PIT's 50 Hz
+sys/timer.c clocknow lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
+sys/timer.c decl interrupts lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
+sys/timer.c divisor lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
+sys/timer.c enum Pitclock lba2	game: LBA1's PIT tick and mode 13h's frame, LBA2's PIT clock and MSS's spin
+sys/timer.c enum Tick lba1	game: LBA1's PIT tick and mode 13h's frame, LBA2's PIT clock and MSS's spin
+sys/timer.c frame apart	game: LBA1's frame by the screen's mode, mode 13h's 70.09 Hz beside VGA's 59.94 Hz, LBA2's one
+sys/timer.c idle apart	game: the devices each pump drives, LBA1's PIT ticks, LBA2's MSS interrupts, its CD and its pad's repeats
+sys/timer.c interrupts lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
+sys/timer.c irqat lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
+sys/timer.c millis lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
+sys/timer.c msat lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
+sys/timer.c pitcount lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
+sys/timer.c pump apart	game: the devices each pump drives, LBA1's PIT ticks, LBA2's MSS interrupts, its CD and its pad's repeats
+sys/timer.c setpit lba2	game: MSS's PIT, its interrupts and LBA2.EXE's milliseconds
+sys/timer.c tick lba1	game: timer_a.asm's counts at the PIT's 50 Hz
+sys/timer.c ticks lba1	game: timer_a.asm's counts at the PIT's 50 Hz
+sys/timer.c vsync apart	game: LBA1's frame by the screen's mode, mode 13h's 70.09 Hz beside VGA's 59.94 Hz, LBA2's one
+sys/video.c #include <polygon/poly.h> lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c #include <stddef.h> lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c #include <svga/blitbov.h> lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c #include <svga/blitbox.h> lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c #include <svga/cleabov.h> lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c #include <svga/clip.h> lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c #include <svga/clrbox.h> lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c #include <svga/copybov.h> lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c #include <svga/copybox.h> lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c #include <svga/dirtybox.h> lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c #include <svga/initmode.h> lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c #include <svga/logphys.h> lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c #include <svga/vesa.h> lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c #include <system/adeline.h> lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c #include <system/deffile.h> lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c #include <system/exit.h> lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c #include <system/timerdos.h> lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c BankSize lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c BlitBoxVESAF lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c BlitBoxVESAI lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c BlitBoxVESAM lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c BufSpeak lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c ClearBoxVESAF lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c ClearBoxVESAI lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c ClearBoxVESAM lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c ClipXmax lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c ClipXmin lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c ClipYmax lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c ClipYmin lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c CopyBlockPhys lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c CopyBoxVESAF lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c CopyBoxVESAI lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c CopyBoxVESAM lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c DetectInitVESAMode lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c DetectVESAMode lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c EndVESA lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c Flip lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c GetLastVESAMode lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c InitMcgaMode lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c InitVESA lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c InitVESAMode lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c Log lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c MemoClip lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c PalMulti lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c PalOne lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c Palette lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c PaletteVblVESA lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c Phys lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c PtrVbeInfoBlock lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c ResetLastVESAMode lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c RestoreClip lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c ScanVESAModes lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c ScreenAux lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c Screen_Y lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c SetClip lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c SetPaletteDirect lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c SetPaletteOneVESA lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c SetPaletteVESA lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c SetPaletteVESA1 lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c SetPaletteVESA2 lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c SetWideScreen lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c SimpleInitSvga lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c SwitchBankVESA lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c SwitchBankVESA1 lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c SwitchBankVESA2 lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c SwitchBankVESA2Sel lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c TabOffLine lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c ToggleWideScreen lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c UnSetClip lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c VESAMode lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c VblVESA lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c Vsync lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c WideScreen lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c boxscreen lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c bufspeak lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c compact lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c copied lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c copiedshown lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c decl ShadeBoxBlk lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c desiredmemory lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c enum Linearbit lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c enum Width lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c memoclip lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c modememory lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c modes lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c movespan lba2	game: the 1994 code sets its clip after each change of area, the 1997 code's clip carried across
+sys/video.c ncopied lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c pace lba1	game: LBA1's menus wait without ManageTime
+sys/video.c palettemode lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c screenbase lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c setdac lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c setmode lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c setwidth lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c shadescreen lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c struct Mode lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c struct Rect lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c typedef Mode lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c typedef Rect lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c vbeinfo lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c videoinit lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c wideinit lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+test/cfgtest.c * apart	game: each game's reader of its settings, def_file.c's lba.cfg of ON and OFF and deffile.c's lba2.cfg of 0 and 1, with LBA2's port's keys
+test/cfgtest.c * lba1	game: each game's reader of its settings, def_file.c's lba.cfg of ON and OFF and deffile.c's lba2.cfg of 0 and 1, with LBA2's port's keys
+test/cfgtest.c * lba2	game: each game's reader of its settings, def_file.c's lba.cfg of ON and OFF and deffile.c's lba2.cfg of 0 and 1, with LBA2's port's keys
+test/clocktest.c FlagGamePad lba1	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c ReadInputs lba1	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c TimerSystem lba1	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c decl NewProc08 lba2	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c dignext lba2	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c digturn lba2	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c enum Turns apart	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c held lba2	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c irqms lba2	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c irqsame lba2	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c main apart	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c miditick lba1	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c padrepeat lba2	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c pitirq lba2	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c soundtick lba1	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c steps lba2	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c switched lba2	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c ticks lba1	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c vga lba1	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/clocktest.c wavetick lba1	game: LBA1's 50 Hz ticks and its two modes' frames, LBA2's milliseconds and MSS's interrupts
+test/filestest.c #define O_BINARY lba2	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c #endif#7 lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c #ifndef O_BINARY lba2	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c #ifndef _WIN32#3 lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c #ifndef _WIN32#4 lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c #include <fcntl.h> lba2	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c ? apart	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c binds apart	game: each game's settings file
+test/filestest.c bound lba2	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c cd apart	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c cdhome apart	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c cfgcopy lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c cfgs lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c cfgtext lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c config lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c copies lba2	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c copysave lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c deadconfig lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c decl AddExt lba1	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c decl Delete lba1	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c decl LoadMalloc lba1	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c decl OpenReadWrite lba1	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c decl Touch lba1	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c decl portclose lba2	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c decl portfclose lba2	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c decl portfopen lba2	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c decl portlseek lba2	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c decl portopen lba2	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c decl portread lba2	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c decl portremove lba2	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c decl portutime lba2	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c decl portwrite lba2	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c decl watcommkdir lba2	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c enum Npath apart	game: each port's limits, LBA1's 32 handles and the root's names of 245 characters, LBA2's 16 handles of its own
+test/filestest.c folds lba1	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
+test/filestest.c handles lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c jingle lba2	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c lastdot apart	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c layers apart	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c listings apart	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c logline lba2	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c logs lba2	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c longest lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c longnames lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c longpath apart	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c longsaves lba2	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c madedirs lba2	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c main apart	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c memory lba2	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c music lba2	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c order lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c readall apart	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c readonly lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c readonlypref lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c refused apart	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c removals apart	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c removes apart	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c renamefail lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c renames lba1	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c renaming lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c rewrites apart	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c savegame lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c savegames lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c saves lba2	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c searches lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c settlewithout lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c setvalue lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c sizes lba1	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/filestest.c start apart	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c utimes lba2	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c value lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c voices lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c volumes lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c writable lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
+test/filestest.c writeall apart	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2

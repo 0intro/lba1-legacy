@@ -212,7 +212,7 @@ void	WaitReleaseSpace()
 	 * Continue does.
 	 */
 #ifdef	FIXES
-	while( Key OR Fire ) ;
+	while( Key OR Fire ) idle() ;
 #else
 	while( (Fire & F_SPACE)
 	OR (Key == K_ESC) ) ;
@@ -889,7 +889,7 @@ void	Inventory()
 	FlagSpeak = memoflagspeak ;
 	InitDial( START_FILE_ISLAND+Island ) ;
 
-	while( Key OR Fire ) ;
+	while( Key OR Fire ) idle() ;
 }
 /*══════════════════════════════════════════════════════════════════════════*
     █▀▀▀▀ █▀▀▀█ █   █ ██▄ █ █▀▀▀▄       █▀▀▀█ █▀▀█      █ █▀▀▀▀ █▀▀▀▀ ▀▀█▀▀
@@ -1113,11 +1113,11 @@ argexit:
 
 	if( speakfromcd )
 	{
-		while( TestSpeakFromCD() AND (Key != K_ESC) ) ;
+		while( TestSpeakFromCD() AND (Key != K_ESC) ) idle() ;
 	}
 	else
 	{
-		while( TestSpeak() AND (Key != K_ESC) ) ;
+		while( TestSpeak() AND (Key != K_ESC) ) idle() ;
 	}
 	StopSpeak() ;
 #endif
@@ -1126,7 +1126,7 @@ argexit:
 	InitDial( START_FILE_ISLAND+Island ) ;
 
 #ifdef	FIXES
-	while( Key == K_ESC ) ;
+	while( Key == K_ESC ) idle() ;
 
 	/*
 	 * FIXED: LBA.EXE goes back to the game with the key that closed
@@ -1135,7 +1135,7 @@ argexit:
 	 * and Shift for the inventory. This waits for every key's release
 	 * but the arrows', as the quit menu's Continue does.
 	 */
-	while( Key OR Fire ) ;
+	while( Key OR Fire ) idle() ;
 #else
 	while( Key == K_ESC ) ;
 #endif
@@ -1659,7 +1659,7 @@ try_again:
 	DrawOneString( 320, 100, PlayerName, 1 ) ;
 	DrawAllLetters() ;
 
-	while( Key OR Fire ) ;
+	while( Key OR Fire ) idle() ;
 
 	memoasciimode = AsciiMode ;
 	AsciiMode = TRUE ;
@@ -1694,7 +1694,7 @@ try_again:
 
 		if( flag & 2 )
 		{
-			while( Fire ) ;
+			while( Fire ) idle() ;
 			flag &= ~2 ;
 		}
 
@@ -1826,7 +1826,7 @@ WORD	ChoosePlayerName( WORD mess )
 #else
 	listplayername = Malloc( MAX_PLAYER * (MAX_SIZE_PLAYER_NAME+1) ) ;
 #endif
-	ptrlist = (UBYTE**)Malloc( MAX_PLAYER * sizeof(UBYTE*) ) ;
+	ptrlist = (UBYTE**)HostMalloc( MAX_PLAYER * sizeof(UBYTE*) ) ;
 
 	if( !listplayername OR !ptrlist )
 	{
@@ -2056,6 +2056,8 @@ void	DrawGameMenu( UWORD *ptrmenu, WORD justone )
 
 		y += HAUTEUR_STANDARD + MENU_SPACE ;
 	}
+
+	if( nb == 0 )	idle() ;
 }
 
 /*──────────────────────────────────────────────────────────────────────────*/
@@ -2356,7 +2358,7 @@ LONG	OptionsMenu()
 	 * waits for its release, as the quit menu's Continue does.
 	 */
 #ifdef	FIXES
-	if( select == 15 )	while( Key OR Fire ) ;
+	if( select == 15 )	while( Key OR Fire ) idle() ;
 #endif
 
 	return FALSE ;
@@ -2659,7 +2661,7 @@ LONG	MainGameMenu()
 				}
 
 				CopyScreen( Log, Screen ) ;
-				while( Key OR Fire ) ; // provisoire
+				while( Key OR Fire ) idle() ; // provisoire
 				break ;
 
 			case 21: // load
@@ -2683,7 +2685,7 @@ LONG	MainGameMenu()
 #endif
 				}
 				CopyScreen( Log, Screen ) ;
-				while( Key OR Fire ) ; // provisoire
+				while( Key OR Fire ) idle() ; // provisoire
 				break ;
 
 			case 23:
@@ -2735,7 +2737,7 @@ LONG	QuitMenu()
 				 * for Key alone, which holds no fire key here.
 				 */
 #ifdef	FIXES
-				while( Key OR Fire ) ;
+				while( Key OR Fire ) idle() ;
 				HQ_RestoreSamples() ;	// et reprises
 #endif
 				return FALSE ;
@@ -2805,7 +2807,7 @@ void	GameAskChoice( WORD nummess )
 #ifdef	CDROM
 	NumObjSpeak = NUM_PERSO ;
 	Speak( GameChoice ) ;
-	while( TestSpeak() AND (Key!=K_ESC) )	;// Wait until silence
+	while( TestSpeak() AND (Key!=K_ESC) )	idle() ;// Wait until silence
 	StopSpeak() ;//	Security
 #endif
 }
@@ -2872,7 +2874,7 @@ void	GameOver()
 	CopyBlockPhys( x0,y0, x1,y1 ) ;
 
 	chrono = TimerRef + 50 * 3 ;
-	while( (TimerRef < chrono) AND (Key!=K_ESC) ) ;
+	while( (TimerRef < chrono) AND (Key!=K_ESC) ) idle() ;
 
 	UnSetClip() ;
 	Free( ptr3do ) ;
@@ -2938,6 +2940,7 @@ void	TimerPause( WORD nbsec )
 	while( TimerRef < (memotimer+50*nbsec) )
 	{
 		if( Key OR Fire OR Joy )	return ;
+		idle() ;
 	}
 }
 

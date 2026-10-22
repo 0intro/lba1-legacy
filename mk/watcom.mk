@@ -228,15 +228,26 @@ $(DOSDLL:%=$(O)/%.elf): $(O)/%.elf: $(O)/%.sym tools/le2elf.py
 
 ifneq ($(DOSFIXES),)
 # test, with the fixes: the build's sums against the reference, the
-# oracle on its image (its rand, srand and qsort against ours,
-# Watcom C 9's being LBA.EXE's), asmoracle on it (its assembly against
-# the translations into C, the fixes where LBA.EXE's faults among them),
-# and its run to No CD.
+# oracle on its image (its rand, srand and qsort against ours, Watcom C
+# 9's being LBA.EXE's), asmoracle on it (its assembly against the
+# translations into C, the fixes where LBA.EXE's faults among them),
+# keyoracle, its keyboard.asm's interrupt handler on a model of the 8042
+# and the BIOS against sys/keyb.c, timeoracle, its timer on a model of
+# the PIT against sys/timer.c, vgaoracle, its screen on a model of VESA
+# and the VGA against sys/video.c, fileoracle, its files on a model of
+# DOS's int 21h against sys/files.c, memoracle, its memory over Watcom's
+# heap and DPMI against sys/mem.c, and its run to No CD.
 test: all oracles
 	diff dos/$(CC)$(if $(FIXES),-fixes).sums $(O)/lba0.sums
 	$(ORACLE)/oracle $(O)/lba0.elf $(O)/lba0.sym
 	$(ORACLE)/asmoracle $(O)/lba0.elf $(O)/lba0.sym
 	$(ORACLE)/asmoracle $(O)/lba0.elf $(O)/lba0.sym fixes
+	mkdir -p $(O)/run/fileoracle
+	$(ORACLE)/keyoracle $(O)/lba0.elf $(O)/lba0.sym
+	$(ORACLE)/timeoracle $(O)/lba0.elf $(O)/lba0.sym
+	$(ORACLE)/vgaoracle $(O)/lba0.elf $(O)/lba0.sym
+	$(ORACLE)/fileoracle -d $(O)/run/fileoracle $(O)/lba0.elf $(O)/lba0.sym
+	$(ORACLE)/memoracle $(O)/lba0.elf $(O)/lba0.sym
 	dos/nodata -g $(DOS4GW) -x $(O)/lba0.exe
 
 # check, with the fixes: lint and test, then asmoracle on the game's
@@ -244,11 +255,13 @@ test: all oracles
 check: lint test
 	$(ORACLE)/asmoracle -g $(LBATMP)/pc/LBA $(O)/lba0.elf $(O)/lba0.sym
 else
-# test, LBA.EXE's code: the build's sums, and the oracle whose cases
-# hold it as they hold the fixes, the run-time's, then its run to No CD.
+# test, LBA.EXE's code: the build's sums, and the oracles whose cases
+# hold it as they hold the fixes: the run-time's and the memory's, then
+# its run to No CD.
 test: all oracles
 	diff dos/$(CC).sums $(O)/lba0.sums
 	$(ORACLE)/oracle $(O)/lba0.elf $(O)/lba0.sym
+	$(ORACLE)/memoracle $(O)/lba0.elf $(O)/lba0.sym
 	dos/nodata -g $(DOS4GW) -x $(O)/lba0.exe
 
 # check, LBA.EXE's code: lint and test.

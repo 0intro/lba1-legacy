@@ -1,0 +1,19 @@
+# Scene 9's hidden mine (fixtures/mine9: the sweep's save of scene 9,
+# Twinsen put where the way in from scene 62 sets him down, SceneStartX,
+# Y, Z 6656 1280 266 at bytes 270-275, facing into the scene, and the
+# CD's LBA.CFG). With the mine, actor 21, at 6656 1280 512, as LBA.EXE
+# has it, it goes off as the scene starts and throws him back into scene
+# 62, where its actor 1 strikes him. Moved to 6912 768, as LbaWin has
+# it, it leaves him standing in scene 9.
+
+hold 0.1
+sleep 70
+shot menu
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 15
+shot start
+sleep 5
+shot end

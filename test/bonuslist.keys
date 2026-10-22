@@ -1,0 +1,28 @@
+# The key that closes the list of places (fixtures/bonuslist: the
+# outside save with inventory object 26, the game's flag 26 at byte 32,
+# and the CD's LBA.CFG). Shift opens the inventory, Right six times and
+# Down twice go to the list, Return reads it, and Escape, held, closes
+# it. In LBA.EXE the next frame takes Escape for the quit menu, which
+# opens. Waited for, its release lets play go on.
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 12
+shot start
+key Shift_L
+sleep 3
+key Right Right Right Right Right Right
+sleep 1
+key Down Down
+sleep 1
+shot inventory
+key Return
+sleep 6
+shot list
+hold 0.4
+key Escape
+hold 0.15
+sleep 3
+shot end

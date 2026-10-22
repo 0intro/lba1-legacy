@@ -6,8 +6,8 @@
 #include "../sys/dat.h"
 
 /*
- * What func.asm gave the game, but its calls to DOS (SimpleInitMcga,
- * GetHDFreeSize, ComputeTime).
+ * What func.asm gave the game. Its calls to DOS (GetHDFreeSize,
+ * ComputeTime) are the port's, and nothing calls SimpleInitMcga.
  */
 
 /* SmallSort is func.asm's SmallSort: n entries of size bytes, by the signed word each starts with, smallest first. */

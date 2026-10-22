@@ -9,12 +9,13 @@
 # Assembler 3.1, which built LBA.EXE, the last from the floppies of
 # Borland C++ 3.1, which shipped it, Watcom C/C++ 10.0a, whose qsort
 # both DOS builds link first and whose wlink links Watcom C 9's wave
-# drivers. 9.01 takes Watcom's patches B to D of 1992, each a level, in
-# their order, as WinWorld's floppies hold level A: LBA.EXE links level
-# D's library. They lie on Walnut Creek's Hobbes OS/2 CD of October
-# 1993, which discmaster serves. WinWorld's mirror serves an archive to
-# a client once the site's download link has sent it there: its URLs are
-# those links.
+# drivers, and SDL3 for mingw-w64, which a Windows target links (a Linux
+# target takes the system's). 9.01 takes Watcom's patches B to D of
+# 1992, each a level, in their order, as WinWorld's floppies hold level
+# A: LBA.EXE links level D's library. They lie on Walnut Creek's Hobbes
+# OS/2 CD of October 1993, which discmaster serves. WinWorld's mirror
+# serves an archive to a client once the site's download link has sent
+# it there: its URLs are those links.
 JWASM_VERSION=2.20
 JWASM_URL=https://github.com/Baron-von-Riedesel/JWasm/archive/refs/tags/v$(JWASM_VERSION).tar.gz
 JWASM_SHA256=a9b78dfe18af47ea9eb55fdee0bf1fb5b8b3d9a8f3d0a490cf6b2b984151ccde
@@ -48,10 +49,14 @@ TASM_VERSION=3.1
 TASM_URL=https://winworldpc.com/download/f7396558-9ba2-11e9-ab10-fa163e9022f0/from/c39ac2af-c381-c2bf-1b25-11c3a4e284a2
 TASM_SHA256=76e155a7fb7eb0590930ecd513644c977497a020466a272943776fbf683d0f27
 
+SDL_VERSION=3.4.20
+SDL_URL=https://github.com/libsdl-org/SDL/releases/download/release-$(SDL_VERSION)/SDL3-devel-$(SDL_VERSION)-mingw.tar.gz
+SDL_SHA256=d2d3bf3fb97a90b22e908a306d7362631ef1bab229d988fe6669595dc29cd9ed
+
 # DL holds the downloads, each named by its version, and TOOLS the
 # tools: JWasm in bin, OpenWatcom 2 in ow2, Watcom C 9.01, 9.5b, 10.0a's
 # library and linker, MASM 6.11 and TASM 3.1 where dos/watcom installs
-# them.
+# them, SDL3 in sdl.
 DL=$(LBATMP)/downloads
 TOOLS=$(LBATMP)/tools
 JWASM_TGZ=$(DL)/jwasm-$(JWASM_VERSION).tar.gz
@@ -62,6 +67,7 @@ W95_7Z=$(DL)/watcom-$(W95_VERSION).7z
 W100A_7Z=$(DL)/watcom-$(W100A_VERSION).7z
 ML_7Z=$(DL)/masm-$(ML_VERSION).7z
 TASM_7Z=$(DL)/bcpp-$(TASM_VERSION).7z
+SDL_TGZ=$(DL)/sdl3-devel-$(SDL_VERSION)-mingw.tar.gz
 JWASMEXE=$(abspath $(TOOLS)/bin/jwasm)
 OW2=$(abspath $(TOOLS)/ow2)
 W901=$(abspath $(TOOLS)/w901)
@@ -69,6 +75,7 @@ W95=$(abspath $(TOOLS)/w95)
 W100A=$(abspath $(TOOLS)/w100a)
 MASM=$(abspath $(TOOLS)/masm)
 TASM=$(abspath $(TOOLS)/tasm)
+SDLDIR=$(TOOLS)/sdl
 
 # Each tool's stamp, named by its version, which make fetch writes once
 # the tool is installed. The rules that run a tool name its stamp, so
@@ -81,10 +88,15 @@ W95_OK=$(TOOLS)/w95-$(W95_VERSION).ok
 W100A_OK=$(TOOLS)/w100a-$(W100A_VERSION).ok
 ML_OK=$(TOOLS)/masm-$(ML_VERSION).ok
 TASM_OK=$(TOOLS)/tasm-$(TASM_VERSION).ok
+SDL_OK=$(TOOLS)/sdl-$(SDL_VERSION).ok
 
-# fetch installs what the target needs: 10.0a's library and linker and
-# the tools that CC names: OpenWatcom 2 and JWasm, or Watcom C 9.01 and
-# its patches, 9.5b, MASM 6.11 and TASM 3.1.
+# fetch installs what the target needs: on Windows SDL3, and for DOS
+# 10.0a's library and linker and the tools that CC names: OpenWatcom 2
+# and JWasm, or Watcom C 9.01 and its patches, 9.5b, MASM 6.11 and TASM
+# 3.1.
+FETCH_windows=\
+	$(SDL_OK)\
+
 FETCH_dos=\
 	$(W100A_OK)\
 
@@ -102,7 +114,7 @@ fetch: $(FETCH_$(OS)) $(FETCH_$(CC))
 
 ifeq ($(filter fetch,$(MAKECMDGOALS)),)
 # Outside make fetch a stamp that is missing stops the build.
-$(JWASM_OK) $(OW2_OK) $(W901_OK) $(W95_OK) $(W100A_OK) $(ML_OK) $(TASM_OK):
+$(JWASM_OK) $(OW2_OK) $(W901_OK) $(W95_OK) $(W100A_OK) $(ML_OK) $(TASM_OK) $(SDL_OK):
 	@echo "no $@: run make fetch OS=$(OS) ARCH=$(ARCH) CC=$(CC)" >&2; exit 1
 else
 # CURL downloads a URL, and tries again when the network or the server
@@ -137,6 +149,8 @@ $(ML_7Z):
 	$(call FETCH,$(ML_URL),$(ML_SHA256))
 $(TASM_7Z):
 	$(call FETCH,$(TASM_URL),$(TASM_SHA256))
+$(SDL_TGZ):
+	$(call FETCH,$(SDL_URL),$(SDL_SHA256))
 
 # JWasm built from its source by its own makefile, which takes none of
 # this make's variables.
@@ -184,4 +198,10 @@ $(TASM_OK): $(TASM_7Z)
 	$(call CHECK,$(TASM_SHA256))
 	dos/watcom install $<
 	rm -f $(TOOLS)/tasm-*.ok && touch $@
+
+# SDL3 for mingw-w64, each architecture under mingw-w64's name for it.
+$(SDL_OK): $(SDL_TGZ)
+	$(call CHECK,$(SDL_SHA256))
+	rm -rf $(SDLDIR) && mkdir -p $(SDLDIR) && tar -xzf $< -C $(SDLDIR) --strip-components=1
+	rm -f $(TOOLS)/sdl-*.ok && touch $@
 endif

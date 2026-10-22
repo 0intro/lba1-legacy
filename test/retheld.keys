@@ -1,0 +1,26 @@
+# Return held as Twinsen walks (fixtures/retheld: the sweep's save of
+# scene 2, the scene's own start, and the CD's LBA.CFG). Up walks him
+# along the paths, and Return held 4 s recentres the camera once as it
+# goes down, the camera then following him by its own jumps, where
+# LBA.EXE recentred it and redrew the scene on every frame Return was
+# held. The arrows keep their walk while Return is held, as in LBA.EXE.
+
+hold 0.1
+sleep 70
+shot menu
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 15
+shot start
+down Up
+sleep 0.5
+down Return
+sleep 4
+shot held
+up Return
+sleep 1
+up Up
+sleep 2
+shot end

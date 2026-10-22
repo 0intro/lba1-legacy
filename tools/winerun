@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+#
+# winerun: run LbaWin, or a Windows build of ours, under Wine in our
+# Xephyr (tools/xrun).
+#
+#     winerun [-k] [-q] [exe [args...]]
+#     winerun [-q] -e command [args...]
+#
+# The Wine prefix is $LBATMP/wine, never the desktop's. Its L: is a CD-ROM
+# drive over the unpacked PC CD ($LBATMP/pc, labelled ADELINE as the disc
+# is, which LbaWin checks). Without an executable, LbaWin runs from a
+# fresh $LBATMP/lbawin/run: the CD's LBA files with LbaWin's, its
+# installer's unpacked in $LBATMP/lbawin/app, on top, the movies linked
+# in so they play from the disk, and an empty VOX for the voices it
+# copies from the CD (a real directory: the game deletes them at exit).
+# -k keeps the last run directory (and its saves). -q mutes Wine's audio.
+# -e runs command in place of an exe, on the same display, in the same
+# prefix and environment: a script that starts Windows programs itself
+# (test/unit, test/nodata), which may run where $LBATMP/pc is missing.
+# Under xrun (XRUN_DISPLAY set) it uses that display. Otherwise it starts
+# xrun itself.
+#
+# LBATMP is ../lba1-tmp beside the tree unless set.
+
+set -Eeuo pipefail
+
+TOOLS=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+TOP=$(cd -- "$TOOLS/../.." && pwd)
+LBATMP=${LBATMP:-$TOP/lba1-tmp}
+export WINEPREFIX=$LBATMP/wine WINEDEBUG=${WINEDEBUG:--all}
+# No DXGI nor Direct3D 9: Fedora installs the 64-bit DXVK as Wine's, whose
+# DXGI finds no outputs on Xephyr (SDL3, which counts displays through it,
+# then sees none) and whose Direct3D 9 breaks Xephyr's connection. SDL
+# then counts the displays through Windows' own calls and draws with
+# OpenGL. LbaWin's DirectDraw needs neither.
+export WINEDLLOVERRIDES="winemenubuilder.exe=d;mscoree=;mshtml=;dxgi=d;d3d9=d"
+
+usage() {
+	echo "usage: winerun [-k] [-q] [exe [args...]]" >&2
+	echo "       winerun [-q] -e command [args...]" >&2
+	exit 2
+}
+
+keep=
+mute=
+cmd=
+while (( $# )); do
+	case $1 in
+	-k) keep=1; shift ;;
+	-q) mute=1; shift ;;
+	-e) cmd=1; shift; break ;;
+	-*) usage ;;
+	*) break ;;
+	esac
+done
+if [[ -n $cmd ]] && (( $# == 0 )); then
+	usage
+fi
+
+if [[ -z ${XRUN_DISPLAY:-} ]]; then
+	exec "$TOOLS/xrun" "$TOOLS/winerun" ${keep:+-k} ${mute:+-q} ${cmd:+-e} "$@"
+fi
+# Wine's programs die at startup (c0000005 in their C runtime) on some
+# desktop environments, such as a variable whose name holds quotes: run
+# Wine with only what it needs.
+if [[ -z ${WINERUN_CLEAN:-} ]]; then
+	exec env -i WINERUN_CLEAN=1 HOME="$HOME" USER="${USER:-}" PATH=/usr/bin:/bin LANG=C.UTF-8 \
+		DISPLAY="$DISPLAY" XAUTHORITY="${XAUTHORITY:-}" XRUN_DISPLAY="$XRUN_DISPLAY" \
+		LBATMP="$LBATMP" WINEDEBUG="$WINEDEBUG" "$TOOLS/winerun" ${keep:+-k} ${mute:+-q} ${cmd:+-e} "$@"
+fi
+[[ -n $cmd || -d $LBATMP/pc/LBA ]] || { echo "winerun: no $LBATMP/pc; run tools/extract" >&2; exit 1; }
+
+reg=$LBATMP/wine.reg
+{
+	printf 'REGEDIT4\n\n'
+	printf '[HKEY_CURRENT_USER\\Software\\Wine\\WineDbg]\n"ShowCrashDialog"=dword:00000000\n\n'
+	printf '[HKEY_LOCAL_MACHINE\\Software\\Wine\\Drives]\n"l:"="cdrom"\n\n'
+	if [[ -n $mute ]]; then
+		printf '[HKEY_CURRENT_USER\\Software\\Wine\\Drivers]\n"Audio"=""\n'
+	else
+		printf '[HKEY_CURRENT_USER\\Software\\Wine\\Drivers]\n"Audio"=-\n'
+	fi
+} > "$reg"
+wine regedit /S "$reg"
+timeout 60 wineserver -w || true
+if [[ -n $cmd ]]; then
+	exec "$@"
+fi
+printf 'ADELINE\n' > "$LBATMP/pc/.windows-label"
+ln -sfn "$LBATMP/pc" "$WINEPREFIX/dosdevices/l:"
+
+if (( $# )); then
+	exe=$1; shift
+	cd -- "$(dirname -- "$exe")"
+	exec wine "./$(basename -- "$exe")" "$@"
+fi
+
+run=$LBATMP/lbawin/run
+if [[ -z $keep || ! -d $run ]]; then
+	rm -rf -- "${run:?}"
+	mkdir -p "$run/VOX" "$run/Save" "$run/Screenshot"
+	find "$LBATMP/pc/LBA" "$LBATMP/lbawin/app" -maxdepth 1 -type f -exec cp {} "$run/" \;
+	ln -s "$LBATMP/pc/LBA/FLA" "$run/FLA"
+	chmod -R u+w "$run"
+fi
+cd -- "$run"
+exec wine ./LbaWin.exe

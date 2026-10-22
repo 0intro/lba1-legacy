@@ -1,0 +1,17 @@
+# Scene 12's door (fixtures/door12: the sweep's save of scene 12, the
+# fort, Twinsen put on its upper floor by the door, SceneStartX, Y, Z
+# 3600 3840 2600, and the CD's LBA.CFG). The door's halves, actors 28
+# and 29, stand at Z 3055 and 1808 in LBA.EXE, and actor 29 at 1795 in
+# LbaWin. The load shows them.
+
+hold 0.1
+sleep 70
+shot menu
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 15
+shot start
+sleep 5
+shot end

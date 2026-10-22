@@ -1,0 +1,34 @@
+# The behaviour menus with an arrow held (fixtures/outside). F2 pressed
+# with Right held opens the menu of the sporty behaviour, which took
+# Right for a change, so that LBA.EXE gave the aggressive one. Then Up
+# held and Ctrl's menu: Right changes the behaviour, and the menu closes
+# as Ctrl comes up, Twinsen walking on, where LBA.EXE waited for every
+# arrow's release, the game stopped while Up stayed down.
+
+hold 0.05
+sleep 70
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 15
+shot start
+down Right
+sleep 0.3
+key F2
+sleep 0.5
+up Right
+sleep 2
+shot f2
+down Up
+sleep 1
+down Control_L
+sleep 0.5
+key Right
+sleep 0.5
+up Control_L
+sleep 2
+shot ctrl
+up Up
+sleep 2
+shot end

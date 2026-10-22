@@ -1,0 +1,22 @@
+# Return to game in F6's options chosen by Space, Twinsen sporty
+# (fixtures/quitmenu: the outside save with the behaviour, byte 263, 1).
+# F6 opens the options, Space held chooses Return to game, and the game
+# goes on as Space comes up, where LBA.EXE took that Space for the next
+# frame's and Twinsen jumped.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 15
+shot start
+key F6
+sleep 2
+shot menu
+hold 0.4
+key space
+hold 0.15
+sleep 3
+shot after

@@ -1,0 +1,15 @@
+# Scene 9's snow bunker (fixtures/gun9: the sweep's save of scene 9,
+# Twinsen put beside the bunker in its zone 1, SceneStartX, Y, Z 16058
+# 803 18944 at bytes 270-275, and the CD's LBA.CFG). The gun, actor
+# 11, stands 176 above its slot in LBA.EXE, its barrel turning over the
+# bunker's roof, and in its slot as the PlayStation puts it.
+
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 15
+shot start
+sleep 5
+shot end

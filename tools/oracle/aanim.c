@@ -87,23 +87,6 @@ static uint32_t top;
 static uint32_t body[Nbody], bodylen[Nbody], anim[Nanim];
 static int nbody, nanim, gamebodies, gameanims;
 
-/* MemOffset and MemPointer over our arena: a frame a body comes from is kept as its offset */
-uint32_t
-MemOffset(void *p)
-{
-	if (p == NULL)
-		return 0;
-	return (uint8_t*)p - carena;
-}
-
-void*
-MemPointer(uint32_t off)
-{
-	if (off == 0)
-		return NULL;
-	return carena + off;
-}
-
 static void
 put32(uint8_t *p, uint32_t v)
 {
@@ -133,14 +116,14 @@ fill(uint8_t *p, uint32_t n)
 static uint32_t
 from(int side, uint32_t b)
 {
+	uint8_t *arena;
 	uint32_t p;
 
-	if (side == 0)
-		return get32(carena + b + Info);
-	p = get32(aarena + b + Info);
+	arena = side == 0 ? carena : aarena;
+	p = get32(arena + b + Info);
 	if (p == 0)
 		return 0;
-	return p - (uint32_t)(uintptr_t)aarena;
+	return p - (uint32_t)(uintptr_t)arena;
 }
 
 /* Room for n bytes and some slack at the arena's top, or NULL. */

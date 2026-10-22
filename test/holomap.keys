@@ -1,0 +1,26 @@
+# The holomap, from saveload's save given the holomap outside the
+# prison, where nothing is confiscated: for a player name of three
+# letters, ListFlagGame[FLAG_HOLOMAP] is byte 6, NumCube byte 261 and
+# SceneStartX bytes 270-271 (-1: the scene's own start). Record it with
+# such a save as the preferences (e2e record -f dir holomap):
+#
+#     printf '\001' | dd of=S1188.LBA bs=1 seek=6 conv=notrunc
+#     printf '\001' | dd of=S1188.LBA bs=1 seek=261 conv=notrunc
+#     printf '\377\377' | dd of=S1188.LBA bs=1 seek=270 conv=notrunc
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 15
+shot outside
+key h
+sleep 5
+shot holo
+sleep 3
+shot holomap
+key Escape
+sleep 5
+shot after

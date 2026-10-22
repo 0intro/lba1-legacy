@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+#
+# unit: a build's unit tests, each in a directory of its own.
+#
+#     test/unit dir
+#
+# dir holds a build's programs: a build's directory, which make all
+# fills, or the folder CI's Windows runner downloads. Each test of the
+# table below runs from the tree's root with its arguments, DIR among
+# them standing for dir/run/NAME, made empty first: the clock's retraces
+# and ticks (clocktest) and the preferences' files and their writer
+# (filestest). cfgtest runs in test/nodata. A Windows build's tests
+# (NAME.exe) run natively under Git Bash or MSYS2, and on Linux under
+# tools/winerun, which starts this script again in its Wine prefix on
+# the project's Xephyr. The paths given to a test are relative to the
+# root, which a Windows test reads as they are, natively and under Wine.
+
+set -Eeuo pipefail
+
+TEST=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPO=$(cd -- "$TEST/.." && pwd)
+
+# a test a line, its name and its arguments
+tests=(
+	'clocktest'
+	'filestest DIR'
+)
+
+usage() {
+	echo "usage: unit dir" >&2
+	exit 2
+}
+
+(( $# == 1 )) || usage
+[[ -d $1 ]] || { echo "unit: no $1" >&2; exit 1; }
+dir=$(realpath --relative-to="$REPO" -- "$1")
+cd -- "$REPO"
+
+# a Windows build's programs end in .exe
+exe=
+for f in "$dir"/*.exe; do
+	[[ -e $f ]] && exe=.exe
+	break
+done
+if [[ -n $exe && $(uname -s) == Linux && -z ${WINERUN_CLEAN:-} ]]; then
+	exec tools/winerun -q -e test/unit "$dir"
+fi
+
+for t in "${tests[@]}"; do
+	read -r -a args <<<"$t"
+	name=${args[0]}
+	prog=$dir/$name$exe
+	[[ -x $prog ]] || { echo "unit: no $prog (make test builds it)" >&2; exit 1; }
+	run=$dir/run/$name
+	rm -rf -- "$run"
+	mkdir -p -- "$run"
+	for i in "${!args[@]}"; do
+		[[ ${args[i]} == DIR ]] && args[i]=$run
+	done
+	"./$prog" "${args[@]:1}" || { echo "unit: $name failed" >&2; exit 1; }
+done

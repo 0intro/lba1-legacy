@@ -1,0 +1,21 @@
+# The key that closes a found object's box (fixtures/foundkey: a
+# save of scene 98, Twinsen put in the scene's zone 0 by actor 2, and the
+# CD's LBA.CFG). The action key, in the normal behaviour, runs Twinsen's
+# script there, which gives the Meca-Penguin, and Shift, held, closes its
+# box. In LBA.EXE the next frame takes Shift for the inventory, which
+# opens. Waited for, its release lets play go on.
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 12
+shot start
+key space
+sleep 8
+shot text
+hold 0.4
+key Shift_L
+hold 0.15
+sleep 3
+shot end

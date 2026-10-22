@@ -1,0 +1,181 @@
+# port.mk builds the game on SDL3 with gcc or clang, for the target that
+# OS and ARCH name: GAME and LIBS with sys/compat.h read first, the rest
+# with every warning an error. Each Windows program links
+# sys/lba.manifest, through sys/lba.rc, which makes its code page UTF-8,
+# the code page of the paths SDL gives.
+
+# The compiler's command. gcc and clang take the architecture as a flag
+# on Linux, and mingw-w64 names it in the command, which CROSS= leaves
+# to the shell's own tools on Windows itself (MSYS2's UCRT64).
+MINGW_386=i686-w64-mingw32
+MINGW_amd64=x86_64-w64-mingw32
+CROSS_windows=$(MINGW_$(ARCH))-
+CROSS=$(CROSS_$(OS))
+M_linux_386=-m32
+SANITIZE_ubsan=-fsanitize=undefined -fno-sanitize-recover=undefined
+SANITIZE_asan=-fsanitize=address,undefined -fno-sanitize-recover=undefined -fno-omit-frame-pointer
+COMPILE=$(CROSS)$(CC) $(M_$(OS)_$(ARCH)) $(SANITIZE_$(SANITIZE))
+
+# pkg-config finds SDL3: a Linux target the system's, the 32-bit one for
+# 386 on a 64-bit Linux, and a Windows target the one make fetch unpacks
+# into SDLDIR, whose stamp the objects that read its headers name, and
+# SDL3.dll.
+PKG_CONFIG_linux_386=PKG_CONFIG_LIBDIR=/usr/lib/pkgconfig:/usr/lib/i386-linux-gnu/pkgconfig:/usr/share/pkgconfig pkg-config
+PKG_CONFIG_linux_amd64=pkg-config
+PKG_CONFIG_windows_386=PKG_CONFIG_LIBDIR=$(SDLDIR)/$(MINGW_386)/lib/pkgconfig pkg-config
+PKG_CONFIG_windows_amd64=PKG_CONFIG_LIBDIR=$(SDLDIR)/$(MINGW_amd64)/lib/pkgconfig pkg-config
+PKG_CONFIG=$(PKG_CONFIG_$(OS)_$(ARCH))
+SDLDEP_windows=$(SDL_OK)
+SDLCFLAGS=$(shell $(PKG_CONFIG) --cflags sdl3)
+SDLLIBS=$(shell $(PKG_CONFIG) --libs sdl3)
+
+# The flags. Every compile writes the headers it read beside its object
+# (-MMD) and names its files in its debug tables from the tree's root,
+# and LBATMP's, SDL3's for Windows among them, as ../lba1-tmp
+# (-ffile-prefix-map), so that a build's bytes are the same wherever the
+# two lie. gcc takes the last map whose path starts a file's, so the
+# maps go in their paths' order: of two paths where one starts the
+# other, the longer last. OLDFLAGS are GAME's and LIBS', NEWFLAGS the
+# others', and LD a program's link: on Windows without the link's time
+# in its header.
+MAPS=$(foreach p,$(sort $(CURDIR) $(LBATMP)),\
+	-ffile-prefix-map=$(p)=$(if $(filter $(CURDIR),$(p)),.,../lba1-tmp))
+CFLAGS=-std=c99 -pedantic -funsigned-char -fno-strict-aliasing -fwrapv -O2 -g\
+	$(MAPS) -MMD -MP -DCDROM=1
+OLDFLAGS=-w -include sys/compat.h
+DEFS_linux=-D_DEFAULT_SOURCE
+NEWFLAGS=-Wall -Wextra -Werror $(DEFS_$(OS))
+LD_windows=-Wl,--no-insert-timestamp
+LD=$(LD_$(OS))
+
+# A Windows program ends in .exe and links sys/lba.rc's resource, lba.exe
+# as a windowed program (-mwindows), and SDL3.dll lies beside them.
+EXE_windows=.exe
+EXE=$(EXE_$(OS))
+GUI_windows=-mwindows
+RES_windows=$(O)/sys/lba.res.o
+MANIFEST=$(RES_$(OS))
+DLL_windows=$(O)/SDL3.dll
+
+# RUN starts a Windows program under Wine, in the project's prefix and
+# Xephyr (tools/winerun), and HOSTPATH gives it a path as Wine names it.
+RUN_windows=tools/winerun -q
+RUN=$(RUN_$(OS))
+HOSTPATH_linux=$(1)
+HOSTPATH_windows='Z:$(subst /,\,$(abspath $(1)))'
+HOSTPATH=$(HOSTPATH_$(OS))
+
+# TESTS lists the unit tests.
+TESTS=\
+	cfgtest\
+	clocktest\
+	filestest\
+
+# The objects, the game's in their link order, and their directories.
+OFILES=$(addprefix $(O)/,$(GAME) $(LIBS) $(NEW) $(PORT) $(ARRAYS))
+NEWOFILES=$(addprefix $(O)/,$(NEW) $(TESTS:%=test/%.o))
+DIRS=$(patsubst %/,%,$(sort $(dir $(OFILES) $(NEWOFILES))))
+
+# all builds the game, lba.cfg beside it and the unit tests.
+all: $(O)/lba$(EXE) $(O)/lba.cfg $(DLL_$(OS))\
+	$(TESTS:%=$(O)/%$(EXE))
+
+# The distribution holds the game and lba.cfg, the tree's licence and
+# those of the code it carries, and on Windows SDL3.dll and its licence.
+# The game comes last, its file the folder's.
+SDLLICENCE_windows=$(SDLDIR)/$(MINGW_$(ARCH))/share/licenses/SDL3/LICENSE.txt
+$(D)/lba$(EXE): $(O)/lba$(EXE) $(O)/lba.cfg $(DLL_$(OS)) $(SDLDEP_$(OS)) LICENSE\
+	lib386/lib_midi/ail32/license
+	rm -rf $(D) && mkdir -p $(D)
+	cp $(O)/lba.cfg $(DLL_$(OS)) LICENSE $(D)/
+	cp lib386/lib_midi/ail32/license $(D)/LICENSE.ail32
+	$(if $(SDLLICENCE_$(OS)),cp $(SDLLICENCE_$(OS)) $(D)/LICENSE.SDL3)
+	cp $(O)/lba$(EXE) $@
+
+# tools/pack.py writes the folder as an archive whose files take DATE,
+# so that the same folder gives the same bytes.
+$(ARCHIVE): $(D)/lba$(EXE) tools/pack.py
+	python3 -I tools/pack.py -t $(DATE) $(D) $@
+
+# dist builds the distribution and its archive.
+dist: $(D)/lba$(EXE) $(ARCHIVE)
+
+$(DIRS):
+	mkdir -p $@
+
+# The game links SDL3, and on Windows its resources.
+$(O)/lba$(EXE): $(OFILES) $(RES_$(OS))
+	$(COMPILE) $(GUI_$(OS)) $(LD) -o $@ $^ $(SDLLIBS) -lm
+
+# sys/lba.cfg beside the program, which a run reads after the
+# preferences and the game's directories.
+$(O)/lba.cfg: sys/lba.cfg | $(DIRS)
+	cp $< $@
+
+# SDL3.dll beside a Windows program.
+$(O)/SDL3.dll: $(SDL_OK) | $(DIRS)
+	cp $(SDLDIR)/$(MINGW_$(ARCH))/bin/SDL3.dll $@
+
+# sys/lba.cfg's bytes as a C array, lbacfg (sys/dat.h), a 0 after them.
+$(O)/sys/lbacfg.c: sys/lba.cfg | $(DIRS)
+	od -An -v -tx1 $< >$@.od
+	{ echo '#include <stdint.h>' &&\
+		echo 'uint8_t $(basename $(@F))[] = {' &&\
+		sed 's/[0-9a-f][0-9a-f]/0x&,/g' $@.od &&\
+		echo '0x00};' &&\
+		echo 'uint32_t n$(basename $(@F)) = sizeof $(basename $(@F)) - 1;'; } >$@
+	rm -f $@.od
+
+# The Windows programs' resource, sys/lba.rc: the manifest.
+$(O)/sys/%.res.o: sys/%.rc sys/lba.manifest | $(DIRS)
+	$(CROSS)windres -I sys -O coff -o $@ $<
+
+# The console programs: the unit tests.
+LINK=$(COMPILE) $(LD) -o $@ $^
+
+$(O)/cfgtest$(EXE): $(addprefix $(O)/,$(CFGTEST)) $(MANIFEST)
+	$(LINK)
+
+$(O)/clocktest$(EXE): $(addprefix $(O)/,$(CLOCKTEST)) $(MANIFEST)
+	$(LINK)
+
+$(O)/filestest$(EXE): $(addprefix $(O)/,$(FILESTEST)) $(MANIFEST)
+	$(LINK)
+
+# GAME and LIBS, the 1994 code.
+$(addprefix $(O)/,$(GAME) $(LIBS)): $(O)/%.o: %.c | $(DIRS)
+	$(COMPILE) $(CFLAGS) $(OLDFLAGS) -c -o $@ $<
+
+# NEW and the unit tests.
+$(NEWOFILES): $(O)/%.o: %.c | $(DIRS)
+	$(COMPILE) $(CFLAGS) $(NEWFLAGS) -c -o $@ $<
+
+# sys/, which reads SDL's headers.
+$(addprefix $(O)/,$(PORT)): $(O)/%.o: %.c $(SDLDEP_$(OS)) | $(DIRS)
+	$(COMPILE) $(CFLAGS) $(NEWFLAGS) $(SDLCFLAGS) -c -o $@ $<
+
+$(addprefix $(O)/,$(ARRAYS)): $(O)/%.o: $(O)/%.c
+	$(COMPILE) $(CFLAGS) $(NEWFLAGS) -c -o $@ $<
+
+-include $(wildcard $(O)/*.d $(O)/*/*.d $(O)/*/*/*.d)
+
+# test runs what needs the tree alone: the unit tests (test/unit) and the
+# game's start without its files, cfgtest among its runs (test/nodata).
+test: all
+	test/unit $(O)
+	test/nodata -x $(O)/lba$(EXE)
+
+# check runs lint and test, then the tests on the game's files in
+# LBATMP: the oracles, cfgtest on the CD's LBA.CFG, the proofs of the
+# tables the C holds (the cells and the texts of the data's fixes,
+# sources/gridfix.c and sources/textfix.c) and the records (test/e2e
+# check).
+check: lint test oraclecheck
+	rm -rf $(O)/run/cfg && mkdir -p $(O)/run/cfg
+	$(RUN) $(O)/cfgtest$(EXE) $(call HOSTPATH,$(O)/run/cfg) $(call HOSTPATH,$(LBATMP)/pc/LBA)
+	python3 -I tools/grids.py -c sources/gridfix.c $(LBATMP)/pc/LBA/LBA_GRI.HQR\
+		$(LBATMP)/gog/cd/LBA_GRI.HQR $(LBATMP)/gog/lba1/Speedrun/Windows/LBA_GRI.HQR
+	python3 -I tools/texts.py -c sources/textfix.c $(LBATMP)/gog/cd/TEXT.HQR\
+		$(LBATMP)/pc/LBA/TEXT.HQR $(LBATMP)/gog/lba1/CommonClassic/TEXT.HQR\
+		$(LBATMP)/ps/TEXT.HQR
+	test/e2e check -x $(O)/lba$(EXE)

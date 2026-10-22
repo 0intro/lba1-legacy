@@ -1,10 +1,17 @@
 # oracle.mk builds the oracles into build/oracle, 32-bit, at a fixed
 # address, what they run mapped below them: oracle, LBA.EXE's own
-# functions against ours (oracle.c), asmoracle, a DOS build's assembly
-# against its translations into C (asmoracle.c, abi.c), and
-# asmoracle-asan, the same under AddressSanitizer. On a DOS target with
-# the fixes, make test runs oracle and asmoracle, and on LBA.EXE's code
-# (CC=watcom without FIXES) oracle.
+# functions against ours (oracle.c), keyoracle, a DOS build's
+# keyboard.asm's interrupt handler on a model of the 8042 and the BIOS
+# against sys/keyb.c (keyoracle.c), timeoracle, its timer on a model of
+# the PIT against sys/timer.c (timeoracle.c), vgaoracle, its screen on a
+# model of VESA and the VGA against sys/video.c (vgaoracle.c),
+# fileoracle, its files on a model of DOS's int 21h against sys/files.c
+# (fileoracle.c), memoracle, its memory over Watcom's heap and DPMI
+# against sys/mem.c (memoracle.c), the five on pc.c's PC, asmoracle, a
+# DOS build's assembly against its translations into C (asmoracle.c,
+# abi.c), and asmoracle-asan, the same under AddressSanitizer. On a DOS
+# target with the fixes, make test runs oracle, asmoracle and the five,
+# and on LBA.EXE's code (CC=watcom without FIXES) oracle and memoracle.
 
 ORACLE=build/oracle
 # -Werror lies in ORACLECC: a build that gives a compiler of its own
@@ -18,6 +25,50 @@ ORACLESRC=\
 	tools/oracle/oracle.c\
 	sys/rand.c\
 	sys/qsort.c\
+
+KEYSRC=\
+	tools/oracle/keyoracle.c\
+	tools/oracle/pc.c\
+	tools/oracle/dll.c\
+	tools/oracle/abi.c\
+	sys/keyb.c\
+	lib386/lib_sys/expand.c\
+
+TIMESRC=\
+	tools/oracle/timeoracle.c\
+	tools/oracle/pc.c\
+	tools/oracle/dll.c\
+	tools/oracle/abi.c\
+	sys/timer.c\
+	lib386/lib_sys/expand.c\
+
+FILESRC=\
+	tools/oracle/fileoracle.c\
+	tools/oracle/dosfs.c\
+	tools/oracle/pc.c\
+	tools/oracle/dll.c\
+	tools/oracle/abi.c\
+	sys/files.c\
+	sys/compat.c\
+	lib386/lib_sys/expand.c\
+
+MEMSRC=\
+	tools/oracle/memoracle.c\
+	tools/oracle/pc.c\
+	tools/oracle/dll.c\
+	tools/oracle/abi.c\
+	sys/mem.c\
+	lib386/lib_sys/expand.c\
+
+VGASRC=\
+	tools/oracle/vgaoracle.c\
+	tools/oracle/pc.c\
+	tools/oracle/dll.c\
+	tools/oracle/abi.c\
+	sys/video.c\
+	sys/timer.c\
+	sources/mcga.c\
+	lib386/lib_sys/expand.c\
 
 ASMSRC=\
 	tools/oracle/asmoracle.c\
@@ -55,12 +106,14 @@ ASMSRC=\
 	lib386/lib_svga/s_fillv.c\
 	lib386/lib_svga/texture.c\
 
-# the headers the oracles read, the game's, those of sys/ and their own,
+# the headers the oracles read, the game's, the port's and their own,
 # so that a change of one builds every oracle again
 ORACLEHDR=$(wildcard sources/*.h sources/*.def sys/*.h lib386/*/*.h tools/oracle/*.h)
 
 # oracles builds the oracles.
-oracles: $(ORACLE)/oracle $(ORACLE)/asmoracle
+oracles: $(ORACLE)/oracle $(ORACLE)/keyoracle $(ORACLE)/timeoracle\
+	$(ORACLE)/vgaoracle $(ORACLE)/fileoracle $(ORACLE)/memoracle\
+	$(ORACLE)/asmoracle
 
 # asan builds asmoracle-asan.
 asan: $(ORACLE)/asmoracle-asan
@@ -68,6 +121,26 @@ asan: $(ORACLE)/asmoracle-asan
 $(ORACLE)/oracle: $(ORACLESRC) $(ORACLEHDR)
 	mkdir -p $(ORACLE)
 	$(ORACLECC) $(ORACLECFLAGS) $(ORACLELDFLAGS) -o $@ $(ORACLESRC)
+
+$(ORACLE)/keyoracle: $(KEYSRC) $(ORACLEHDR)
+	mkdir -p $(ORACLE)
+	$(ORACLECC) $(ORACLECFLAGS) $(ORACLEPORTFLAGS) $(ORACLELDFLAGS) -o $@ $(KEYSRC)
+
+$(ORACLE)/timeoracle: $(TIMESRC) $(ORACLEHDR)
+	mkdir -p $(ORACLE)
+	$(ORACLECC) $(ORACLECFLAGS) $(ORACLEPORTFLAGS) $(ORACLELDFLAGS) -o $@ $(TIMESRC)
+
+$(ORACLE)/vgaoracle: $(VGASRC) $(ORACLEHDR)
+	mkdir -p $(ORACLE)
+	$(ORACLECC) $(ORACLECFLAGS) $(ORACLEPORTFLAGS) $(ORACLELDFLAGS) -o $@ $(VGASRC)
+
+$(ORACLE)/fileoracle: $(FILESRC) $(ORACLEHDR)
+	mkdir -p $(ORACLE)
+	$(ORACLECC) $(ORACLECFLAGS) $(ORACLEPORTFLAGS) $(ORACLELDFLAGS) -o $@ $(FILESRC)
+
+$(ORACLE)/memoracle: $(MEMSRC) $(ORACLEHDR)
+	mkdir -p $(ORACLE)
+	$(ORACLECC) $(ORACLECFLAGS) $(ORACLEPORTFLAGS) $(ORACLELDFLAGS) -o $@ $(MEMSRC)
 
 # asmoracle's objects apart, so that a change of one file, a mutant's,
 # compiles that file alone

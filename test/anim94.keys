@@ -1,0 +1,15 @@
+# Scene 94's actor 9, which starts without a body, gets body 15 from its
+# life at the scene's first frame, with Twinsen in its zone 7 and game
+# flag 127 set, and its point 7, on the screen (fixtures/anim94: the
+# sweep's save of scene 94 with flag 127, byte 133, and Twinsen put at
+# 13056, 1024, 14336, bytes 270 to 275). That frame draws it before its
+# track gives it an animation.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 12
+shot loaded

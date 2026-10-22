@@ -205,9 +205,9 @@ T_HQR_HEADER	*HQR_Init_Ressource(	char *hqrname,
 
 	if( !FileSize( hqrname ) )	return 0 ;	// fichier ok ?
 
-	header =	Malloc(	sizeof(T_HQR_HEADER)
-				+
-				sizeof(T_HQR_BLOC) * maxindex	) ;
+	header =	HostMalloc(	sizeof(T_HQR_HEADER)
+					+
+					sizeof(T_HQR_BLOC) * maxindex	) ;
 
 	if( !header )	return 0 ;			// mem ok ?
 

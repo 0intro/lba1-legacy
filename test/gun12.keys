@@ -1,0 +1,15 @@
+# Scene 12's turret (fixtures/gun12: the sweep's save of scene 12,
+# Twinsen put before the turret, SceneStartX, Y, Z 16384 1280 13824 at
+# bytes 270-275, and the CD's LBA.CFG). The gun, actor 18, stands 128
+# above its slot's floor in LBA.EXE, and on it as the PlayStation puts
+# it.
+
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 15
+shot start
+sleep 5
+shot end

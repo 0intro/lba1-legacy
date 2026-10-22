@@ -35,6 +35,14 @@ typedef unsigned long		uint32_t;
 #define _dos_getdrive(d)	(_dos_getdrive)((unsigned *)(d))
 #define _dos_setdrive(d, n)	(_dos_setdrive)((d), (unsigned *)(n))
 
+/*
+ * The port's loops that wait on the keyboard or the timer call idle, and
+ * its main loop framesync at the top of each frame, for what DOS's
+ * interrupts and its uncapped loop do: here both are empty.
+ */
+#define idle()
+#define framesync()
+
 #if __WATCOMC__ > 901
 /*
  * perso.c installs its critical error handler through _harderr_, the name

@@ -1,0 +1,5 @@
+# Every file is checked out as it was committed, on every system: under
+# Windows' autocrlf the scripts, the Makefile and test/nodata.sums keep
+# their LF, and AIL/32's files, sys/lba.cfg, test/nodata.cfg and
+# dos/nodata.out keep their CRLF.
+* -text

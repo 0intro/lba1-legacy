@@ -1,0 +1,33 @@
+# The pause and the key that ends it (fixtures/outside). P pauses the
+# game, and P again ends the pause as P comes up, where LBA.EXE took that
+# P for the next frame's and paused again. Then P pauses and Y ends it,
+# and P pauses and Escape ends it, Escape then opening the quit menu as
+# it did, whose first entry, Continue, Return chooses.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 15
+shot start
+key p
+sleep 1
+shot pause
+key p
+sleep 2
+shot after
+key p
+sleep 1
+key y
+sleep 2
+shot y
+key p
+sleep 1
+key Escape
+sleep 2
+shot quit
+key Return
+sleep 2
+shot end

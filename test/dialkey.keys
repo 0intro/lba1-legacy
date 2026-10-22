@@ -1,0 +1,23 @@
+# The key that closes a message (fixtures/dialkey: a save with
+# Twinsen put in scene 1's zone 12, a message zone by
+# the prison's back door, and the CD's LBA.CFG). Space, in the normal
+# behaviour, opens the zone's message, "Keep the planet clean!", and
+# Shift, held, closes it. In LBA.EXE the next frame takes Shift for the
+# inventory, which opens. Waited for, the key opens nothing, and play
+# goes on.
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 12
+shot start
+key space
+sleep 4
+shot message
+hold 0.4
+key Shift_L
+hold 0.15
+sleep 3
+shot end

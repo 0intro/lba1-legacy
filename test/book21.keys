@@ -1,0 +1,60 @@
+# The Book of Bû used in scene 21's zone 6 (fixtures/book21: the sweep's
+# save of scene 21 with the book, the game's flag 5 at byte 11, Twinsen
+# put in zone 6, SceneStartX, Y, Z 18050 1792 20000 at bytes 270-275,
+# and the CD's LBA.CFG). Shift opens the inventory, Right and Down go to
+# the book and Return uses it: the prophecy, then the hero's script
+# shows the book's picture and its message of the runic stones, after
+# which it sets three places of the holomap, each showing the holomap's
+# picture. In LBA.EXE the message drops the book's picture, whose time
+# it outlasts, and each holomap picture takes a slot of its own, the
+# globe turning three times as fast. With the clock given back first the
+# book's picture shows after the message, and each new picture taking
+# the slot of the one shown, the globe turns as one.
+
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 12
+shot start
+key Shift_L
+sleep 3
+shot inventory
+key Right
+sleep 1
+key Down
+sleep 1
+shot book
+key Return
+sleep 4
+shot message
+key space
+sleep 3
+key space
+sleep 3
+key space
+sleep 3
+key space
+sleep 3
+key space
+sleep 3
+key space
+sleep 3
+key space
+sleep 3
+shot last
+key space
+sleep 4
+shot stones
+key space
+sleep 3
+key space
+sleep 3
+key space
+sleep 0.5
+shot pictures
+sleep 1
+shot pictures2
+sleep 4
+shot end

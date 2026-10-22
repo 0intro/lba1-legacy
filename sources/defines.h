@@ -250,10 +250,19 @@ typedef	struct
 	UBYTE	Bit ;		}	T_FLAG ;
 */
 
+#pragma pack(push, 1)
+/*
+ * FIXED: LBA.EXE reads a scene's track points where its data puts them,
+ * after its zones, at an odd offset in the same 68 scenes, where reading
+ * a structure of WORDs is undefined C. Packed to 1, as LbaWin and the
+ * Classic pack every structure, the points keep their layout and may lie
+ * at any address.
+ */
 typedef	struct
 {
 	WORD	X ;
 	WORD	Y ;
 	WORD	Z ;		}	T_TRACK ;
+#pragma pack(pop)
 
 #pragma pack(pop)

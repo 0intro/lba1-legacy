@@ -1,0 +1,48 @@
+# A new game, the inventory (Shift, closed by Escape), the behaviour menu
+# (while Ctrl is held), Escape and Quit game, which saves, the main menu
+# again, and the save loaded back, which in the first scene replays the
+# introduction.
+
+sleep 40
+shot menu
+key Return
+sleep 4
+shot name
+key a b c Return
+sleep 6
+shot text
+key Escape
+sleep 8
+key Escape
+sleep 10
+shot scene
+down Shift_L
+sleep 0.3
+up Shift_L
+sleep 3
+shot inventory
+key Escape
+sleep 2
+down Control_L
+sleep 2
+shot behaviour
+up Control_L
+sleep 2
+key Escape
+sleep 3
+shot quit
+key Down Return
+sleep 8
+shot menu2
+key Down Return
+sleep 3
+shot choose
+key Return
+sleep 8
+shot intro
+key Escape
+sleep 8
+shot movie
+key Escape
+sleep 10
+shot loaded

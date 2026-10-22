@@ -1,0 +1,19 @@
+# Scene 105's zone 11 (fixtures/zone105: the sweep's save of scene 105,
+# Funfrock's headquarters, Twinsen put in zone 11 by the safe,
+# SceneStartX, Y, Z 6912 256 27000, and the CD's LBA.CFG). The zone
+# takes zone 7's number 3 in LBA.EXE, so that the action key there runs
+# the hero's sequence of zone 3, which walks him off under its script.
+# Numbered 50, as LbaWin numbers it, the zone leaves the key to nothing.
+
+hold 0.1
+sleep 70
+shot menu
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 15
+shot start
+key space
+sleep 8
+shot end

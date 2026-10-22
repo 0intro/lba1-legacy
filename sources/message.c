@@ -141,6 +141,20 @@ char	*TabLanguage[] = {
 	"Espa\244ol",
 	"Italiano" 	}	;
 
+#ifndef	DOS
+/*
+ * FEATURE: the languages' names in UTF-8, Français and Español as a
+ * configuration file of today spells them, beside TabLanguage's CP437,
+ * the game's own. The port's own.
+ */
+char	*TabLanguageUtf8[] = {
+	"English",
+	"Fran\303\247ais",
+	"Deutsch",
+	"Espa\303\261ol",
+	"Italiano" 	}	;
+#endif
+
 
 char  *ListLanguage[] = {     "EN_", "FR_", "DE_", "SP_", "IT_" } ;
 
@@ -279,7 +293,15 @@ void	InitLanguage()
 	{
 		for( n=0; n<NB_LANGUAGES; n++ )
 		{
-			if( !stricmp( string, TabLanguage[n] ) )
+			if( !stricmp( string, TabLanguage[n] )
+#ifndef	DOS
+			/*
+			 * FEATURE: Language named in UTF-8 as in CP437. The
+			 * port's own.
+			 */
+			OR  !stricmp( string, TabLanguageUtf8[n] )
+#endif
+			)
 			{
 				Language = n 	;
 				break		;
@@ -296,7 +318,15 @@ void	InitLanguage()
 
 		for( n=0; n<NB_LANGUAGES; n++ )
 		{
-			if( !stricmp( string, TabLanguage[n] ) )
+			if( !stricmp( string, TabLanguage[n] )
+#ifndef	DOS
+			/*
+			 * FEATURE: LanguageCD named in UTF-8 as in CP437. The
+			 * port's own.
+			 */
+			OR  !stricmp( string, TabLanguageUtf8[n] )
+#endif
+			)
 			{
 				LanguageCD = n	;
 				FlagSpeak = TRUE;
@@ -453,8 +483,8 @@ void	AffStatusVoiceFile()
 	{
 		Text( 10, i*10+16, "%FName : %s  Size : %L  Time : %L", pt->NameHD, pt->SizeFileHD, pt->SaveTimer ) ;
 	}
-        while( !Key )	;
-	while( Key )	;
+        while( !Key )	idle() ;
+	while( Key )	idle() ;
 }
 #endif
 /*-------------------------------------------------------------------------*/
@@ -1112,7 +1142,7 @@ void    AffAllCar()
 #ifdef  LBA_EDITOR
 	if ( !QuickMessage )
 #endif
-		while( SaveTimerForCar == TimerRef )	;
+		while( SaveTimerForCar == TimerRef )	idle() ;
 
 	SaveTimerForCar = TimerRef			;
 
@@ -1482,7 +1512,7 @@ void    Dial( LONG text )
 	if (( !FlagDisplayText )	// Pas de texte et Voix OK
 	AND ( ret ))
 	{
-		while((TestSpeak()) AND ( Key != K_ESC )) ;
+		while((TestSpeak()) AND ( Key != K_ESC )) idle() ;
 		StopSpeak()	;
 		RestoreClip()	;
 		return		;
@@ -1498,11 +1528,11 @@ void    Dial( LONG text )
 		{
 			while(( Key )
 			OR    ( Fire )
-			OR    ( Joy ))	TestSpeak()	;// Tu relaches ?
+			OR    ( Joy ))	{ TestSpeak()	; idle() ; }// Tu relaches ?
 
 			while(( !Key )
 			AND   ( !Fire )
-			AND   ( !Joy ))	TestSpeak()	;// Tu appuies ?
+			AND   ( !Joy ))	{ TestSpeak()	; idle() ; }// Tu appuies ?
 		}
 
 		if ( Key == K_ESC )//	Player Abort...
@@ -1513,6 +1543,8 @@ void    Dial( LONG text )
 
 		if ((( ret == 0 ) AND ( !TestSpeak()))// Tout fini
 		OR ( flagabort )) break ;	      // Ou Abort by player
+
+		if ( ret == 0 )	idle() ;
 	}
 
 	StopSpeak()     ;
@@ -1520,9 +1552,9 @@ void    Dial( LONG text )
 #ifndef LORAN
 	if(( ret == 0 ) AND ( !flagabort ))
 	{
-		while(!(( !Key ) AND ( !Fire ) AND ( !Joy ))) ;
+		while(!(( !Key ) AND ( !Fire ) AND ( !Joy ))) idle() ;
 
-		while(( !Key ) AND ( !Fire ) AND ( !Joy )) ;
+		while(( !Key ) AND ( !Fire ) AND ( !Joy )) idle() ;
 	}
 #endif
 /*
@@ -1547,12 +1579,12 @@ void	MyDial( WORD nummess )	// attends une touche si autre page sinon continue
 		TestSpeak() 		;
 		if( dialstat == 2 )		// encore 1 page
 		{
-			while( Key OR Fire OR Joy ) 	 TestSpeak() ;
-			while( !Key AND !Fire AND !Joy ) TestSpeak() ;
+			while( Key OR Fire OR Joy ) 	 { TestSpeak() ; idle() ; }
+			while( !Key AND !Fire AND !Joy ) { TestSpeak() ; idle() ; }
 		}
 	}
 
-	while(TestSpeak())	;// Wait until silence
+	while(TestSpeak())	idle() ;// Wait until silence
 
 	StopSpeak() ;//	Security
 	CloseDial() ;
@@ -1577,9 +1609,9 @@ void    Dial( LONG text )
 		ret = NextDialCar()     ;
 		if ( ret == 2 ) /*      Attente de Touche       */
 		{
-			while(!(( !Key ) AND ( !Fire ) AND ( !Joy )))	;
+			while(!(( !Key ) AND ( !Fire ) AND ( !Joy )))	idle() ;
 			if ( Key == K_ESC )     break   		;
-			while(( !Key ) AND ( !Fire ) AND ( !Joy ))	;
+			while(( !Key ) AND ( !Fire ) AND ( !Joy ))	idle() ;
 		}
 
 		if (( ret == 0 ) OR ( Key == K_ESC )) break ;
@@ -1588,9 +1620,9 @@ void    Dial( LONG text )
 #ifndef LORAN
 	if( ret == 0 )
 	{
-		while(!(( !Key ) AND ( !Fire ) AND ( !Joy ))) ;
+		while(!(( !Key ) AND ( !Fire ) AND ( !Joy ))) idle() ;
 
-		while(( !Key ) AND ( !Fire ) AND ( !Joy )) ;
+		while(( !Key ) AND ( !Fire ) AND ( !Joy )) idle() ;
 	}
 #endif
 /*
@@ -1613,8 +1645,8 @@ void	MyDial( WORD nummess )	// attends une touche si autre page sinon continue
 		dialstat = NextDialCar() ;
 		if( dialstat == 2 )		// encore 1 page
 		{
-			while( Key OR Fire OR Joy ) ;
-			while( !Key AND !Fire AND !Joy ) ;
+			while( Key OR Fire OR Joy ) idle() ;
+			while( !Key AND !Fire AND !Joy ) idle() ;
 		}
 	}
 

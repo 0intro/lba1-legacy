@@ -78,7 +78,7 @@ void	CheckSavePcx()
 		Save_Pcx( NamePcxSave, Screen, PtrPal ) ;
 
 		NumPcxSave++ ;
-		while( Key ) ;
+		while( Key ) idle() ;
 		FirstTime = TRUE ;
 	}
 }
@@ -316,6 +316,7 @@ startloop:
 //		while( TimerRef == timeralign ) ;
 //		timeralign = TimerRef ;
 		if( NbFramePerSecond > 500 )	Vsync() ;
+		framesync() ;
 
 
 /*		CoulText( 15, 0 ) ;
@@ -362,7 +363,7 @@ startloop:
 		if( MyKey == K_F11 )
 		{
 			AsciiMode ^= 1 ;
-			while( Key ) ;
+			while( Key ) idle() ;
 		}
 
 		if( MyKey == K_W )
@@ -652,7 +653,7 @@ startloop:
 					 * arrows', as the quit menu's Continue does.
 					 */
 #ifdef	FIXES
-					while( Key OR Fire ) ;
+					while( Key OR Fire ) idle() ;
 #endif
 				}
 				break ;
@@ -701,7 +702,7 @@ startloop:
 		 * held, as LbaWin, DotEmu and the Classic clear Return in
 		 * MyFire and Fire after the recentring. Fire keeps it, so that
 		 * its release ends the press: LbaWin's keyboard gives Return
-		 * no repeat.
+		 * no repeat, where the port's repeats it.
 		 */
 		if( MyFire & F_RETURN )	/* recentre sur perso */
 		{
@@ -751,15 +752,15 @@ startloop:
 				Font( 5,446, "Pause" ) ;
 				CopyBlockPhys( 5,446,100,479 ) ;
 			}
-			while( Key ) ;
-			while( !Key AND !Joy AND !Fire ) ;
+			while( Key ) idle() ;
+			while( !Key AND !Joy AND !Fire ) idle() ;
 			/*
 			 * FIXED: LBA.EXE leaves the pause with the P that ends it
 			 * still down, which the next frame takes for a pause
 			 * again. This waits for P's release, the game held.
 			 */
 #ifdef	FIXES
-			while( Key == K_P ) ;
+			while( Key == K_P ) idle() ;
 #endif
 			if( !FlagMCGA )
 			{
@@ -775,13 +776,13 @@ startloop:
 			if( FlagMCGA ^= 1 )
 			{
 				ExtInitMcga() ;
-				while( Key ) ;
+				while( Key ) idle() ;
 			}
 			else
 			{
 				ExtInitSvga() ;
 				FirstTime = TRUE ;
-				while( Key ) ;
+				while( Key ) idle() ;
 			}
 		}
 /*
@@ -1304,8 +1305,8 @@ void	Message( UBYTE *mess, WORD flag )
 
 	if( flag )
 	{
-		while( Key OR Joy OR Fire ) ;
-		while( !Key AND !Joy AND !Fire ) ;
+		while( Key OR Joy OR Fire ) idle() ;
+		while( !Key AND !Joy AND !Fire ) idle() ;
 	}
 	RestoreClip() ;
 }
@@ -1397,7 +1398,7 @@ int	main( int argc, char *argv[] )
 
 // pause logo
 	memotimer = TimerRef ;
-	while( TimerRef < (memotimer+50*4) ) ;
+	while( TimerRef < (memotimer+50*4) ) idle() ;
 #endif
 
 // check cd rom
@@ -1412,7 +1413,7 @@ int	main( int argc, char *argv[] )
 	{
 		/*
 		 * FIXED: LBA.EXE writes the CD's drive letter into a string
-		 * literal, which a compiler may make read-only. This array holds
+		 * literal, which gcc and mingw make read-only. This array holds
 		 * the same bytes.
 		 */
 #ifdef	FIXES
@@ -1429,8 +1430,14 @@ int	main( int argc, char *argv[] )
 	}
 	else	TheEnd(PROGRAM_OK, "No CD")	;
 
+#ifdef	DOS
+	/*
+	 * DOS's drives: the port's CD is a directory, its D: a
+	 * name of its own.
+	 */
 	if ( ProgDrive[0]-'A' == DriveCDR )// A=0 , B=1 etc.
 		TheEnd(PROGRAM_OK, "Type INSTALL")	;
+#endif
 
 #else
 	strcpy( PathFla, "FLA\\" ) ;	// version cdrom sur hd (fla only)

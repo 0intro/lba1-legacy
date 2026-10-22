@@ -1,0 +1,180 @@
+#!/usr/bin/env bash
+#
+# nodata: a build run without the game's files, as CI runs it: cfgtest
+# on an lba.cfg of our own, then lba from its start to "No CD", or past
+# a stand-in for the CD to its first missing resource.
+#
+#     test/nodata [-k] [-x exe]
+#
+# The lba.cfg, test/nodata.cfg (dos/nodata gives it to the DOS build
+# too), holds the keys the game reads at its start and those cfgtest
+# checks (test/cfgtest.c), with every sound off and nothing of the CD's
+# file. cfgtest reads it as the game's LBA.CFG, and lba, with it in its
+# preferences too and no other file, plays the logo's fades on a black
+# screen, waits its 4 s, finds no CD and quits with "No CD". It replays
+# a record that holds only its end, so it runs as fast as it goes, with
+# SDL's dummy video, and the sums of its screens must be
+# test/nodata.sums, the same on every build and system. -k keeps them
+# there instead. A run that hangs reaches the record's end, about ten
+# times the run's pumps, and fails without "No CD". lba then runs again
+# on that lba.cfg less the keys InitLanguage reads, Language,
+# LanguageCD, FlagKeepVoice and FlagDisplayText, which a missing key
+# leaves at their defaults: French for Language (index 1 of
+# TabLanguage), nodata.cfg's values for the others. The run shows the
+# logo's fades alone, the same in every language: the same screens. Then
+# lba starts from drive D:, as Windows' Explorer names a program on that
+# drive (a Windows exe is started as it is), beside a stand-in CD, its
+# CD_LBA alone: the start goes past the CD to its first missing
+# resource, the inventory's ("HQR Inventory"), the same screens. Then
+# three runs from empty preferences, which they must leave empty. On two
+# game directories, the first, langé, holding an LBA.CFG of two keys,
+# Language: Deutsch and LanguageCD in CP437, the second empty, lba reads
+# that LBA.CFG as it is: the same screens. On a game directory without
+# LBA.CFG, a copy of lba in besidé reads the lba.cfg beside it: the same
+# screens. A copy beside none reads the text lba holds of lba.cfg to
+# "No CD".
+#
+# exe is build/linux-amd64-gcc/lba by default, cfgtest and lba.cfg
+# beside it. A Windows exe runs natively (Git Bash, MSYS2), SDL3.dll
+# beside it or on the PATH. On Linux, SDL3.dll beside it, the test
+# starts itself again under tools/winerun: binfmt gives the exe to Wine
+# with the caller's display and prefix, which winerun makes our Xephyr's
+# and our own. Only relative names are passed, from the run's directory,
+# $LBATMP/nodata, so that no path needs converting. The two folders
+# named with an é hold the game directory's LBA.CFG and the copy beside
+# its lba.cfg, which a Windows build finds as SDL names them, its
+# argument and the program's folder in UTF-8.
+
+set -Eeuo pipefail
+
+TEST=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPO=$(cd -- "$TEST/.." && pwd)
+LBATMP=${LBATMP:-$(cd -- "$REPO/.." && pwd)/lba1-tmp}
+RUN=$LBATMP/nodata
+END=50000
+
+usage() {
+	echo "usage: nodata [-k] [-x exe]" >&2
+	exit 2
+}
+
+keep=
+exe=$REPO/build/linux-amd64-gcc/lba
+while (( $# )); do
+	case $1 in
+	-k) keep=1; shift ;;
+	-x) exe=$(cd -- "$(dirname -- "${2:?}")" && pwd)/$(basename -- "$2"); shift 2 ;;
+	*) usage ;;
+	esac
+done
+cfgtest=$(dirname -- "$exe")/cfgtest
+[[ $exe == *.exe ]] && cfgtest+=.exe
+for f in "$exe" "$cfgtest"; do
+	[[ -x $f ]] || { echo "nodata: no $f; build it first" >&2; exit 1; }
+done
+cfg=$(dirname -- "$exe")/lba.cfg
+[[ -f $cfg ]] || { echo "nodata: no $cfg; build it first" >&2; exit 1; }
+
+if [[ $exe == *.exe && $(uname -s) == Linux && -z ${WINERUN_CLEAN:-} ]]; then
+	exec "$REPO/tools/winerun" -q -e "$TEST/nodata" ${keep:+-k} -x "$exe"
+fi
+
+rm -rf -- "$RUN"
+mkdir -p "$RUN/game" "$RUN/pref" "$RUN/unit"
+cd -- "$RUN"
+cp "$TEST/nodata.cfg" game/LBA.CFG
+cp game/LBA.CFG pref/lba.cfg
+
+"$cfgtest" unit game
+
+echo "$END e" > rec
+
+# run pref sums want arg...: lba run with the preferences pref and the
+# arguments arg, its end want, which it must print, its output in out,
+# its sums in sums, started as argv0 when that is set
+run() {
+	local pref=$1 sums=$2 want=$3 start=("$exe")
+	shift 3
+	if [[ -n ${argv0:-} ]]; then
+		start=(bash -c 'exec -a "$0" "$@"' "$argv0" "$exe")
+	fi
+	if ! SDL_VIDEO_DRIVER=dummy "${start[@]}" "$@" -p "$pref" -i rec -s "$sums" > out 2>&1; then
+		echo "nodata: $exe failed" >&2
+		cat out >&2
+		exit 1
+	fi
+	if ! grep -q "$want" out; then
+		echo "nodata: $exe ended without \"$want\"" >&2
+		cat out >&2
+		exit 1
+	fi
+}
+
+# same sums what: the first line of sums that differs from the reference,
+# compared in bash: Git Bash may lack cmp
+same() {
+	local -a got ref
+	local i
+	mapfile -t got < "$1"
+	mapfile -t ref < "$TEST/nodata.sums"
+	for (( i = 0; i < ${#got[@]} || i < ${#ref[@]}; i++ )); do
+		if [[ ${got[i]:-} != "${ref[i]:-}" ]]; then
+			echo "nodata: $2differs at line $((i + 1)): reference ${ref[i]:-none}, run ${got[i]:-none}" >&2
+			exit 1
+		fi
+	done
+	echo "nodata: ${2}same, ${#got[@]} screens"
+}
+
+run pref sums 'No CD' -g game -c cd
+if [[ $keep ]]; then
+	cp sums "$TEST/nodata.sums"
+	echo "nodata: kept, $(wc -l < sums) screens"
+	exit 0
+fi
+same sums ""
+
+mkdir nokeys
+grep -av '^\(Language\|LanguageCD\|FlagKeepVoice\|FlagDisplayText\):' game/LBA.CFG > nokeys/lba.cfg
+run nokeys sums-nokeys 'No CD' -g game -c cd
+same sums-nokeys "without the language's keys, "
+
+mkdir disc
+: > disc/CD_LBA
+if [[ $exe == *.exe ]]; then
+	run pref sums-drive 'HQR Inventory' -g game -c disc
+else
+	argv0='D:\LBA\LBA.EXE' run pref sums-drive 'HQR Inventory' -g game -c disc
+fi
+same sums-drive "from drive D:, "
+
+# untouched pref what: pref left empty
+untouched() {
+	if [[ -n $(ls -A "$1") ]]; then
+		echo "nodata: $2: the preferences written: $(ls -A "$1" | tr '\n' ' ')" >&2
+		exit 1
+	fi
+}
+
+mkdir gamecfg langé nogame
+printf 'Language: Deutsch\r\nLanguageCD: Fran\207ais\r\n' > langé/LBA.CFG
+run gamecfg sums-gamecfg 'No CD' -g langé -g nogame -c cd
+grep '^[0-9]' sums-gamecfg > screens-gamecfg || true
+same screens-gamecfg "with a game directory's LBA.CFG, "
+untouched gamecfg "a game directory's LBA.CFG"
+
+mkdir besidé besidecfg
+cp "$exe" besidé/
+[[ ! -f $(dirname -- "$exe")/SDL3.dll ]] || cp "$(dirname -- "$exe")/SDL3.dll" besidé/
+cp "$cfg" besidé/lba.cfg
+exe=besidé/$(basename -- "$exe") run besidecfg sums-beside 'No CD' -g nogame -c cd
+grep '^[0-9]' sums-beside > screens-beside || true
+same screens-beside "with lba.cfg beside the program, "
+untouched besidecfg "lba.cfg beside the program"
+
+mkdir bare textcfg
+cp "$exe" bare/
+[[ ! -f $(dirname -- "$exe")/SDL3.dll ]] || cp "$(dirname -- "$exe")/SDL3.dll" bare/
+exe=bare/$(basename -- "$exe") run textcfg sums-text 'No CD' -g nogame -c cd
+untouched textcfg "the program's text of lba.cfg"
+echo "nodata: the program's text of lba.cfg read to \"No CD\""

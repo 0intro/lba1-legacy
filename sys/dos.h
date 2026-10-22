@@ -1,6 +1,7 @@
 /*
  * What dos.h gave the 1994 code: the drive, and the search for files
- * the game makes. Included by compat.h.
+ * the game makes (sys/files.c, sys/compat.c). Included by compat.h and
+ * by the port files that implement these.
  */
 #define _A_NORMAL	0x00
 #define _A_RDONLY	0x01
@@ -17,7 +18,7 @@ struct find_t
 	unsigned short	wr_time;
 	unsigned short	wr_date;
 	unsigned int	size;
-	char		name[13];
+	char		name[256];	/* 8.3, or in the root a long name (sys/files.c) */
 };
 
 unsigned	_dos_findfirst(const char*, unsigned, struct find_t*);

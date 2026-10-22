@@ -1,0 +1,22 @@
+# DotEmu's saves under the names DotEmu gives them (fixtures/longname:
+# the CD's LBA.CFG, the four saves of Steam's package, three named by
+# their date, 20200509154641.LBA to 20200509161619.LBA, and a quick
+# save, 20200509161619.LBA_quick.LBA, with their pictures, beside the
+# outside save of scene 1 in S1000.LBA, named abc). Continue saved game
+# lists them by file, four Twinsen and abc, and the second,
+# 20200509155535.LBA, loads Twinsen's house, scene 5, which the port
+# writes back under that name.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Return
+sleep 3
+shot list
+key Down
+sleep 1
+shot second
+key Return
+hold 0.15
+sleep 15
+shot loaded

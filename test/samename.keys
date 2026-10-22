@@ -1,0 +1,19 @@
+# Two saves of one player's name, abc (fixtures/samename: the CD's
+# LBA.CFG, the outside save of scene 1 in S1000.LBA, and the sweep's save
+# of scene 43 in S2000.LBA). Load game lists abc twice, and the second,
+# chosen, loads scene 43, the save's own, where the first file of that
+# name was loaded.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Return
+sleep 3
+shot list
+key Down
+sleep 1
+shot second
+key Return
+hold 0.15
+sleep 15
+shot loaded

@@ -1,0 +1,26 @@
+# A question with no answer (fixtures/candy: the outside save,
+# fixtures/outside, put in scene 30, byte 261, with Twinsen before the
+# life candy machine, actor 4: SceneStartX, Y, Z at bytes 270-275, 26368
+# 256 24832, and no kashes). The action key asks whether to buy, Return
+# takes "Ok, I'll buy.", and the machine asks text 87, "Not enough
+# Kashes!", with no answer added: a menu of no entries, which waits for
+# Return, as in LBA.EXE, and play goes on.
+
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 12
+shot start
+key space
+sleep 4
+shot question
+key Return
+sleep 4
+shot empty
+key Return
+sleep 4
+shot left
+sleep 4
+shot end

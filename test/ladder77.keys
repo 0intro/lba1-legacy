@@ -1,0 +1,21 @@
+# Scene 77's ladder (fixtures/ladder77: the sweep's save of scene 77,
+# Twinsen put in Tippet's secret passage before the ladder, SceneStartX,
+# Y, Z 28938 1536 3800, facing it, and the CD's LBA.CFG). Up walks him
+# to the ladder and up it. Its zone 6 ends at Z 3588 in LBA.EXE and at
+# 3616 in LbaWin, so that the climb starts at 3614, where LBA.EXE's
+# starts at 3587.
+
+hold 0.1
+sleep 70
+shot menu
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 15
+shot start
+down Up
+sleep 5
+up Up
+sleep 3
+shot end

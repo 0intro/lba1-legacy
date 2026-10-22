@@ -540,6 +540,7 @@ void PlayAnimFla(char *name_anim)
 			GestionPalette();
 			do
 			{
+				idle() ;
 				NbTip = TimerRef - cadence;
 			}
 			while (NbTip < 50 / ImageCadence);
@@ -676,7 +677,11 @@ void	PlayDiskFla( UBYTE *name_anim )
 		FadeToPal( PalettePcx ) ;
 
 		timer = TimerRef + 2 * 50 ;
-		while( TimerRef < timer ) if( Key == K_ESC ) break ;
+		while( TimerRef < timer )
+		{
+			if( Key == K_ESC ) break ;
+			idle() ;
+		}
 
 		if( Key == K_ESC ) break ;
 

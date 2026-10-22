@@ -1,0 +1,33 @@
+# Manual fighting with two arrows (fixtures/blows: the outside save made
+# aggressive, byte 263, 2, and the CD's LBA.CFG). F6's advanced options
+# set the fighting to manual, then Space is held with Up and Right. In
+# LBA.EXE each frame starts Right's blow, then Up's over it, so that
+# Twinsen stands in the first frame of a blow. Started once a frame, Up's
+# blow plays and plays again.
+
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 12
+shot start
+key F6
+sleep 2
+key Down Down Down Return
+sleep 2
+shot advanced
+key Down Return
+sleep 1
+shot manual
+key Up Return
+sleep 2
+key Up Up Up Return
+sleep 3
+shot game
+down space Up Right
+sleep 3
+shot blows
+up space Up Right
+sleep 2
+shot end

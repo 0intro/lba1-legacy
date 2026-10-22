@@ -1,0 +1,359 @@
+#!/usr/bin/env bash
+#
+# sweep: every scene of the game, from a save that starts in it, in
+# LBA.EXE under DOSBox and in the port, their screens compared.
+#
+#     test/sweep saves
+#     test/sweep record [-x exe]
+#     test/sweep dos [-x exe] [scene...]
+#     test/sweep port [-x exe] [scene...]
+#     test/sweep compare [-x exe] [scene...]
+#     test/sweep check [-x exe] [scene...]
+#
+# Everything goes to $LBATMP/sweep. saves makes a save for each of the
+# 120 scenes of SCENE.HQR (saves/NNN/S2292.LBA): the outside save of the
+# records ($LBATMP/e2e/fixtures/outside, a new game's flags and the
+# holomap) with its scene (byte 261) set and its start (bytes 270-271)
+# at -1, the scene's own, and beside them the CD's LBA.CFG, no sound.
+# record plays the loading of a save on the port in our Xephyr
+# (tools/xkeys): the main menu, Continue saved game, the save, then a
+# hundred seconds. It keeps its input (port.in). A record counts its
+# time in pumps, and a loop that idles takes a millisecond a pump where
+# the scenes' loop takes a retrace: the hundred seconds of a scene are
+# some twenty-four in the introduction's text, which a load in the
+# prison's scene shows. dos plays the same on LBA.EXE in DOSBox
+# (tools/dosrun, the CD's LBA.CFG, its install made once and kept) for
+# each scene, waiting for the menu and the list as references show them
+# (ref/, made at the first run), and shoots its screen every two
+# seconds from the second to the sixteenth after the load (dos/NNN).
+# port replays the input on each save, keeps the sums of its screens
+# (port/NNN.sums) and writes every sixth screen of the twenty-four
+# seconds from the load (port/NNN/). compare samples LBA.EXE's shots
+# back to 640x480, or 320x200 for a movie or the zoom, and finds each
+# among the port's screens of that size (tools/framecmp.py), asking 95%
+# of its pixels, the actors not standing alike. A shot not found is
+# sought again among every screen between those that found the shots
+# before and after it (fine/NNN-tNN: a fade's steps, a quick move),
+# and if still not found, put beside the nearest (review/). It writes
+# report, a line a scene. check replays the input
+# on each save on exe and compares its sums with port's: the whole game
+# against the port as compare left it.
+#
+# Scenes are numbered 0 to 119. None named means all. exe is
+# build/linux-amd64-gcc/lba by default. Given to dos and compare, exe is
+# a DOS program played in LBA.EXE's place, our build
+# (build/dos-386-openwatcom/lba0.exe):
+# its shots, report, review, fine and ppm take its name (dos-lba0,
+# report-lba0, ...), LBA.EXE's references the same, and compare's
+# replays stay the default's. The others refuse a program named .exe:
+# they start exe as it is, which binfmt gives to Wine with the caller's
+# display and prefix.
+
+set -Eeuo pipefail
+
+TEST=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+REPO=$(cd -- "$TEST/.." && pwd)
+LBATMP=${LBATMP:-$(cd -- "$REPO/.." && pwd)/lba1-tmp}
+TOOLS=$REPO/tools
+SW=$LBATMP/sweep
+NSCENES=120
+LOAD=43000000000	# ns: the record's Return on the list, its clock
+SPAN=24000000000	# ns: the screens compared from there
+
+usage() {
+	echo "usage: sweep saves | record [-x exe] | dos [-x exe] [scene...] | port [-x exe] [scene...]" >&2
+	echo "       sweep compare [-x exe] [scene...] | check [-x exe] [scene...]" >&2
+	exit 2
+}
+
+(( $# )) || usage
+cmd=$1
+shift
+exe=$REPO/build/linux-amd64-gcc/lba
+if [[ ${1:-} == -x ]]; then
+	exe=$(cd -- "$(dirname -- "${2:?}")" && pwd)/$(basename -- "$2")
+	shift 2
+fi
+# the DOS program, LBA.EXE unless -x names one for dos or compare, which
+# leaves exe the port's
+dosexe=()
+D=dos REPORT=report REVIEW=review FINE=fine PPM=ppm
+if [[ $exe == *.exe && ( $cmd == dos || $cmd == compare ) ]]; then
+	dosexe=(-e "$exe")
+	n=$(basename -- "$exe" .exe)
+	D=dos-$n REPORT=report-$n REVIEW=review-$n FINE=fine-$n PPM=ppm-$n
+	exe=$REPO/build/linux-amd64-gcc/lba
+fi
+[[ $exe != *.exe ]] || { echo "sweep: $exe: $cmd plays Linux builds alone" >&2; exit 1; }
+[[ $cmd == saves || $cmd == dos || -x $exe ]] || { echo "sweep: no $exe: make it or give -x" >&2; exit 1; }
+scenes=()
+for s in "$@"; do
+	[[ $s =~ ^[0-9]+$ ]] && (( 10#$s < NSCENES )) || usage
+	scenes+=("$(printf '%03d' "$((10#$s))")")
+done
+if (( ${#scenes[@]} == 0 )); then
+	for ((s = 0; s < NSCENES; s++)); do
+		scenes+=("$(printf '%03d' "$s")")
+	done
+fi
+
+saves() {
+	local base=$LBATMP/e2e/fixtures/outside
+	[[ -f $base/S2292.LBA ]] || { echo "sweep: no $base/S2292.LBA" >&2; exit 1; }
+	mkdir -p "$SW/saves"
+	python3 -I - "$base/S2292.LBA" "$SW/saves" "$NSCENES" <<-'EOF'
+	import os
+	import sys
+	base = open(sys.argv[1], 'rb').read()
+	for n in range(int(sys.argv[3])):
+	    d = bytearray(base)
+	    d[261] = n
+	    d[270:272] = b'\xff\xff'
+	    os.makedirs('%s/%03d' % (sys.argv[2], n), exist_ok=True)
+	    open('%s/%03d/S2292.LBA' % (sys.argv[2], n), 'wb').write(d)
+	EOF
+	cp "$LBATMP/pc/LBA/LBA.CFG" "$SW/saves/lba.cfg"
+	echo "sweep: $NSCENES saves in ${SW#"$LBATMP"/}/saves"
+}
+
+# pref dir scene: the port's preferences for a scene's save
+pref() {
+	rm -rf -- "$1"
+	mkdir -p "$1"
+	cp "$SW/saves/lba.cfg" "$SW/saves/$2/S2292.LBA" "$1/"
+}
+
+record() {
+	[[ -d $SW/saves/001 ]] || saves
+	printf 'sleep 40\nkey Down Return\nsleep 3\nkey Return\nsleep 100\n' > "$SW/port.keys"
+	pref "$RUN/pref" 001
+	"$TOOLS/xkeys" -c lba -o "$SW/run/shots" "$SW/port.keys" "$exe" \
+		-g "$LBATMP/pc/LBA" -c "$LBATMP/pc" -p "$RUN/pref" -r "$SW/port.in"
+	echo "sweep: recorded ${SW#"$LBATMP"/}/port.in"
+}
+
+dos() {
+	local hd=$LBATMP/dos/run s f
+	[[ -d $SW/saves/001 ]] || saves
+	{
+		printf 'wait menu 814x76+234+470 150\nkey Down Return\nwait choose 520x50+380+160 30\nkey Return\n'
+		for f in 02 04 06 08 10 12 14 16; do
+			printf 'sleep 1.6\nshot t%s\n' "$f"
+		done
+	} > "$SW/dos.keys"
+	# a fresh install with the CD's LBA.CFG, LBA.EXE run to its menu
+	printf 'sleep 45\nshot menu\nkey Down Return\nsleep 3\nshot choose\n' > "$SW/ref.keys"
+	rm -rf -- "$SW/run/ref"
+	"$TOOLS/xkeys" -o "$SW/run/ref" "$SW/ref.keys" "$TOOLS/dosrun" -q -s none > /dev/null 2>&1 || true
+	if [[ ! -f $SW/ref/menu.png ]]; then
+		mkdir -p "$SW/ref"
+		cp "$SW/run/ref/menu.png" "$SW/ref/"
+	fi
+	mkdir -p "$SW/$D"
+	for s in "${scenes[@]}"; do
+		rm -f "$hd/LBA/"S*.LBA
+		cp "$SW/saves/$s/S2292.LBA" "$hd/LBA/"
+		if [[ ! -f $SW/ref/choose.png ]]; then
+			"$TOOLS/xkeys" -o "$SW/run/ref" "$SW/ref.keys" "$TOOLS/dosrun" -k -q > /dev/null 2>&1 || true
+			cp "$SW/run/ref/choose.png" "$SW/ref/"
+		fi
+		rm -rf -- "${SW:?}/$D/$s"
+		if "$TOOLS/xkeys" -o "$SW/$D/$s" -r "$SW/ref" "$SW/dos.keys" "$TOOLS/dosrun" -k -q "${dosexe[@]}" \
+				> "$SW/$D/$s.log" 2>&1 || [[ -f $SW/$D/$s/t16.png ]]; then
+			echo "$s: $(ls "$SW/$D/$s"/t*.png 2>/dev/null | wc -l) shots"
+		else
+			echo "$s: failed (${SW#"$LBATMP"/}/$D/$s.log)"
+		fi
+	done
+}
+
+# replay scene dir range: the input on a scene's save, the screens in
+# range written into dir
+replay() {
+	rm -rf -- "$2"
+	mkdir -p "$2"
+	pref "$RUN/pref" "$1"
+	(cd -- "$2" && SDL_VIDEO_DRIVER=dummy "$exe" -g "$LBATMP/pc/LBA" \
+		-c "$LBATMP/pc" -p "$RUN/pref" -i "$SW/port.in" -S "$3" > /dev/null 2>&1) || true
+}
+
+# screens sums: the screens a sums file holds
+screens() {
+	grep -c '^[0-9]' "$1" || true
+}
+
+# window scene: the first and the last screen of the span compared,
+# from the scene's sums
+window() {
+	awk -v a="$LOAD" -v b="$((LOAD + SPAN))" '$1 ~ /^[0-9]+$/ && $2 >= a && $2 <= b {
+		if(first == "") first = $1; last = $1 } END { print first, last }' "$SW/port/$1.sums"
+}
+
+port() {
+	local s w
+	[[ -f $SW/port.in ]] || { echo "sweep: no ${SW#"$LBATMP"/}/port.in; run sweep record" >&2; exit 1; }
+	mkdir -p "$SW/port"
+	for s in "${scenes[@]}"; do
+		pref "$RUN/pref" "$s"
+		SDL_VIDEO_DRIVER=dummy "$exe" -g "$LBATMP/pc/LBA" -c "$LBATMP/pc" \
+			-p "$RUN/pref" -i "$SW/port.in" -s "$SW/port/$s.sums" > "$SW/port/$s.log" 2>&1 ||
+			{ echo "$s: failed (${SW#"$LBATMP"/}/port/$s.log)"; continue; }
+		read -ra w <<< "$(window "$s")"
+		(( ${#w[@]} == 2 )) || { echo "$s: no screen after the load"; continue; }
+		replay "$s" "$SW/port/$s" "${w[0]}-${w[1]}/6"
+		echo "$s: screens ${w[0]} to ${w[1]}, $(ls "$SW/port/$s" | wc -l) written"
+	done
+}
+
+# match res dir shot...: the shots ($PPM/NNN/640/shot.ppm, and 320/) sought
+# among the screens in dir, each size among its own, framecmp's lines
+# into res
+match() {
+	local res=$1 dir=$2 big small n a=() b=()
+	shift 2
+	for n in "$@"; do
+		a+=("$SW/$PPM/$s/640/$n.ppm")
+		b+=("$SW/$PPM/$s/320/$n.ppm")
+	done
+	mapfile -t big < <(find "$dir" -name '*.bmp' -size +100k)
+	mapfile -t small < <(find "$dir" -name '*.bmp' -size -100k)
+	: > "$res"
+	if (( ${#big[@]} )); then
+		python3 -I "$TOOLS/framecmp.py" -p 0.95 "${big[@]}" -- "${a[@]}" >> "$res" || true
+	fi
+	if (( ${#small[@]} )); then
+		python3 -I "$TOOLS/framecmp.py" -p 0.95 "${small[@]}" -- "${b[@]}" >> "$res" || true
+	fi
+}
+
+# found res shot: the line of res that finds shot, if one does
+found() {
+	grep -E "/(640|320)/$2\\.ppm: " "$1" | grep -v 'not found' | head -n 1 || true
+}
+
+# nearest res shot: the line of res nearest to finding shot
+nearest() {
+	grep -E "/(640|320)/$2\\.ppm: " "$1" | awk '{print $NF - 0 == 0 ? $(NF - 2) : $NF, $0}' |
+		sort -rn | head -n 1 | cut -d' ' -f2-
+}
+
+# at res shot: the numbers of the screens that found shot in res
+at() {
+	grep -E "/(640|320)/$2\\.ppm: " "$1" | grep -v 'not found' | grep -oE 'lba[0-9]+\.bmp' |
+		tr -dc '0-9\n' | sort -n || true
+}
+
+compare() {
+	local s f n i j lo hi line ok worst nfound out shots fine res w
+	mkdir -p "$SW/$REVIEW" "$SW/$FINE"
+	: > "$RUN/report"
+	for s in "${scenes[@]}"; do
+		[[ -d $SW/$D/$s && -d $SW/port/$s ]] || { echo "$s: not run" | tee -a "$RUN/report"; continue; }
+		rm -rf -- "${SW:?}/${PPM:?}/$s" "$SW/$FINE/$s"-* "$SW/$REVIEW/$s"-*
+		mkdir -p "$SW/$PPM/$s/640" "$SW/$PPM/$s/320"
+		shots=()
+		for f in "$SW/$D/$s"/t*.png; do
+			[[ -e $f ]] || { echo "$s: no shots" | tee -a "$RUN/report"; continue 2; }
+			n=$(basename -- "$f" .png)
+			shots+=("$n")
+			magick "$f" -crop 948x711+166+124 +repage -filter point -resize '640x480!' -depth 8 "$SW/$PPM/$s/640/$n.ppm"
+			magick "$f" -crop 948x711+166+124 +repage -filter point -resize '320x200!' -depth 8 "$SW/$PPM/$s/320/$n.ppm"
+		done
+		res=$SW/$PPM/$s/result
+		match "$res" "$SW/port/$s" "${shots[@]}"
+		# a shot not found is sought among every screen from the first
+		# that found the shot before it to the last that found the one
+		# after it: the shots are in the order of the game's time
+		read -ra w <<< "$(window "$s")"
+		for ((i = 0; i < ${#shots[@]}; i++)); do
+			n=${shots[i]}
+			[[ -z $(found "$res" "$n") ]] || continue
+			lo=${w[0]}
+			hi=${w[1]}
+			for ((j = i - 1; j >= 0; j--)); do
+				f=$(at "$res" "${shots[j]}" | head -n 1)
+				[[ -n $f ]] && { lo=$f; break; }
+			done
+			for ((j = i + 1; j < ${#shots[@]}; j++)); do
+				f=$(at "$res" "${shots[j]}" | tail -n 1)
+				[[ -n $f ]] && { hi=$f; break; }
+			done
+			(( lo < hi )) || { lo=${w[0]}; hi=${w[1]}; }
+			fine=$SW/$FINE/$s-$n
+			replay "$s" "$fine" "$lo-$hi"
+			match "$fine/result" "$fine" "$n"
+		done
+		nfound=0
+		worst=1
+		out=()
+		for n in "${shots[@]}"; do
+			fine=$SW/$FINE/$s-$n
+			ok=$(found "$res" "$n")
+			[[ -n $ok || ! -f $fine/result ]] || ok=$(found "$fine/result" "$n")
+			if [[ -n $ok ]]; then
+				nfound=$((nfound + 1))
+				line=$(grep -oE '[01]\.[0-9]{4}' <<< "$ok" | tail -n 1)
+				worst=$(awk -v a="$worst" -v b="$line" 'BEGIN { print (b < a ? b : a) }')
+				rm -f "$fine"/*.bmp
+				continue
+			fi
+			line=$(nearest "$res" "$n")
+			[[ ! -f $fine/result ]] || line=$(nearest "$fine/result" "$n")
+			out+=("$n $(grep -oE '[01]\.[0-9]{4}' <<< "$line" | tail -n 1)")
+			f=$(grep -oE '[^ ]*lba[0-9]+\.bmp' <<< "$line" | head -n 1 || true)
+			if [[ -n $f ]]; then
+				if grep -q '/320/' <<< "$line"; then
+					magick "$SW/$PPM/$s/640/$n.ppm" \( "$f" -filter point -resize '640x480!' \) +append "$SW/$REVIEW/$s-$n.png"
+				else
+					magick "$SW/$PPM/$s/640/$n.ppm" "$f" +append "$SW/$REVIEW/$s-$n.png"
+				fi
+			fi
+			[[ ! -d $fine ]] || rm -f "$fine"/*.bmp
+		done
+		if (( ${#out[@]} == 0 )); then
+			echo "$s: found $nfound of $nfound, worst $worst" | tee -a "$RUN/report"
+		else
+			echo "$s: found $nfound, not: ${out[*]}" | tee -a "$RUN/report"
+		fi
+	done
+	# the scenes compared now replace their lines in report
+	(
+		flock 9
+		touch "$SW/$REPORT"
+		{ grep -v -E "^($(IFS='|'; echo "${scenes[*]}")):" "$SW/$REPORT" || true; cat "$RUN/report"; } |
+			sort > "$RUN/report.new"
+		mv "$RUN/report.new" "$SW/$REPORT"
+	) 9> "$SW/$REPORT.lock"
+}
+
+check() {
+	local s bad=0
+	for s in "${scenes[@]}"; do
+		[[ -f $SW/port/$s.sums ]] || { echo "$s: no reference"; bad=1; continue; }
+		pref "$RUN/pref" "$s"
+		SDL_VIDEO_DRIVER=dummy "$exe" -g "$LBATMP/pc/LBA" -c "$LBATMP/pc" \
+			-p "$RUN/pref" -i "$SW/port.in" -s "$RUN/$s.sums" > /dev/null 2>&1 || true
+		if cmp -s "$SW/port/$s.sums" "$RUN/$s.sums"; then
+			echo "$s: same, $(screens "$RUN/$s.sums") screens"
+		else
+			echo "$s: differs from $(diff "$SW/$P/$s.sums" "$RUN/$s.sums" | grep -m1 '^[<>]' || true)"
+			bad=1
+		fi
+	done
+	return "$bad"
+}
+
+# run/cmd-pid: this command's preferences and report, so that two may
+# run at once
+RUN=$SW/run/$cmd-$$
+mkdir -p "$RUN"
+trap 'rm -rf -- "$RUN"' EXIT
+case $cmd in
+saves) saves ;;
+record) record ;;
+dos) dos ;;
+port) port ;;
+compare) compare ;;
+check) check ;;
+*) usage ;;
+esac

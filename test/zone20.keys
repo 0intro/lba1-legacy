@@ -1,0 +1,25 @@
+# Scene 20's bonus by the cupboard (fixtures/zone20: the sweep's save of
+# scene 20, Twinsen put east of the cupboard, SceneStartX, Y, Z 24500
+# 768 24300 at bytes 270-275 and his heading 768 at 276-277, facing it,
+# and the CD's LBA.CFG). Zone 4, which gives a bonus to the action, lies
+# over the cupboard, X 23296 to 24049, which a jump does not top. Walked
+# into the cupboard and searched, he finds nothing in LBA.EXE, and with
+# DotEmu's X1 of 24305 the bonus.
+
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 12
+shot start
+hold 2
+key Up
+hold 0.15
+sleep 1
+shot cupboard
+key space
+sleep 4
+shot search
+sleep 4
+shot end

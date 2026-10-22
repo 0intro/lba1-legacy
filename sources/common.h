@@ -241,6 +241,13 @@ typedef	struct
 
 /*──────────────────────────────────────────────────────────────────────────*/
 
+#pragma pack(push, 1)
+/*
+ * FIXED: LBA.EXE reads the scene's zones where its data puts them, at an
+ * odd offset in 68 of the 120 scenes, where reading a structure of WORDs
+ * is undefined C. Packed to 1, as LbaWin and the Classic pack every
+ * structure, the zones keep their layout and may lie at any address.
+ */
 typedef	struct
 {
 	WORD	X0 ;
@@ -255,6 +262,7 @@ typedef	struct
 	WORD	Info1 ;
 	WORD	Info2 ;
 	WORD	Info3 ;			}	T_ZONE ;
+#pragma pack(pop)
 
 typedef struct
 {

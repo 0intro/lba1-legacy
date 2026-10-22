@@ -1,0 +1,259 @@
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "../sys/compat.h"
+#include "../lib386/lib_sys/adeline.h"
+#include "../lib386/lib_sys/lib_sys.h"
+#include "../sys/dat.h"
+
+#undef main	/* compat.h's, which names the game's lbamain */
+
+/*
+ * cfgtest: lba.cfg as lib386/lib_sys/def_file.c reads and writes it,
+ * through the port's files, the preferences read first.
+ *
+ *	cfgtest prefdir gamedir
+ *
+ * The keys of the game's LBA.CFG, in gamedir, then files of its own,
+ * written in prefdir, with the cases the 1994 loops make, the odd ones
+ * among them: a value taken for a key, an empty number taking the next
+ * line's first word, the last byte of a file without a line's end lost,
+ * and a key added to such a file lost on its last line. Then the lines
+ * def_file.c's fixes take: a value led by a tab written over whole,
+ * lines ended by LF or CR alone, a key written among them keeping the
+ * lines after it, and lines longer than DefString, a key read past them
+ * and a value kept to its first 255 bytes.
+ */
+
+void	setdirs(char*, char**, int, char**, int);
+
+static char *pref;
+static int fails;
+
+/* fatal is sys/fns.h's, as sys/sdl.c has it. */
+void
+fatal(char *fmt, ...)
+{
+	va_list arg;
+
+	va_start(arg, fmt);
+	fprintf(stderr, "cfgtest: ");
+	vfprintf(stderr, fmt, arg);
+	fprintf(stderr, "\n");
+	va_end(arg);
+	exit(2);
+}
+
+static void
+put(char *name, char *text)
+{
+	char path[1024];
+	FILE *f;
+
+	if (snprintf(path, sizeof path, "%s/%s", pref, name) >= (int)sizeof path)
+		fatal("%s/%s: too long", pref, name);
+	f = fopen(path, "wb");
+	if (f == NULL || fputs(text, f) == EOF || fclose(f) != 0)
+		fatal("cannot write %s", path);
+}
+
+/* The file of the preferences as it now is. */
+static char*
+get(char *name)
+{
+	static char buf[4096];
+	char path[1024];
+	FILE *f;
+	size_t n;
+
+	snprintf(path, sizeof path, "%s/%s", pref, name);
+	f = fopen(path, "rb");
+	if (f == NULL)
+		return NULL;
+	n = fread(buf, 1, sizeof buf - 1, f);
+	fclose(f);
+	buf[n] = '\0';
+	return buf;
+}
+
+static void
+str(char *file, char *key, char *want)
+{
+	char *got;
+
+	got = (char*)Def_ReadString((UBYTE*)file, (UBYTE*)key);
+	if (got == NULL && want == NULL)
+		return;
+	if (got != NULL && want != NULL && strcmp(got, want) == 0)
+		return;
+	fprintf(stderr, "cfgtest: %s %s: \"%s\" where \"%s\" was due\n", file, key,
+		got != NULL ? got : "(none)", want != NULL ? want : "(none)");
+	fails++;
+}
+
+static void
+val(char *file, char *key, int found, LONG want)
+{
+	LONG got;
+	int r;
+
+	got = 0;
+	r = Def_ReadValue2((UBYTE*)file, (UBYTE*)key, &got) != 0;
+	if (r == found && (!found || got == want))
+		return;
+	fprintf(stderr, "cfgtest: %s %s: %s %ld where %s %ld was due\n", file, key,
+		r ? "found" : "not found", (long)got, found ? "found" : "not found", (long)want);
+	fails++;
+}
+
+static void
+text(char *name, char *want)
+{
+	char *s;
+
+	s = get(name);
+	if (s == NULL || strcmp(s, want) != 0) {
+		fprintf(stderr, "cfgtest: %s holds \"%s\" where \"%s\" was due\n", name, s != NULL ? s : "(none)", want);
+		fails++;
+	}
+}
+
+/*
+ * Lines longer than DefString's 256 bytes: a comment before the keys, a
+ * key's value and a number's word, each read to its first 255 bytes,
+ * and the file written again whole past them.
+ */
+static void
+longcase(void)
+{
+	char file[2048], want[2048], comment[301], value[301], word[301];
+
+	memset(comment, 'x', sizeof comment - 1);
+	comment[sizeof comment - 1] = 0;
+	memset(value, 'v', sizeof value - 1);
+	value[sizeof value - 1] = 0;
+	memset(word, 'w', sizeof word - 1);
+	word[sizeof word - 1] = 0;
+	snprintf(file, sizeof file, "; %s\r\nAlpha: one\r\nLong: %s\r\nWord: %s\r\nNeg: -5\r\n",
+		comment, value, word);
+	put("G.CFG", file);
+	str("G.CFG", "Alpha", "one");
+	value[255] = 0;
+	str("G.CFG", "Long", value);
+	val("G.CFG", "Word", 1, 0);
+	val("G.CFG", "Neg", 1, -5);
+	Def_WriteValue((UBYTE*)"G.CFG", (UBYTE*)"Long", 7);
+	snprintf(want, sizeof want, "; %s\r\nAlpha: one\r\nLong: 7\r\nWord: %s\r\nNeg: -5\r\n",
+		comment, word);
+	text("G.CFG", want);
+}
+
+int
+main(int argc, char **argv)
+{
+	if (argc != 3) {
+		fprintf(stderr, "usage: cfgtest prefdir gamedir\n");
+		return 2;
+	}
+	pref = argv[1];
+	setdirs(argv[1], &argv[2], 1, &argv[2], 1);
+
+	str("LBA.CFG", "Language", "English");
+	str("LBA.CFG", "SvgaDriver", "VESA");
+	str("LBA.CFG", "MidiDriver", "NoMidi");
+	str("LBA.CFG", "MidiBase", "");
+	val("LBA.CFG", "WaveRate", 1, 0);	/* empty: the next line's first word, read as 0 */
+
+	put("T.CFG",
+		"; a comment\r\n"
+		"Alpha: one\r\n"
+		"  beta:two words  \r\n"
+		"Gamma :\t three\r\n"
+		"Empty:\r\n"
+		"Blank: \r\n"
+		"Hex: 220h\r\n"
+		"Dec: 22000\r\n"
+		"Neg: -5\r\n");
+	str("T.CFG", "Alpha", "one");
+	str("T.CFG", "ALPHA", "one");
+	str("T.CFG", "beta", "two words");
+	str("T.CFG", "Gamma", "three");
+	str("T.CFG", "Empty", "");
+	str("T.CFG", "Blank", "");
+	str("T.CFG", "Missing", NULL);
+	str("T.CFG", "one", "");	/* Alpha's value, taken for a key */
+	val("T.CFG", "Hex", 1, 0x220);
+	val("T.CFG", "Dec", 1, 22000);
+	val("T.CFG", "Neg", 1, -5);
+	val("T.CFG", "Empty", 1, 0);	/* Blank:, the next line's */
+	val("T.CFG", "Missing", 0, 0);
+	put("A.CFG", "Big: 4294967295\r\nPast: 2147483648\r\nNegpast: -2147483649\r\n");
+	val("A.CFG", "Big", 1, -1);	/* past 32 bits, modulo 2^32 as Watcom's atoi */
+	val("A.CFG", "Past", 1, INT32_MIN);
+	val("A.CFG", "Negpast", 1, INT32_MAX);
+	Def_WriteString((UBYTE*)"T.CFG", (UBYTE*)"Dec", (UBYTE*)"11025");
+	text("T.CFG",
+		"; a comment\r\n"
+		"Alpha: one\r\n"
+		"  beta:two words  \r\n"
+		"Gamma :\t three\r\n"
+		"Empty:\r\n"
+		"Blank: \r\n"
+		"Hex: 220h\r\n"
+		"Dec: 11025\r\n"
+		"Neg: -5\r\n");
+	/* a key that ends the file, its line's end missing */
+	put("E.CFG", "One: 1\r\nLast:");
+	Def_WriteString((UBYTE*)"E.CFG", (UBYTE*)"Last", (UBYTE*)"2");
+	text("E.CFG", "One: 1\r\nLast: 2\r\n");
+	Def_WriteValue((UBYTE*)"T.CFG", (UBYTE*)"New", 7);
+	val("T.CFG", "New", 1, 7);
+	val("T.CFG", "Dec", 1, 11025);
+	Def_WriteValue((UBYTE*)"T.CFG", (UBYTE*)"Gamma", 4);	/* a value led by a tab */
+	text("T.CFG",
+		"; a comment\r\n"
+		"Alpha: one\r\n"
+		"  beta:two words  \r\n"
+		"Gamma : 4\r\n"
+		"Empty:\r\n"
+		"Blank: \r\n"
+		"Hex: 220h\r\n"
+		"Dec: 11025\r\n"
+		"Neg: -5\r\n"
+		"New: 7\r\n");
+
+	put("U.CFG", "Last: xy");
+	str("U.CFG", "Last", "x");	/* the last byte lost */
+	Def_WriteValue((UBYTE*)"U.CFG", (UBYTE*)"New", 7);
+	text("U.CFG", "Last: xyNew: 7\r\n");
+	str("U.CFG", "New", NULL);	/* added on the last line */
+	put("U.CFG", "First: 1\r\nLast: xy");
+	Def_WriteValue((UBYTE*)"U.CFG", (UBYTE*)"Last", 9);
+	text("U.CFG", "First: 1\r\nLast: 9\r\n");	/* the old value to the file's end */
+
+	put("L.CFG", "Alpha: one\nDec: 22000\nEmpty:\nNeg: -5\n");
+	str("L.CFG", "Alpha", "one");
+	val("L.CFG", "Dec", 1, 22000);
+	val("L.CFG", "Neg", 1, -5);
+	Def_WriteValue((UBYTE*)"L.CFG", (UBYTE*)"Dec", 11025);
+	text("L.CFG", "Alpha: one\nDec: 11025\r\nEmpty:\nNeg: -5\n");
+	Def_WriteValue((UBYTE*)"L.CFG", (UBYTE*)"Empty", 3);
+	text("L.CFG", "Alpha: one\nDec: 11025\r\nEmpty: 3\r\nNeg: -5\n");
+	val("L.CFG", "Neg", 1, -5);
+
+	put("C.CFG", "Alpha: one\rDec: 22000\rNeg: -5\r");
+	str("C.CFG", "Alpha", "one");
+	val("C.CFG", "Dec", 1, 22000);
+	Def_WriteValue((UBYTE*)"C.CFG", (UBYTE*)"Dec", 11025);
+	text("C.CFG", "Alpha: one\rDec: 11025\r\nNeg: -5\r");
+
+	longcase();
+
+	if (fails != 0)
+		return 1;
+	printf("cfgtest: ok\n");
+	return 0;
+}

@@ -12,8 +12,8 @@
 # $LBATMP/elf/dll, with the names and regions of its map in re/ where it
 # has one (re/*.dll.sym).
 # ps is the PlayStation's disc, SLES-00698, the Redump image in $LBAISO:
-# its texts (TEXT.HQR) go into $LBATMP/ps, where tools/texts.py reads
-# them. By default extract makes pc.
+# its texts (TEXT.HQR) go into $LBATMP/ps, where make check reads them.
+# By default extract makes pc.
 
 set -Eeuo pipefail
 

@@ -1,0 +1,22 @@
+# F5's zoom, the scene in 320x200, from holomap.keys's save outside the
+# prison: zoomed, a turn to the left, and back.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 15
+shot outside
+key F5
+sleep 3
+shot zoom
+down Left
+sleep 1
+up Left
+sleep 1
+shot zoomwalk
+key F5
+sleep 3
+shot unzoom

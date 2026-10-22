@@ -1,19 +1,23 @@
 name: C
 
 # Every target built in the latest Fedora and tested on the tree alone
-# (make test): the DOS builds, by OpenWatcom and JWasm (CC=openwatcom)
-# or by Watcom C 9.01 and 9.5, MASM 6.11 and TASM 3.1 as LBA.EXE was
-# (CC=watcom, LBA.EXE's code, and with FIXES=1 its fixes), with
-# Watcom C/C++ 10.0a's qsort, each tool as make fetch installs it
-# (mk/fetch.mk), against their sums (dos/CC.sums,
+# (make test): the unit tests (test/unit) and the game's start without
+# its files (test/nodata), Linux with gcc, clang and UBSan, and the
+# Windows builds, with SDL3 as make fetch installs it, run natively,
+# beside one made by MSYS2's UCRT64. The DOS builds, by OpenWatcom and
+# JWasm (CC=openwatcom) or by Watcom C 9.01 and 9.5, MASM 6.11 and TASM
+# 3.1 as LBA.EXE was (CC=watcom, LBA.EXE's code, and with FIXES=1 its
+# fixes), with Watcom C/C++ 10.0a's qsort, each tool as make fetch
+# installs it (mk/fetch.mk), against their sums (dos/CC.sums,
 # dos/watcom-fixes.sums), the oracles and DOSBox (dos/nodata). The
 # tree's rules (make lint), the modules' .def files made again (make
 # defs) and the oracles built with -Werror, and the workflows read by
 # actionlint and zizmor. On a pushed tag v*, once every other job has
 # passed, the release job publishes the tag's GitHub release: make
 # dist's archives, with the tag's annotation as its notes. make check
-# reads the game's files in $LBATMP, the CD's, which tools/extract takes
-# from its image (pc/): it runs where they are.
+# reads the game's files in $LBATMP: the CD's and the PlayStation's,
+# which tools/extract takes from their images (pc/, ps/), GOG's install
+# (gog/) and the records (e2e/): it runs where they are.
 
 on:
   push:
@@ -34,6 +38,145 @@ defaults:
     shell: bash
 
 jobs:
+  linux:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    container: quay.io/fedora/fedora:latest # zizmor: ignore[unpinned-images] the latest Fedora, by choice
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - name: linux-386-gcc
+          arch: '386'
+          cc: gcc
+          sanitize: ''
+          packages: glibc-devel.i686 libgcc.i686 libatomic.i686 SDL3-devel.i686
+        - name: linux-amd64-gcc
+          arch: amd64
+          cc: gcc
+          sanitize: ''
+          packages: SDL3-devel.x86_64
+        - name: linux-386-clang
+          arch: '386'
+          cc: clang
+          sanitize: ''
+          packages: clang glibc-devel.i686 libgcc.i686 libatomic.i686 SDL3-devel.i686
+        - name: linux-amd64-clang
+          arch: amd64
+          cc: clang
+          sanitize: ''
+          packages: clang SDL3-devel.x86_64
+        - name: linux-amd64-gcc-ubsan
+          arch: amd64
+          cc: gcc
+          sanitize: ubsan
+          packages: libubsan SDL3-devel.x86_64
+    env:
+      ARCH: ${{ matrix.arch }}
+      CC: ${{ matrix.cc }}
+      SANITIZE: ${{ matrix.sanitize }}
+      PACKAGES: ${{ matrix.packages }}
+    steps:
+    - name: dnf install
+      run: dnf -y install --setopt=install_weak_deps=False make gcc git-core findutils diffutils tar gzip pkgconf-pkg-config python3 $PACKAGES
+    - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+    - name: make
+      run: make -j"$(nproc)" all OS=linux ARCH="$ARCH" CC="$CC" SANITIZE="$SANITIZE"
+    - name: make test
+      run: make test OS=linux ARCH="$ARCH" CC="$CC" SANITIZE="$SANITIZE"
+    - name: make dist
+      if: matrix.cc == 'gcc' && matrix.sanitize == ''
+      run: make dist OS=linux ARCH="$ARCH"
+    - uses: actions/upload-artifact@v7
+      if: matrix.cc == 'gcc' && matrix.sanitize == ''
+      with:
+        path: dist/lba1-linux-${{ matrix.arch }}-gcc.tar.gz
+        archive: false
+        if-no-files-found: error
+
+  mingw:
+    name: windows-${{ matrix.arch }}-gcc
+    runs-on: ubuntu-latest
+    container: quay.io/fedora/fedora:latest # zizmor: ignore[unpinned-images] the latest Fedora, by choice
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - arch: '386'
+          mingw: mingw32
+        - arch: amd64
+          mingw: mingw64
+    env:
+      ARCH: ${{ matrix.arch }}
+      MINGW: ${{ matrix.mingw }}
+    steps:
+    - name: dnf install
+      run: dnf -y install --setopt=install_weak_deps=False make git-core findutils curl tar gzip pkgconf-pkg-config "$MINGW-gcc"
+    - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+    - name: make fetch
+      run: make fetch OS=windows ARCH="$ARCH"
+    - name: make
+      run: make -j"$(nproc)" all OS=windows ARCH="$ARCH"
+    - name: make dist
+      run: make dist OS=windows ARCH="$ARCH"
+    - uses: actions/upload-artifact@v7
+      with:
+        path: dist/lba1-windows-${{ matrix.arch }}-gcc.zip
+        archive: false
+        if-no-files-found: error
+    - name: cp
+      run: |
+        d=build/lba-windows-$ARCH
+        cp -R "dist/windows-$ARCH-gcc" "$d"
+        cp "build/windows-$ARCH-gcc/"*test.exe "$d/"
+    - uses: actions/upload-artifact@v7
+      with:
+        name: lba-windows-${{ matrix.arch }}
+        path: build/lba-windows-${{ matrix.arch }}
+        if-no-files-found: error
+
+  windows:
+    needs: mingw
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+    - uses: msys2/setup-msys2@v2
+      with:
+        msystem: UCRT64
+        update: true
+        install: make curl
+        pacboy: gcc:p pkgconf:p
+    - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+    - uses: actions/download-artifact@v8
+      with:
+        pattern: lba-windows-*
+        path: build
+    - name: test/unit windows-386-gcc
+      run: test/unit build/lba-windows-386
+    - name: test/unit windows-amd64-gcc
+      run: test/unit build/lba-windows-amd64
+    - name: test/nodata windows-386-gcc
+      run: test/nodata -x build/lba-windows-386/lba.exe
+    - name: test/nodata windows-amd64-gcc
+      run: test/nodata -x build/lba-windows-amd64/lba.exe
+    - name: make fetch ucrt64
+      run: make fetch OS=windows
+    - name: make ucrt64
+      run: make -j"$(nproc)" all OS=windows CROSS=
+    - name: make test ucrt64
+      run: make test OS=windows CROSS=
+
   dos:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
@@ -116,7 +259,7 @@ jobs:
 
   release:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: [dos, lint, actions]
+    needs: [linux, mingw, windows, dos, lint, actions]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

@@ -1,0 +1,31 @@
+# The option menus from the main menu: the volumes, the saved games, the
+# advanced options, back to the main menu. A menu that returns on Return
+# leaves the next to read the same key while it is down, so keys are
+# short here. A menu keeps its selection. The port shows the main menu
+# about 36 s after it starts.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Down Return
+sleep 3
+shot options
+key Down Return
+sleep 3
+shot volume
+key Return
+sleep 3
+shot back
+key Down Return
+sleep 3
+shot saves
+key Return
+sleep 3
+key Down Return
+sleep 3
+shot advanced
+key Return
+sleep 3
+key Up Up Up Return
+sleep 3
+shot main
