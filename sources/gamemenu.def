@@ -34,6 +34,11 @@ extern void DrawOneChoice(int16_t ,int16_t ,int16_t ,int16_t ,int16_t );
 extern void DrawGameMenu(uint16_t *,int16_t );
 extern void SetVolumes(int32_t ,int32_t ,int32_t ,int32_t ,int32_t );
 extern int16_t DoGameMenu(uint16_t *);
+#ifndef	DOS
+extern void ChangeTextLanguage(int32_t );
+extern void ChangeVoiceLanguage(int32_t );
+extern int32_t LanguageOptions(void);
+#endif
 extern int32_t OptionsMenu(void);
 extern void VolumeOptions(void);
 extern void SavedGameManagement(void);

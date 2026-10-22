@@ -17,6 +17,9 @@
 #include	"grille.def"
 #include	"holomap.def"
 #include	"incrust.def"
+#ifndef	DOS
+#include	"lba2text.def"
+#endif
 #include	"message.def"
 #include	"object.def"
 #include	"perso.def"

@@ -1,0 +1,22 @@
+# The voices turned off on the language page (fixtures/sound: English
+# texts and voices). Left from English gives None, LanguageCD staying at
+# 0, and on leaving the page writes LanguageCD: None to lba.cfg, where
+# the Classic, comparing the languages alone, writes nothing.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Down Return
+sleep 3
+key Down Down Down Down Return
+sleep 3
+shot page
+key Down Down Left
+sleep 2
+shot none
+key Up Up Return
+sleep 3
+shot options
+key Up Up Up Up Return
+sleep 3
+shot main

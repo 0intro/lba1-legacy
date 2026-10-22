@@ -1,0 +1,37 @@
+# Display text on the language page in play (fixtures/langf6: dialkey's
+# save, Twinsen by scene 1's message zone 12, and sound's lba.cfg,
+# English voices). F6's options, Choose language, where Display text
+# follows the voices: Return turns it to Don't display text, back to the
+# game, where Space speaks the zone's message, its text hidden, as
+# FlagDisplayText: OFF has the game speak it. The lba.cfg left says
+# FlagDisplayText: OFF.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 12
+shot start
+hold 0.05
+key F6
+sleep 3
+shot options
+key Down Down Down Down Return
+sleep 3
+shot page
+key Down Down Down Return
+sleep 3
+shot hidden
+key Up Up Up Return
+sleep 3
+key Up Up Up Up Return
+sleep 3
+shot back
+hold 0.15
+key space
+sleep 2
+shot speaking
+sleep 10
+shot end

@@ -1,0 +1,24 @@
+# The voices' test with the banks on the disk (fixtures/sound: English
+# texts and voices on the Sound Blaster), on pcmusic, whose track 9
+# plays under the options, and the CD's own game directory, its VOX
+# beside the HQR files. Right steps the voices to French and German,
+# each bank read from the disk and its test voice spoken, the track
+# playing on through both and back on the options.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Down Return
+sleep 3
+key Down Down Down Down Return
+sleep 3
+shot page
+key Down Down Right
+sleep 5
+shot fr
+key Right
+sleep 5
+shot de
+key Up Up Return
+sleep 3
+shot options

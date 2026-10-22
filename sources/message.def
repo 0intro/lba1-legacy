@@ -1,4 +1,9 @@
 extern void TimeBar(uint32_t ,uint32_t );
+#ifndef	DOS
+extern int32_t FindLanguage(char *,int32_t *);
+extern void ReadLanguage(void);
+extern void WriteLanguage(void);
+#endif
 extern void InitLanguage(void);
 extern int32_t FindText(int32_t );
 #ifndef	DOS
@@ -18,6 +23,7 @@ extern int32_t TestSpeak(void);
 extern int32_t TestSpeakFromCD(void);
 extern void SpeakFromCD(int32_t ,int32_t );
 extern int32_t IsVoiceFileOnHD(int32_t );
+extern int32_t IsVoiceLanguage(int32_t );
 extern int32_t Speak(int32_t );
 extern void StopSpeak(void);
 #endif

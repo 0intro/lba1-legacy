@@ -132,6 +132,10 @@ static char     FileText[256]   ;
 
 LONG	Language = 1 	;		// English
 LONG	LastFileInit=-1	;
+#ifndef	DOS
+/* LastLanguageInit is TLBA2C.exe 0x856040: the texts' language of the bank InitDial loaded last. */
+static	LONG	LastLanguageInit = -1 ;
+#endif
 
 char	*TabLanguage[] = {
 			//	Ne pas toucher l'ordre cause HQR
@@ -152,6 +156,18 @@ char	*TabLanguageUtf8[] = {
 	"Fran\303\247ais",
 	"Deutsch",
 	"Espa\303\261ol",
+	"Italiano" 	}	;
+
+/*
+ * FEATURE: the languages' names as the Classic reads them in lba.cfg
+ * and writes them there, in ASCII. Taken from the Classic 3.2.3.
+ */
+/* TabLanguageClassic is TLBA1C.exe 0x7f2ad0, the Classic's TabLanguage. */
+char	*TabLanguageClassic[] = {
+	"English",
+	"French",
+	"Deutsch",
+	"Spanish",
 	"Italiano" 	}	;
 #endif
 
@@ -205,6 +221,18 @@ extern	char	*fixedtexts[]	;/* the texts it writes in their place */
 #endif
 
 LONG    FlagSpeak=FALSE	        	;//	cf InitLanguage
+#ifndef	DOS
+/*
+ * FEATURE: set while the language page loads and speaks its test voice,
+ * whose bank InitSpeak and InitFileNar then load with the CD's music
+ * playing on, as the Classic's leave the music, and whose block
+ * PlaySpeakVoc plays from BufVoiceTest, BufSpeak's size, as the
+ * Classic's mixer plays every sample from a copy. Taken from the Classic
+ * 3.2.3.
+ */
+LONG	FlagVoiceTest = FALSE	;
+static	UBYTE	BufVoiceTest[256*1024 + 34]	;
+#endif
 //------------------------------
 #ifdef	CDROM
 WORD	NumObjSpeak = -1 ;
@@ -273,12 +301,94 @@ void	TimeBar( ULONG max, ULONG val )
 	RestoreClip()	;
 }
 /*-------------------------------------------------------------------------*/
+#ifndef	DOS
+/*
+ * FindLanguage is TLBA1C.exe 0x41a410: TRUE with the index of the
+ * language string names in *n, or FALSE where it names none.
+ *
+ * FIXED: the Classic matches its own names alone, so that a lba.cfg
+ * naming the voices as INSTALL.EXE writes them, Français in CP437,
+ * leaves them off. TabLanguage's names and their UTF-8 spellings are
+ * matched too, as INSTALL.EXE and an editor of today write them.
+ */
+LONG	FindLanguage( char *string, LONG *n )
+{
+	LONG	i ;
+
+	for( i=0; i<NB_LANGUAGES; i++ )
+	{
+		if( !stricmp( string, TabLanguageClassic[i] )
+		OR  !stricmp( string, TabLanguage[i] )
+		OR  !stricmp( string, TabLanguageUtf8[i] ) )
+		{
+			*n = i	;
+			return TRUE ;
+		}
+	}
+	return FALSE ;
+}
+
+/*-------------------------------------------------------------------------*/
+/*
+ * ReadLanguage is TLBA1C.exe 0x41a450: Language read from lba.cfg, then
+ * LanguageCD, the voices on where it names a language and off
+ * otherwise, a key missing leaving its setting.
+ */
+void	ReadLanguage()
+{
+	UBYTE	*string ;
+
+	string = Def_ReadString( PathConfigFile, "Language" ) ;
+	if( string )	FindLanguage( string, &Language ) ;
+
+#ifdef	CDROM
+	string = Def_ReadString( PathConfigFile, "LanguageCD" ) ;
+	if( string )	FlagSpeak = FindLanguage( string, &LanguageCD ) ;
+
+	/*
+	 * FIXED: the Classic sets the voices on whatever the sound, which
+	 * InitLanguage then keeps off with WaveDriver: NoWave but its
+	 * language page leaves on. There they stay off.
+	 */
+	if ( !Wave_Driver_Enable ) FlagSpeak = FALSE	;
+#endif
+}
+
+/*-------------------------------------------------------------------------*/
+/*
+ * WriteLanguage is TLBA1C.exe 0x41a4a0: Language's name written to
+ * lba.cfg, and LanguageCD's, or None while the voices are off, the names
+ * the Classic writes.
+ */
+void	WriteLanguage()
+{
+	Def_WriteString( PathConfigFile, "Language", TabLanguageClassic[Language] ) ;
+
+#ifdef	CDROM
+	/*
+	 * FIXED: with WaveDriver: NoWave, ReadLanguage keeps the voices off
+	 * for the run, and the Classic's write would put None over the
+	 * voices lba.cfg names, as the CD's own LBA.CFG names English.
+	 * LanguageCD is written while a wave driver is set.
+	 */
+	if( Wave_Driver_Enable )
+	{
+		if( FlagSpeak )	Def_WriteString( PathConfigFile, "LanguageCD", TabLanguageClassic[LanguageCD] ) ;
+		else		Def_WriteString( PathConfigFile, "LanguageCD", "None" ) ;
+	}
+#endif
+}
+
+/*-------------------------------------------------------------------------*/
+#endif
 
 void	InitLanguage()
 {
 #ifdef	FIXES
 	UBYTE	*string ;
+#ifdef	DOS
 	LONG	n ;
+#endif
 
 	/*
 	 * FIXED: LBA.EXE copies Def_ReadString's answer untested, so that a
@@ -287,21 +397,14 @@ void	InitLanguage()
 	 * Each answer is tested, a missing key leaving its setting as it
 	 * was, its default. Taken from LbaWin 0.8.1.
 	 */
+#ifdef	DOS
 	string = Def_ReadString( PathConfigFile, "Language" ) ;
 
 	if( string )
 	{
 		for( n=0; n<NB_LANGUAGES; n++ )
 		{
-			if( !stricmp( string, TabLanguage[n] )
-#ifndef	DOS
-			/*
-			 * FEATURE: Language named in UTF-8 as in CP437. The
-			 * port's own.
-			 */
-			OR  !stricmp( string, TabLanguageUtf8[n] )
-#endif
-			)
+			if( !stricmp( string, TabLanguage[n] ) )
 			{
 				Language = n 	;
 				break		;
@@ -318,15 +421,7 @@ void	InitLanguage()
 
 		for( n=0; n<NB_LANGUAGES; n++ )
 		{
-			if( !stricmp( string, TabLanguage[n] )
-#ifndef	DOS
-			/*
-			 * FEATURE: LanguageCD named in UTF-8 as in CP437. The
-			 * port's own.
-			 */
-			OR  !stricmp( string, TabLanguageUtf8[n] )
-#endif
-			)
+			if( !stricmp( string, TabLanguage[n] ) )
 			{
 				LanguageCD = n	;
 				FlagSpeak = TRUE;
@@ -334,7 +429,16 @@ void	InitLanguage()
 			}
 		}
 	}
+#endif
+#else
+	/*
+	 * FEATURE: Language and LanguageCD read by ReadLanguage, as the
+	 * Classic's InitLanguage reads them. Taken from the Classic 3.2.3.
+	 */
+	ReadLanguage() ;
+#endif
 
+#ifdef	CDROM
 	if ( !Wave_Driver_Enable ) FlagSpeak = FALSE	;// No Sound PC
 
 	string = Def_ReadString( PathConfigFile, "FlagKeepVoice" ) ;
@@ -665,6 +769,14 @@ void	InitFileNar( char *file, LONG from )
 
 	FlagVoiceCD = 0		;//Je touche pas au CD pour le moment
 
+#ifndef	DOS
+	/*
+	 * FEATURE: the CD's track plays on under the language page's test
+	 * voice (FlagVoiceTest), as in the Classic, whose InitFileNar leaves
+	 * the music. Taken from the Classic 3.2.3.
+	 */
+	if( !FlagVoiceTest )
+#endif
 	if (( from == FROM_CD ) AND ( GetMusicCD() != -1 ))
 		StopMusicCD()	;
 
@@ -721,6 +833,14 @@ void    InitSpeak( LONG file )
 	strcat( filenar, ListFileText[file])    ;
 	AddExt( filenar, EXT_NAR)               ;
 
+#ifndef	DOS
+	/*
+	 * FEATURE: the CD's track plays on under the language page's test
+	 * voice (FlagVoiceTest), as in the Classic, whose InitSpeak leaves
+	 * the music. Taken from the Classic 3.2.3.
+	 */
+	if( !FlagVoiceTest )
+#endif
 	if ( GetMusicCD() != -1 )	StopMusicCD()				;
 
 	if ( !TryCopyFileCD_HD( filenar, filehd ) )
@@ -779,6 +899,22 @@ void    PlaySpeakVoc(LONG fd)
 #ifdef	LORAN
 	WavePlay( SPEAK_SAMPLE, 0x1000, 1, 0, 1024, 1024, BufSpeak )	;
 #else
+#ifndef	DOS
+	/*
+	 * FIXED: the mixer plays a voice in place in BufSpeak, which the
+	 * menus' fire rewrites at each frame, so that the language page's
+	 * test voice would sound as noise under the page, where the
+	 * Classic's mixer plays a copy of every sample. The test voice plays
+	 * from a copy of its block, the page going on under it as the
+	 * Classic's does.
+	 */
+	if( FlagVoiceTest )
+	{
+		MovMem( BufSpeak, BufVoiceTest, size ) ;
+		WavePlay( SPEAK_SAMPLE, 0x1000, 1, 0, volleft, volright, BufVoiceTest )	;
+	}
+	else
+#endif
 	WavePlay( SPEAK_SAMPLE, 0x1000, 1, 0, volleft, volright, BufSpeak )	;
 #endif
 
@@ -896,6 +1032,36 @@ LONG	IsVoiceFileOnHD( LONG island )
 	return(0L)	;
 }
 /*-------------------------------------------------------------------------*/
+#ifndef	DOS
+/*
+ * FEATURE: whether the voices of language lang lie on the disk or on the
+ * CD, its bank 000 found where InitSpeak looks for a bank, so that the
+ * language page steps through the voices the install holds. The port's
+ * own.
+ */
+LONG	IsVoiceLanguage( LONG lang )
+{
+	char	filehd[_MAX_PATH]	;
+	char	filenar[_MAX_PATH]	;
+
+	strcpy( filehd, PATH_NAR_HD )			;
+	strcat( filehd, ListLanguage[lang] )		;
+	strcat( filehd, ListFileText[3] )		;
+	AddExt( filehd, EXT_NAR )			;
+
+	if ( FileSize( filehd ))	return( 1L )	;
+
+	strcpy( filenar, PATH_NAR_CD )			;
+	strcat( filenar, ListLanguage[lang] )		;
+	strcat( filenar, ListFileText[3] )		;
+	AddExt( filenar, EXT_NAR )			;
+
+	if ( GetFileCDR( filenar ))	return( 1L )	;
+
+	return( 0L )	;
+}
+/*-------------------------------------------------------------------------*/
+#endif
 LONG    Speak( LONG text )
 {
 	LONG    num, offset     ;
@@ -946,7 +1112,19 @@ void    InitDial( LONG file )
 	LONG	n, k, end ;
 #endif
 
+#ifdef	DOS
 	if ( LastFileInit == file )	return	;
+#else
+	/*
+	 * FEATURE: the bank is loaded again when the texts' language has
+	 * changed since its last load, GetMultiText's kept text emptied, so
+	 * that a change of language shows at once. Taken from the LBA2
+	 * Classic 3.2.4.
+	 */
+	if ( LastFileInit == file AND LastLanguageInit == Language )	return	;
+	LastLanguageInit = Language		;
+	NumMultiText = -1			;
+#endif
 	LastFileInit = file			;
 
 #ifdef	CRYPTAGE
@@ -1661,6 +1839,17 @@ char    *GetMultiText( LONG text, char *dst )
 	char    *ptd    ;
 	LONG	smax ;
 
+#ifndef	DOS
+	/*
+	 * FEATURE: a text numbered from 0x4000 is one of LBA2's own,
+	 * Display text's. Taken from LBA2.
+	 */
+	if( text & 0x4000 )
+	{
+		strcpy( dst, GetLba2Text( text ) ) ;
+		return dst ;
+	}
+#endif
 	/*
 	 * FIXED: LBA.EXE keys the text it keeps on its number and the
 	 * island, so that once InitDial has loaded another bank, a text of

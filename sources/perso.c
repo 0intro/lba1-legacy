@@ -472,6 +472,16 @@ startloop:
 			OptionsMenu() ;
 
 			FlagSpeak = memoflagspeak ;
+#ifndef	DOS
+			/*
+			 * FIXED: the Classic puts back the voices' state it held
+			 * off around its options, so that voices turned off on
+			 * its language page speak on, in English, and voices
+			 * turned on stay silent, until the next start. The
+			 * voices are read again as the page wrote them.
+			 */
+			ReadLanguage() ;
+#endif
 			InitDial( START_FILE_ISLAND+Island )	;
 
 			// rustine scenarique pour twinsun cafe et credits

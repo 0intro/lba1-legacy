@@ -1,0 +1,16 @@
+# The language page on the voices named as INSTALL.EXE writes them
+# (fixtures/langpagecp437: sound's lba.cfg, LanguageCD: Français in
+# CP437). The page opens on Voices: Français, where the Classic, matching
+# its own names alone, opens it on None.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Down Return
+sleep 3
+key Down Down Down Down Return
+sleep 3
+shot page
+key Return
+sleep 3
+shot options

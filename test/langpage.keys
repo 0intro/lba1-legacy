@@ -1,0 +1,91 @@
+# The language page from the main menu's options (fixtures/sound: English
+# texts and voices on the Sound Blaster), on pcmusic, whose track 9 plays
+# under the options, and novox, the game's directory less VOX, so that
+# each bank of voices comes from the CD. In the advanced options Left and
+# Right leave the shadows and the zoom as they are. The fifth entry,
+# Choose language, opens the page: Right steps the texts to French,
+# German, Spanish, Italian and English, Left back to Italian, and Return
+# forward to English, then French, each step drawing the page in its
+# language, the music playing on. Right steps the voices to French,
+# German, None and English, each bank copied from the CD under the
+# transfer's title in French, the CD's track playing on as in the
+# Classic, then each language speaks its "Bonjour", "Guten Tag" or "Good
+# day", and Return goes back to French. Display text, after the voices,
+# goes with them at None and comes back at English. The options and the
+# main menu speak French, then a new game's first text, and the lba.cfg
+# left names French for both languages.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Down Return
+sleep 3
+shot options
+key Down Down Down Return
+sleep 3
+shot advanced
+key Down Down Down
+sleep 1
+key Left Right
+sleep 1
+key Down
+sleep 1
+key Left Right
+sleep 2
+shot unchanged
+key Up Up Up Up Return
+sleep 3
+key Down Return
+sleep 3
+shot page
+key Down Right
+sleep 2
+shot fr
+key Right
+sleep 2
+shot de
+key Right
+sleep 2
+shot sp
+key Right
+sleep 2
+shot it
+key Right
+sleep 2
+shot en
+key Left
+sleep 2
+shot itback
+key Return
+sleep 2
+key Return
+sleep 2
+shot frreturn
+key Down Right
+sleep 8
+shot voicefr
+key Right
+sleep 6
+shot voicede
+key Right
+sleep 3
+shot voicenone
+key Right
+sleep 6
+shot voiceen
+key Return
+sleep 4
+shot voicefrreturn
+key Up Up Return
+sleep 3
+shot options2
+key Up Up Up Up Return
+sleep 3
+shot main
+key Up Up Return
+sleep 4
+key a b c
+sleep 1
+key Return
+sleep 15
+shot text

@@ -175,6 +175,7 @@ NEW=\
 	sources/func.o\
 	sources/gridfix.o\
 	sources/grille_a.o\
+	sources/lba2text.o\
 	sources/mcga.o\
 	sources/textfix.o\
 
@@ -271,6 +272,7 @@ CDIMAGETEST=\
 # port's own, which include sys/compat.h themselves.
 NEWDEFS=\
 	exttext\
+	lba2text\
 
 DEFS=\
 	ambiance\

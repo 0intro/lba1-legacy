@@ -1,0 +1,1 @@
+extern char *GetLba2Text(int32_t );

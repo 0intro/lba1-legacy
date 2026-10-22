@@ -1,0 +1,25 @@
+# The language page without a wave driver (fixtures/langnowave: sound's
+# lba.cfg, WaveDriver: NoWave). The page opens on Voices: None, as the
+# game plays silent, where the Classic's page turns the voices on again,
+# and Right on the voices leaves them at None, where the Classic's code
+# turns them on. Right on the texts steps them to French, and on leaving
+# the page writes Language: French and keeps LanguageCD: English, where
+# the Classic's code writes None over it.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Down Return
+sleep 3
+key Down Down Down Down Return
+sleep 3
+shot page
+key Down Down Right
+sleep 3
+shot right
+key Up Right
+sleep 3
+shot french
+key Up Return
+sleep 3
+shot options

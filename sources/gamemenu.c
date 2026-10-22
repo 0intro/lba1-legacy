@@ -9,6 +9,15 @@
 
 	LONG	MixMusic = 1 ;		// Flag Mixer for Music
 extern	LONG	MaxVolume ;		// Max Music Volume if no Mixer
+#ifndef	DOS
+extern	LONG	Language ;		// message.c's, the texts' language
+extern	LONG	LanguageCD ;		// message.c's, the voices' language
+extern	char	*TabLanguage[] ;	// message.c's, the languages' names
+extern	LONG	FlagDisplayText ;	// message.c's, the texts shown under the voices
+extern	LONG	FlagVoiceTest ;		// message.c's, the page's test voice loading and speaking
+extern	LONG	FlagVoiceCD ;		// message.c's, the voices' file on the CD
+void	CloseFdNar( void ) ;		// message.c's
+#endif
 
 #define	HAUTEUR_STANDARD	50
 #define	MENU_SPACE		6
@@ -45,7 +54,7 @@ UWORD	GameOptionMenu[] = {
 #ifdef	DOS
 			4,	// nb entries
 #else
-			6,	// nb entries
+			7,	// nb entries
 #endif
 			0,	// y from top.
 			0,	// .dia num
@@ -57,6 +66,7 @@ UWORD	GameOptionMenu[] = {
 			0, 47	// advanced options
 #else
 			0, 47,	// advanced options
+			0, 0x1000,	// FEATURE: Choose language, before the switches. Taken from the Classic 3.2.3.
 			0, 0x1008,	// FEATURE: Fullscreen display, before Hit walls. Taken from the Classic 3.2.3.
 			0, 0x100A	// FEATURE: Hit walls, the option menu's last entry. Taken from the Classic 3.2.3.
 #endif
@@ -74,6 +84,33 @@ UWORD	GameAdvancedMenu[] = {
 			7, 32,	// ombres on/off
 			8, 33	// zoom on/off
 				} ;
+
+#ifndef	DOS
+/*
+ * FEATURE: the language page, its entries of types 9 and 10 the texts'
+ * language and the voices', which the arrows step. Taken from the
+ * Classic 3.2.3, whose types 7 and 8 mark the advanced options' shadows
+ * and zoom here.
+ *
+ * FEATURE: LBA2's Display text after the voices, counted in while they
+ * speak, its text 17 while the texts show under the voices and 16 while
+ * the voices speak alone. Taken from LBA2.
+ */
+#define	MENU_DISPLAY_TEXT	3
+
+/* LanguageMenu is TLBA1C.exe 0x819780, with LBA2's Display text. */
+UWORD	LanguageMenu[] = {
+			0,	// selected
+			3,	// nb entries
+			0,	// y from top.
+			0,	// .dia num
+
+			0, 26,	// retour menu prec
+			9, 0x1001,	// langue des textes
+			10, 0x1002,	// langue des voix
+			0, 17|0x4000	// affichage des textes
+				} ;
+#endif
 
 UWORD	GameVolumeMenu[] = {
 			0,	// selected
@@ -2025,10 +2062,25 @@ void	DrawOneChoice( WORD x, WORD y, WORD type, WORD num, WORD select )
 #ifndef	DOS
 	/*
 	 * FEATURE: a text numbered from 0x1000 is one of the Classic's own,
-	 * Fullscreen display's and Hit walls' among them. Taken from the
-	 * Classic 3.2.3.
+	 * the language page's, Fullscreen display's and Hit walls' among
+	 * them. The language page's entries of types 9 and 10 name the
+	 * texts' language and the voices', or None while the voices are
+	 * off. Taken from the Classic 3.2.3.
+	 *
+	 * FIXED: the Classic names the languages by a table of its own,
+	 * Spanish in English beside the others' own names. The page names
+	 * them by TabLanguage, Español among them.
 	 */
-	if( num & 0x1000 )	strcpy( string, GetExtText( num ) ) ;
+	if( num & 0x1000 )
+	{
+		if( type == 9 )
+			snprintf( string, sizeof string, GetExtText( num ),
+				TabLanguage[Language] ) ;
+		else if( type == 10 )
+			snprintf( string, sizeof string, GetExtText( num ),
+				FlagSpeak ? TabLanguage[LanguageCD] : GetExtText( 0x1003 ) ) ;
+		else	strcpy( string, GetExtText( num ) ) ;
+	}
 	else
 #endif
 	GetMultiText( num, string ) ;
@@ -2263,6 +2315,50 @@ WORD	DoGameMenu( UWORD *ptrmenu )
 					flagVol = 2 ;
 				}
 				break ;
+#ifndef	DOS
+
+			/*
+			 * FEATURE: the arrows step the language page's
+			 * languages back or forward, the texts' or the voices',
+			 * the fire given its start again in BufSpeak after the
+			 * voices' step, where the test voice was read, then
+			 * await the keys' release. Taken from the Classic 3.2.3.
+			 */
+			case 9: // langue des textes
+
+				if( (MyJoy & J_LEFT) )
+				{
+					ChangeTextLanguage( Language-1 ) ;
+					while( Joy OR Fire OR Key )
+						DrawGameMenu( ptrmenu, TRUE ) ;
+				}
+				else if( (MyJoy & J_RIGHT) )
+				{
+					ChangeTextLanguage( Language+1 ) ;
+					while( Joy OR Fire OR Key )
+						DrawGameMenu( ptrmenu, TRUE ) ;
+				}
+				break ;
+
+			case 10: // langue des voix
+
+				if( (MyJoy & J_LEFT) OR (MyJoy & J_RIGHT) )
+				{
+					if( (MyJoy & J_LEFT) )
+						ChangeVoiceLanguage( LanguageCD-1 ) ;
+					else	ChangeVoiceLanguage( LanguageCD+1 ) ;
+					Load_HQR( PATH_RESSOURCE"ress.hqr", BufSpeak, RESS_INIT_PLASMA ) ;
+					/*
+					 * FEATURE: the entries counted again, the
+					 * voices giving or taking Display text. Taken
+					 * from LBA2.
+					 */
+					nb = ptrmenu[1] ;
+					while( Joy OR Fire OR Key )
+						DrawGameMenu( ptrmenu, TRUE ) ;
+				}
+				break ;
+#endif
 		}
 
 		if( flag == 1 )
@@ -2321,6 +2417,251 @@ WORD	DoGameMenu( UWORD *ptrmenu )
 	return -1 ;
 }
 
+#ifndef	DOS
+/*══════════════════════════════════════════════════════════════════════════*/
+/*
+ * FEATURE: the language page, the texts' language and the voices' chosen
+ * apart and written to lba.cfg. Taken from the Classic 3.2.3.
+ */
+/*──────────────────────────────────────────────────────────────────────────*/
+
+/*
+ * ChangeTextLanguage is TLBA1C.exe 0x4136c0: the texts' language set to
+ * n, wrapped over the five, bank 0 loaded in it, and the language page
+ * drawn again.
+ */
+void	ChangeTextLanguage( LONG n )
+{
+	LONG	memoflagspeak ;
+
+	if( n >= 5 )		Language = 0 ;
+	else if( n < 0 )	Language = 4 ;
+	else			Language = n ;
+
+	/*
+	 * FIXED: InitDial with the voices on runs InitSpeak, which stops the
+	 * CD's music before it looks for the menus' voices, where the
+	 * Classic's leaves it playing. The voices are held off around the
+	 * bank, as the quit menu holds them.
+	 */
+	memoflagspeak = FlagSpeak ;
+	FlagSpeak = FALSE ;
+	InitDial( 0 ) ;
+	FlagSpeak = memoflagspeak ;
+
+	/*
+	 * FEATURE: PleaseWait, the voices' transfer's title, read again in
+	 * the language, where the Classic reads again its behaviours' names,
+	 * which it shows in play. The port's own.
+	 */
+	GetMultiText( 49, PleaseWait ) ;
+
+	DrawGameMenu( LanguageMenu, FALSE ) ;
+}
+
+/*──────────────────────────────────────────────────────────────────────────*/
+
+/*
+ * ChangeVoiceLanguage is TLBA1C.exe 0x413710: the voices' language set to
+ * n among the CD's three, None past either end, and from None the first
+ * forward or the last back, then text 9 of bank 3 spoken as their test,
+ * the timer held.
+ */
+void	ChangeVoiceLanguage( LONG n )
+{
+	LONG	step ;
+
+	/*
+	 * FIXED: the Classic turns the voices on whatever the sound, where
+	 * InitLanguage keeps them off with WaveDriver: NoWave, so that a
+	 * dialogue whose text is hidden under the voices would pass unseen.
+	 * There the voices stay off.
+	 */
+	if( !Wave_Driver_Enable )	return ;
+
+	SaveTimer() ;
+
+	step = (n < LanguageCD) ? -1 : 1 ;
+	LanguageCD = n ;
+
+	if( !FlagSpeak )
+	{
+		FlagSpeak = TRUE ;
+		LanguageCD = (n < 0) ? 2 : 0 ;
+		step = (n < 0) ? -1 : 1 ;
+	}
+
+	/*
+	 * FEATURE: the voices step through the languages whose voices the
+	 * install holds, None past the last, so that the page offers the
+	 * voices it can speak. The port's own.
+	 */
+	while( (LanguageCD >= 0) AND (LanguageCD <= 2)
+	AND    !IsVoiceLanguage( LanguageCD ) )
+		LanguageCD += step ;
+
+	if( (LanguageCD < 0) OR (LanguageCD > 2) )
+	{
+		LanguageCD = 0 ;
+		FlagSpeak = FALSE ;
+		/*
+		 * FIXED: the Classic's None leaves the voices' file open, and
+		 * FlagVoiceCD says the CD still reads it, which keeps the tunes
+		 * from the CD's tracks. The file is closed.
+		 */
+		CloseFdNar() ;
+		FlagVoiceCD = FALSE ;
+		/*
+		 * FEATURE: Display text goes with the voices, the page drawn
+		 * again on its three entries. Taken from LBA2.
+		 */
+		LanguageMenu[1] = 3 ;
+		CopyScreen( Screen, Log ) ;
+		Flip() ;
+		DrawGameMenu( LanguageMenu, FALSE ) ;
+		RestoreTimer() ;
+		return ;
+	}
+
+	/*
+	 * FEATURE: the test voice's bank loaded with the CD's music playing
+	 * on, as the Classic's InitSpeak leaves the music, and the voice
+	 * spoken from a copy of its block, the page going on under it, as
+	 * the Classic's mixer plays it. Taken from the Classic 3.2.3.
+	 */
+	FlagVoiceTest = TRUE ;
+	InitDial( 3 ) ;
+	Speak( 9 ) ;
+	FlagVoiceTest = FALSE ;
+
+	/*
+	 * FIXED: InitDial with the voices on runs InitSpeak, which stops the
+	 * CD's music before it looks for the menus' voices, where the
+	 * Classic's leaves it playing. The voices are held off around the
+	 * bank, as the quit menu holds them.
+	 */
+	FlagSpeak = FALSE ;
+	InitDial( 0 ) ;
+	FlagSpeak = TRUE ;
+
+	/*
+	 * FIXED: a bank of voices copied from the CD draws LBA.EXE's
+	 * transfer bar, which turns colour 15, the menus' white, to cyan and
+	 * stays on the screen under the page, where the Classic reads its
+	 * voices from the disk. The palette the menu shows is set again, the
+	 * scene's own (FlagPalettePcx) under F6's options, the normal one
+	 * under the main menu, which shows it over any scene, the background
+	 * shown again and the page drawn over it, the fire given its start
+	 * first in BufSpeak, where the voice was read.
+	 */
+	if( FlagPalettePcx AND (GameOptionMenu[5] == 15) )
+		Palette( PalettePcx ) ;
+	else	Palette( PtrPal ) ;
+	Load_HQR( PATH_RESSOURCE"ress.hqr", BufSpeak, RESS_INIT_PLASMA ) ;
+	CopyScreen( Screen, Log ) ;
+	Flip() ;
+	/*
+	 * FEATURE: Display text on the page with the voices. Taken from
+	 * LBA2.
+	 */
+	LanguageMenu[1] = 4 ;
+	DrawGameMenu( LanguageMenu, FALSE ) ;
+
+	RestoreTimer() ;
+}
+
+/*──────────────────────────────────────────────────────────────────────────*/
+
+/*
+ * LanguageOptions is TLBA1C.exe 0x413790: the language page, Return on an
+ * entry stepping its language forward, the arrows either way in
+ * DoGameMenu, and on leaving a changed choice written to lba.cfg.
+ */
+LONG	LanguageOptions()
+{
+	WORD	select ;
+	WORD	flag = 0 ;
+	LONG	memolanguage ;
+	LONG	memolanguagecd ;
+	LONG	memoflagspeak ;
+	LONG	memoflagdisplaytext ;
+
+	memolanguagecd = LanguageCD ;
+	memolanguage = Language ;
+	memoflagdisplaytext = FlagDisplayText ;
+
+	CopyScreen( Log, Screen ) ;
+
+	ReadLanguage() ;
+	memoflagspeak = FlagSpeak ;
+
+	/*
+	 * FEATURE: Display text on the page while the voices speak, as
+	 * LBA2's option menu shows it, the selection kept on the page.
+	 * Taken from LBA2.
+	 */
+	LanguageMenu[1] = FlagSpeak ? 4 : 3 ;
+	if( LanguageMenu[0] >= LanguageMenu[1] )
+		LanguageMenu[0] = LanguageMenu[1]-1 ;
+
+	while( !flag )
+	{
+		LanguageMenu[4+0+MENU_DISPLAY_TEXT*2+1] = (16+FlagDisplayText)|0x4000 ;
+
+		select = DoGameMenu( LanguageMenu ) ;
+
+		switch( select )	// num mess
+		{
+			case 26: // menu prec.
+				flag = 1 ;
+				break ;
+
+			case 0x1001: // langue des textes
+				ChangeTextLanguage( Language+1 ) ;
+				break ;
+
+			case 0x1002: // langue des voix
+				ChangeVoiceLanguage( LanguageCD+1 ) ;
+				break ;
+
+			case 16|0x4000: // textes cachés
+			case 17|0x4000: // textes affichés
+				FlagDisplayText ^= 1 ;
+				break ;
+		}
+	}
+
+	/*
+	 * FIXED: the voices turned off from English, or on to English, leave
+	 * LanguageCD at 0, so that the Classic writes nothing and the next
+	 * start gives the voices back as they were. Whether the voices speak
+	 * is compared too.
+	 */
+	if( (Language != memolanguage)
+	OR  (LanguageCD != memolanguagecd)
+	OR  (FlagSpeak != memoflagspeak) )
+	{
+		WriteLanguage() ;
+	}
+
+	/*
+	 * FEATURE: Display text written to lba.cfg when it changed, as LBA2's
+	 * WriteConfigFile writes it. Taken from LBA2.
+	 */
+	if( FlagDisplayText != memoflagdisplaytext )
+	{
+		if( FlagDisplayText )	Def_WriteString( PathConfigFile, "FlagDisplayText", "ON" ) ;
+		else			Def_WriteString( PathConfigFile, "FlagDisplayText", "OFF" ) ;
+	}
+
+	CopyScreen( Screen, Log ) ;
+	Flip() ;
+
+	return FALSE ;
+}
+
+/*──────────────────────────────────────────────────────────────────────────*/
+#endif
 /*══════════════════════════════════════════════════════════════════════════*/
 /*══════════════════════════════════════════════════════════════════════════*/
 /*──────────────────────────────────────────────────────────────────────────*/
@@ -2409,6 +2750,12 @@ LONG	OptionsMenu()
 				SavedGameManagement() ;
 				break ;
 #ifndef	DOS
+
+			case 0x1000:	// Choose language
+				CopyScreen( Screen, Log ) ;
+				Flip() ;
+				LanguageOptions() ;
+				break ;
 
 			case 0x1008:	// Fullscreen display: ON
 			case 0x1009:	// Fullscreen display: OFF
