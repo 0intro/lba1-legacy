@@ -81,6 +81,7 @@ CDSRC=\
 	sys/files.c\
 	sys/cdimage.c\
 	sys/compat.c\
+	sys/cuts.c\
 	lib386/lib_sys/expand.c\
 
 KEYSRC=\

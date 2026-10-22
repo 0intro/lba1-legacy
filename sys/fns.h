@@ -122,6 +122,7 @@ void	summedwave(uint64_t, const uint32_t*, int);
 void	summedcd(uint64_t, const uint8_t*, int);
 void	summedpstrack(uint64_t, uint8_t*, int);
 void	summedmidi(uint64_t, int16_t*, int);
+uint32_t	crc(uint32_t, const uint8_t*, size_t);
 void	waveto(char*);
 void	musicto(char*);
 
@@ -136,6 +137,13 @@ int32_t	musicmode(char*, char*);
 void	readplatform(char*, int*);
 int32_t	gamekey(char*, char*);
 char*	gamekeyname(int);
+
+/* decode.c */
+Decoder*	decopen(const char*);
+void	decinfo(Decoder*, uint32_t*, uint32_t*, uint64_t*);
+uint64_t	decread(Decoder*, int16_t*, uint64_t);
+int	decseek(Decoder*, uint64_t);
+void	decclose(Decoder*);
 
 /* video.c */
 int32_t	SetSmoothScaling(int32_t);
@@ -162,6 +170,8 @@ void	pstrackvolume(int32_t);
 void	pstrackfade(uint32_t);
 void	pstrackpause(void);
 void	pstrackresume(void);
+int32_t	cutlength(int32_t);
+void	cutplay(int32_t);
 
 /* xmidi.c */
 uint32_t	uldivide(uint32_t, uint32_t);

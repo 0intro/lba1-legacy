@@ -807,6 +807,7 @@ void	PlayMidiFile( WORD num )
 	if( !Midi_Driver_Enable )	return ;// hum si on peut
 #else
 	char	*track ;
+	LONG	cut ;
 
 	/*
 	 * FEATURE: with SaveAnywhere, a tune the scene holds for its save
@@ -826,7 +827,14 @@ void	PlayMidiFile( WORD num )
 		track = GetPsTrackFile( num ) ;
 		if( (track != NULL) AND (!pstracklength( track )) )	track = NULL ;
 	}
-	if( !Midi_Driver_Enable AND (track == NULL) )	return ;
+	/*
+	 * FEATURE: with MusicJingles: CD, the tune's cut from its track of
+	 * the CD, as DotEmu cut it for its recording (cutlength), plays so
+	 * when the CD holds the track. Taken from DotEmu 1.06.
+	 */
+	cut = FALSE ;
+	if( MusicJingles == JINGLES_CD )	cut = cutlength( num ) != 0 ;
+	if( !Midi_Driver_Enable AND (track == NULL) AND !cut )	return ;
 #endif
 
 #ifdef	CDROM
@@ -843,6 +851,13 @@ void	PlayMidiFile( WORD num )
 		{
 			NumXmi = num ;
 			pstrackplay( track ) ;
+			VolumeMidi( 100 ) ;
+			return ;
+		}
+		if( cut )
+		{
+			NumXmi = num ;
+			cutplay( num ) ;
 			VolumeMidi( 100 ) ;
 			return ;
 		}

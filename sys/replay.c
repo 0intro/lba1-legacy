@@ -265,7 +265,7 @@ sumto(char *file)
 }
 
 /* crc: the CRC-32 of n bytes at p, on from c, a CRC before them or 0. */
-static uint32_t
+uint32_t
 crc(uint32_t c, const uint8_t *p, size_t n)
 {
 	uint32_t k;

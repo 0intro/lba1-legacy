@@ -51,7 +51,8 @@
  * GetLengthTrackCDR as ambiance.c does for tracks 0 to 256,
  * PlayTrackCDR for each audio track and for tracks 0, one past the last
  * and 256, then, while a track plays, PlayTrackCDR of a track the disc
- * lacks, StopCDR and ClearCDR, and ClearCDR as TheEnd does. After
+ * lacks, StopCDR and ClearCDR, and ClearCDR as TheEnd does, and on a CD
+ * named each tune's cut played by sys/cd.c alone. After
  * InitCDR its result and DriveCDR must be the same, a disc compared
  * whole holding CD_LBA for both and giving a file, and the assembly's
  * LowTrack, HigTrack and LeadOut the disc's, after each GetFileCDR its
@@ -347,6 +348,21 @@ summedpstrack(uint64_t n, uint8_t *buf, int nb)
 	USED(n);
 	USED(buf);
 	USED(nb);
+}
+
+/* CRC-32, as sys/replay.c's */
+uint32_t
+crc(uint32_t c, const uint8_t *p, size_t n)
+{
+	int k;
+
+	c = ~c;
+	while (n-- > 0) {
+		c ^= *p++;
+		for (k = 0; k < 8; k++)
+			c = (c >> 1) ^ (0xedb88320 & -(c & 1));
+	}
+	return ~c;
 }
 
 /* Sector a as Red Book gives it: frame, second and minute from the low byte. */
@@ -1340,6 +1356,31 @@ comparerun(void *v)
 	compare(v);
 }
 
+/*
+ * sys/cd.c alone, on a CD of the game's: each tune's cut whose track it
+ * holds plays, wherever on the track its mark falls.
+ */
+static void
+cutsrun(void *v)
+{
+	int32_t t;
+	int n;
+
+	portcd(v);
+	InitCDR("CD_LBA");
+	n = 0;
+	for (t = 0; t < Ntune; t++) {
+		if (cuts[t].n == 0 || cutlength(t) == 0)
+			continue;
+		cutplay(t);
+		if (!pstrackplaying())
+			fail("tune %d's cut plays nothing", t);
+		pstrackstop();
+		n++;
+	}
+	printf("%d cuts played\n", n);
+}
+
 /* The assembly alone, on a model told to fail. */
 typedef struct Fault Fault;
 
@@ -2003,6 +2044,9 @@ main(int argc, char **argv)
 		r.label = r.disc->name;
 		r.image = disc[3*i];
 		nbad += inchild(r.label, 600, comparerun, &r);
+		snprintf(label, sizeof label, "%s, its cuts", r.disc->name);
+		r.label = label;
+		nbad += inchild(r.label, 600, cutsrun, &r);
 		if (strcmp(disc[3*i+1], "-") == 0)
 			continue;
 		snprintf(label, sizeof label, "%s, its tree", r.disc->name);

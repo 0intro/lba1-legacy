@@ -82,11 +82,11 @@ TESTS_linux=\
 
 # The objects, the game's in their link order, and their directories.
 OFILES=$(addprefix $(O)/,$(GAME) $(LIBS) $(NEW) $(CARRIED) $(PORT) $(OPL3) $(ARRAYS))
-NEWOFILES=$(addprefix $(O)/,$(NEW) $(CARRIED) $(TESTS:%=test/%.o))
-DIRS=$(patsubst %/,%,$(sort $(dir $(OFILES) $(NEWOFILES) $(O)/test/padtest.o)))
+NEWOFILES=$(addprefix $(O)/,$(NEW) $(CARRIED) $(TESTS:%=test/%.o) $(PCM))
+DIRS=$(patsubst %/,%,$(sort $(dir $(OFILES) $(NEWOFILES) $(DECODE:%=$(O)/%) $(O)/test/padtest.o)))
 
-# all builds the game, lba.cfg beside it and the unit tests.
-all: $(O)/lba$(EXE) $(O)/lba.cfg $(DLL_$(OS))\
+# all builds the game, lba.cfg beside it, the tool and the unit tests.
+all: $(O)/lba$(EXE) $(O)/lba.cfg $(O)/pcm$(EXE) $(DLL_$(OS))\
 	$(TESTS:%=$(O)/%$(EXE)) $(TESTS_$(OS):%=$(O)/%$(EXE))
 
 # The distribution holds the game and lba.cfg, the tree's licence and
@@ -140,7 +140,7 @@ $(O)/sys/lbacfg.c: sys/lba.cfg | $(DIRS)
 $(O)/sys/%.res.o: sys/%.rc sys/lba.manifest | $(DIRS)
 	$(CROSS)windres -I sys -O coff -o $@ $<
 
-# The console programs: the unit tests.
+# The console programs: the unit tests and the tool.
 LINK=$(COMPILE) $(LD) -o $@ $^
 
 $(O)/emu8ktest$(EXE): $(addprefix $(O)/,$(EMU8KTEST)) $(MANIFEST)
@@ -170,6 +170,9 @@ $(O)/cdimagetest$(EXE): $(addprefix $(O)/,$(CDIMAGETEST)) $(MANIFEST)
 $(O)/padtest$(EXE): $(addprefix $(O)/,$(PADTEST)) $(MANIFEST)
 	$(LINK) $(SDLLIBS) -lm
 
+$(O)/pcm$(EXE): $(addprefix $(O)/,$(PCM) $(DECODE)) $(MANIFEST)
+	$(LINK) -lm
+
 # livemusic.so: test/livemusic's preload, which watches the music's
 # stream in play and stalls the game, on Linux alone, as Wine's builds
 # refuse a preload.
@@ -180,7 +183,7 @@ $(O)/livemusic.so: test/livemusic.c | $(DIRS)
 $(addprefix $(O)/,$(GAME) $(LIBS)): $(O)/%.o: %.c | $(DIRS)
 	$(COMPILE) $(CFLAGS) $(OLDFLAGS) -c -o $@ $<
 
-# NEW, CARRIED and the unit tests.
+# NEW, CARRIED, the unit tests and the tool.
 $(NEWOFILES): $(O)/%.o: %.c | $(DIRS)
 	$(COMPILE) $(CFLAGS) $(NEWFLAGS) -c -o $@ $<
 
@@ -188,9 +191,13 @@ $(NEWOFILES): $(O)/%.o: %.c | $(DIRS)
 $(addprefix $(O)/,$(PORT) test/padtest.o): $(O)/%.o: %.c $(SDLDEP_$(OS)) | $(DIRS)
 	$(COMPILE) $(CFLAGS) $(NEWFLAGS) $(SDLCFLAGS) -c -o $@ $<
 
-# Nuked OPL3 as published.
-$(addprefix $(O)/,$(OPL3)): $(O)/%.o: %.c | $(DIRS)
+# Nuked OPL3 and stb_vorbis as published.
+$(addprefix $(O)/,$(OPL3) sys/stb/stb_vorbis.o): $(O)/%.o: %.c | $(DIRS)
 	$(COMPILE) $(CFLAGS) -w -c -o $@ $<
+
+# dr_mp3 as published, dr_mp3.h compiled as its implementation.
+$(O)/sys/drlibs/dr_mp3.o: sys/drlibs/dr_mp3.h | $(DIRS)
+	$(COMPILE) $(CFLAGS) -w -x c -DDR_MP3_IMPLEMENTATION -c -o $@ $<
 
 $(addprefix $(O)/,$(ARRAYS)): $(O)/%.o: $(O)/%.c
 	$(COMPILE) $(CFLAGS) $(NEWFLAGS) -c -o $@ $<
@@ -203,10 +210,12 @@ test: all
 	test/unit $(O)
 	test/nodata -x $(O)/lba$(EXE)
 
-# The part of check that a Linux target alone runs: the start in real
+# The parts of check that a Linux target alone runs: the proof of the
+# tunes cut from the CD's tracks, which runs pcm, and the start in real
 # time with the music's stream watched and the game stalled, whose
 # preload Wine's builds refuse.
 CHECKDEPS_linux=$(O)/livemusic.so
+CUTS_linux=python3 -I tools/cuts.py -x $(O)/pcm -c sys/cuts.c
 LIVEMUSIC_linux=test/livemusic -x $(O)/lba
 
 # check runs lint and test, then the tests on the game's files in
@@ -233,5 +242,6 @@ check: lint test oraclecheck $(CHECKDEPS_$(OS))
 	python3 -I tools/texts.py -c sources/textfix.c $(LBATMP)/gog/cd/TEXT.HQR\
 		$(LBATMP)/pc/LBA/TEXT.HQR $(LBATMP)/gog/lba1/CommonClassic/TEXT.HQR\
 		$(LBATMP)/ps/TEXT.HQR
+	$(CUTS_$(OS))
 	test/e2e check -x $(O)/lba$(EXE)
 	$(LIVEMUSIC_$(OS))

@@ -17,7 +17,7 @@ int32_t	MusicTracks;
 int32_t	MusicJingles;
 
 char	*tracknames[] = {"CD", "Midi", "Auto", NULL};
-char	*jinglenames[] = {"Midi", "PlayStation", "Auto", NULL};
+char	*jinglenames[] = {"Midi", "PlayStation", "CD", "Auto", NULL};
 
 /*
  * A source Auto takes, its mode, where the CD holds its file, the one
@@ -38,10 +38,12 @@ static Source tracksources[] = {
 };
 
 /*
- * The jingles' sources in Auto's order: the PlayStation's recordings
- * (tune 0's J08MID), the XMIDI.
+ * The jingles' sources in Auto's order: the cuts from the CD's tracks
+ * (tune 0's from track 8), the PlayStation's recordings (tune 0's
+ * J08MID), the XMIDI.
  */
 static Source jinglesources[] = {
+	{Jcd, "D:\\TRACK08.WAV"},
 	{Jplaystation, "D:\\JINGLES\\J08MID.WAV"},
 	{Jmidi, NULL},
 };

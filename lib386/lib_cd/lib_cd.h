@@ -54,6 +54,12 @@ LONG    pstracklength( char *file )     ;
 void    pstrackplay( char *file )       ;
 int     pstrackplaying( void )          ;
 
+//      FEATURE: a tune's cut from a track of the CD, as DotEmu cut it for
+//      its recording, its length in frames, 0 if the CD lacks its track,
+//      played in place of the XMIDI. Taken from DotEmu 1.06.
+LONG    cutlength( LONG num )           ;
+void    cutplay( LONG num )             ;
+
 //      FEATURE: the music's sources, lba.cfg's MusicTracks for the tunes
 //      asked of the CD and MusicJingles for those asked of the XMIDI.
 //      The port's own.
@@ -61,6 +67,7 @@ int     pstrackplaying( void )          ;
 #define TRACKS_MIDI             1       // the XMIDI, as the disk version
 #define JINGLES_MIDI            0       // the XMIDI
 #define JINGLES_PLAYSTATION     1       // the PlayStation's recordings
+#define JINGLES_CD              2       // cut from the CD's tracks, as DotEmu cut them
 extern  LONG    MusicTracks     ;
 extern  LONG    MusicJingles    ;
 #endif

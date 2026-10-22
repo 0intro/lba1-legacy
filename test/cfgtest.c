@@ -87,11 +87,12 @@ static struct {
 	{"MusicJingles: playstation\r\n", "MusicJingles", jinglenames, 1},
 	{"MusicJingles:\r\n", "MusicJingles", jinglenames, 0},
 	{"MusicJingles: PS\r\n", "MusicJingles", jinglenames, -1},
-	{"MusicJingles: CD\r\n", "MusicJingles", jinglenames, -1},
+	{"MusicJingles: CD\r\n", "MusicJingles", jinglenames, 2},
+	{"MusicJingles: cd\r\n", "MusicJingles", jinglenames, 2},
 	{"MusicTracks: Midi\r\n", "MusicJingles", jinglenames, 0},
 	{"MusicTracks: Auto\r\n", "MusicTracks", tracknames, 2},
 	{"MusicTracks: auto\r\n", "MusicTracks", tracknames, 2},
-	{"MusicJingles: AUTO\r\n", "MusicJingles", jinglenames, 2},
+	{"MusicJingles: AUTO\r\n", "MusicJingles", jinglenames, 3},
 	{"MusicJingles: Automatic\r\n", "MusicJingles", jinglenames, -1},
 };
 
@@ -142,8 +143,8 @@ static struct {
 
 /*
  * The files a CD's directory holds and the modes Auto takes there for the
- * tracks and the jingles: the CD's tracks, the PlayStation's recordings,
- * the XMIDI, in that order
+ * tracks and the jingles: the CD's tracks, their cuts for the jingles,
+ * the PlayStation's recordings, the XMIDI, in that order
  */
 static struct {
 	char	*files[4];
@@ -151,7 +152,9 @@ static struct {
 } autos[] = {
 	{{NULL}, 1, 0},	/* none: the XMIDI */
 	{{"TRACK02.WAV"}, 0, 0},	/* the CD's track 2 alone */
+	{{"TRACK02.WAV", "TRACK08.WAV"}, 0, 2},	/* and track 8, tune 0's cut */
 	{{"JINGLES\\J08MID.WAV"}, 1, 1},	/* the PlayStation's recordings */
+	{{"JINGLES\\J08MID.WAV", "TRACK08.WAV"}, 1, 2},	/* the cuts before them */
 };
 
 /* SetSmoothScaling is sys/video.c's: here the flag kept. */
@@ -356,10 +359,10 @@ record(uint8_t *p, uint32_t s, uint32_t size, int dir, char *name, int namelen)
  * holding JINGLES\J08MID.WAV, the file of the first tune of the
  * PlayStation's recordings (the volume at sector 16, the root at 18,
  * JINGLES at 21, the file at 23), as auto.iso, or
- * with audio 1 or 2 as auto.cue over auto.bin, the data track's raw
- * sectors then audio track 2 alone, of 20 frames, and with audio 2
- * J08MID.WAV two of them from its second, as the PlayStation's disc
- * places its jingles in its audio tracks.
+ * with audio 1 as auto.cue over auto.bin, the data track's raw sectors
+ * then audio tracks 2 and 8 of 10 frames each, or with audio 2 audio
+ * track 2 alone, of 20 frames, J08MID.WAV two of them from its second,
+ * as the PlayStation's disc places its jingles in its audio tracks.
  */
 static char*
 autoimage(int audio)
@@ -409,6 +412,7 @@ autoimage(int audio)
 	f = fopen(path, "wb");
 	if (f == NULL || fprintf(f, "FILE \"auto.bin\" BINARY\n  TRACK 01 MODE1/2352\n    INDEX 01 00:00:00\n"
 		"  TRACK 02 AUDIO\n    INDEX 01 00:00:%02d\n", Nauto) < 0
+	|| (audio == 1 && fprintf(f, "  TRACK 08 AUDIO\n    INDEX 01 00:00:%02d\n", Nauto+10) < 0)
 	|| fclose(f) != 0)
 		fatal("cannot write %s", path);
 	return path;
@@ -538,7 +542,8 @@ defaults(void)
 
 /*
  * The music's sources of sys/lba.cfg and of the CD's LBA.CFG on a CD
- * whose track 2 makes Auto the CD's tracks: the same.
+ * whose tracks 2 and 8 make Auto the CD's tracks and their cuts: the
+ * same.
  */
 static void
 musicdefaults(void)
@@ -547,6 +552,7 @@ musicdefaults(void)
 	int32_t t, j;
 
 	cdfile("TRACK02.WAV", 1);
+	cdfile("TRACK08.WAV", 1);
 	if (bindtext(0, "SHIPPED.CFG", (char*)lbacfg, err, sizeof err) < 0)
 		fatal("SHIPPED.CFG: %s", err);
 	t = musicmode("LBA.CFG", "MusicTracks");
@@ -557,6 +563,7 @@ musicdefaults(void)
 		fails++;
 	}
 	cdfile("TRACK02.WAV", 0);
+	cdfile("TRACK08.WAV", 0);
 }
 
 static void
@@ -717,9 +724,9 @@ main(int argc, char **argv)
 	setdirs(argv[1], &argv[2], 1, &argv[1], 1);
 	for (i = 0; i < (int)(sizeof autos / sizeof autos[0]); i++)
 		autocase(i);
-	/* the CD an image, as an ISO, then with audio track 2, then with J08MID.WAV in it */
+	/* the CD an image, as an ISO, then with audio tracks 2 and 8, then with J08MID.WAV in track 2 */
 	autoimagecase(&argv[2], 0, 1, 0);
-	autoimagecase(&argv[2], 1, 0, 0);
+	autoimagecase(&argv[2], 1, 0, 2);
 	autoimagecase(&argv[2], 2, 0, 1);
 	setdirs(argv[1], &argv[2], 1, &argv[1], 1);
 	musicdefaults();

@@ -61,6 +61,7 @@ enum
 {
 	Jmidi,		/* the XMIDI */
 	Jplaystation,	/* the PlayStation's recordings on the CD */
+	Jcd,		/* cut from the CD's tracks, as DotEmu */
 	Jauto,		/* the first of them the CD's directory holds */
 };
 
@@ -87,8 +88,46 @@ enum
 	Wwake,		/* every waiter woken */
 };
 
+/* a decoder of an MP3 or Ogg Vorbis file (decode.c) */
+typedef struct Decoder Decoder;
+
 /* a CD's image, a cue sheet and its files or an ISO (cdimage.c) */
 typedef struct Image Image;
+
+enum
+{
+	Ntune = 33,	/* the tunes, 0 to 32 */
+	Nknot = 16,	/* a cut's knots at most */
+	Unit = 4096,	/* a cut's gain of 1 */
+};
+
+typedef struct Knot Knot;
+typedef struct Cut Cut;
+
+/* A knot of a cut's gain: its sample from the cut's first, its gain in Units. */
+struct Knot
+{
+	uint32_t	at;
+	uint16_t	gain;
+};
+
+/*
+ * A tune cut from a track of the CD as DotEmu cut it (cuts.c): its
+ * samples, each a 16-bit stereo pair, from the first, the gain Unit
+ * before the first knot and drawn from knot to knot, the last's after
+ * it.
+ */
+struct Cut
+{
+	uint8_t	track;	/* the CD's, 0 for none */
+	uint32_t	first;	/* its first sample, on the PlayStation's tracks */
+	uint32_t	n;	/* its samples, 0 for the track whole */
+	uint32_t	mark;	/* the CRC-32 of its 32 samples a second in */
+	uint8_t	nknot;
+	Knot	knot[Nknot];
+};
+
+extern Cut	cuts[Ntune];	/* each tune's cut, DotEmu's (cuts.c) */
 
 typedef struct Drvrdesc Drvrdesc;
 typedef struct Synth Synth;

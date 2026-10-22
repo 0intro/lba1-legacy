@@ -115,7 +115,8 @@ usage::
 # translations of the game's assembly and the game's new code, CARRIED
 # LBA2's code carried in its own form, built as NEW but out of make
 # lint's layout of the new C, PORT the layer on SDL3. Nuked OPL3
-# (sys/nuked) builds as published, its warnings off.
+# (sys/nuked), dr_mp3 (sys/drlibs) and stb_vorbis (sys/stb) build as
+# published, their warnings off, dr_mp3.h as its implementation.
 GAME=\
 	sources/ambiance.o\
 	sources/diskfunc.o\
@@ -219,6 +220,7 @@ PORT=\
 	sys/wave.o\
 	sys/xmidi.o\
 	sys/yamaha.o\
+	sys/cuts.o\
 	sys/cdimage.o\
 	sys/input.o\
 	sys/syskeys.o\
@@ -226,11 +228,16 @@ PORT=\
 OPL3=\
 	sys/nuked/opl3.o\
 
+DECODE=\
+	sys/drlibs/dr_mp3.o\
+	sys/stb/stb_vorbis.o\
+
 # sys/lba.cfg's text made into C at the build.
 ARRAYS=\
 	sys/lbacfg.o\
 
-# The unit tests' objects, each list the test's own first.
+# The unit tests' objects, each list the test's own first, and those of
+# the tool built beside the game.
 
 # emu8ktest: the EMU8000 against its documents (test/emu8ktest.c).
 EMU8KTEST=\
@@ -310,6 +317,11 @@ CDIMAGETEST=\
 	sys/files.o\
 	sys/cdimage.o\
 
+# pcm: a music file decoded as the port decodes it.
+PCM=\
+	tools/pcm.o\
+	sys/decode.o\
+
 # The game's modules whose .def files make defs writes, NEWDEFS the
 # port's own, which include sys/compat.h themselves.
 NEWDEFS=\
@@ -348,6 +360,7 @@ lint:
 	shellcheck -S warning $$(git grep -l --untracked '^#!/usr/bin/env bash')
 	python3 -I tools/lint.py\
 		-c $(NEW:.o=.c) $(PORT:.o=.c) $(wildcard sys/*.h dos/*.h test/*.c)\
+			$(PCM:.o=.c)\
 			$(wildcard tools/oracle/*.c tools/oracle/*.h tools/emu8kdiff/*.c)\
 		-p $$(git ls-files -co --exclude-standard '*.py')\
 		-- $$(git ls-files -co --exclude-standard)

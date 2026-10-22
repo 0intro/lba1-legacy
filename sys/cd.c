@@ -27,6 +27,12 @@
  * scaled by its volume, a percent that the music's calls set at once or
  * ramp down along the clock, and handed to a stream of their own at the
  * CD's gain. Taken from the PlayStation.
+ *
+ * FEATURE: a tune's cut from a track of the CD, as DotEmu cut it for its
+ * recording (cuts.c), plays there in the same way: the track's frames
+ * from the cut's first, the place its mark finds on this CD, to its end,
+ * each sample scaled by the cut's gain at its frame. Taken from DotEmu
+ * 1.06.
  */
 
 enum
@@ -34,6 +40,10 @@ enum
 	Sector = 2048,
 	Start = 16,	/* the first file's sector: past ISO 9660's own */
 	Frame = 2352,	/* of audio: 588 of 16-bit stereo */
+	Samples = Frame/4,	/* a frame's, each a 16-bit stereo pair */
+	Mark = 32,	/* the samples a cut's mark sums */
+	Markat = 44100,	/* their place, from its first */
+	Markseek = 2*44100 + 4096,	/* the samples about its place on the PlayStation's tracks it is sought in: GOG's and Steam's image starts its tracks 2 s late */
 };
 
 typedef struct Track Track;
@@ -53,11 +63,15 @@ struct Track
 
 typedef struct Pstrack Pstrack;
 
-/* the PlayStation's track in the XMIDI's place */
+/* the PlayStation's track in the XMIDI's place, or a cut */
 struct Pstrack
 {
 	Track	t;
 	char	file[300];	/* on the CD */
+	uint32_t	first;	/* the file's sample it starts at */
+	uint32_t	skip;	/* a cut's samples before the track's start */
+	uint32_t	samples;	/* its samples, 0 for the file's whole */
+	Cut	*cut;	/* the gain's knots, or NULL */
 	int	on;	/* asked for, not stopped since */
 	int	paused;
 	uint64_t	pausedframe;	/* the clock's, when paused */
@@ -83,6 +97,8 @@ static int32_t pausedtrack;	/* LBA2's PausedTrack: the track PauseCD stopped, 0 
 static uint64_t pausedframe;	/* LBA2's Cur: the frame it stopped at */
 static Pstrack ps;
 static uint64_t psplayed;	/* frames, every PlayStation track's */
+static int32_t placed[Ntune];	/* each cut's first on this CD */
+static uint8_t isplaced[Ntune];
 
 /*
  * InitCDR is cdrom.asm's: whether the CD's root holds the file name, the
@@ -182,20 +198,21 @@ trackopen(int32_t num, Track *t)
 /*
  * n bytes of t's sound from its byte t->at, as a drive plays them: an
  * image's track as imagetrackread gives it, or its file's bytes, zeros
- * past its end.
+ * past its end. The bytes it holds.
  */
-static void
+static size_t
 trackread(Track *t, uint8_t *buf, size_t n)
 {
 	size_t got;
 
 	if (t->img != NULL)
-		imagetrackread(t->img, t->audio, t->base + t->at, buf, n);
+		got = imagetrackread(t->img, t->audio, t->base + t->at, buf, n);
 	else {
 		got = fread(buf, 1, n, t->f);
 		memset(buf + got, 0, n - got);
 	}
 	t->at += n;
+	return got;
 }
 
 /* t's sound read from its byte at on: 0, or -1. */
@@ -367,11 +384,54 @@ scale(uint8_t *buf, int32_t v)
 	}
 }
 
+/* The gain of cut c at its sample i, in Units. */
+static int32_t
+cutgain(Cut *c, uint64_t i)
+{
+	Knot *k;
+	int j;
+
+	if (c->nknot == 0 || i < c->knot[0].at)
+		return Unit;
+	for (j = 1; j < c->nknot; j++) {
+		k = &c->knot[j];
+		if (i < k->at)
+			return k[-1].gain + (int64_t)(k->gain - k[-1].gain) * (int64_t)(i - k[-1].at)
+				/ (int64_t)(k->at - k[-1].at);
+	}
+	return c->knot[c->nknot-1].gain;
+}
+
+/* The recording's frame f, each sample scaled by its cut's gain. */
+static void
+cutframe(uint8_t *buf, uint64_t f)
+{
+	int32_t s, g;
+	uint16_t u;
+	int k, b;
+
+	if (ps.cut == NULL)
+		return;
+	for (k = 0; k < Samples; k++) {
+		g = cutgain(ps.cut, ps.skip + f*Samples + k);
+		if (g == Unit)
+			continue;
+		for (b = 4*k; b < 4*k+4; b += 2) {
+			s = buf[b] | buf[b+1]<<8;
+			if (s >= 0x8000)
+				s -= 0x10000;
+			u = (uint16_t)(s * g / Unit);
+			buf[b] = u & 0xff;
+			buf[b+1] = u >> 8;
+		}
+	}
+}
+
 /*
  * cdtick: the frames of the track playing that the clock has passed,
  * and Ahead more, read and handed on, each summed in a record. At its
- * end it stops. So too the PlayStation's track, its frames scaled by
- * its volume at their time.
+ * end it stops. So too the PlayStation's track or the cut, its frames
+ * scaled by its volume at their time.
  */
 void
 cdtick(uint64_t ns)
@@ -392,6 +452,7 @@ cdtick(uint64_t ns)
 	if (trackon(&ps.t)) {
 		for (n = due(&ps.t, ns); ps.t.fed < n; ps.t.fed++) {
 			trackread(&ps.t, buf, Frame);
+			cutframe(buf, ps.t.fed);
 			scale(buf, psvolume(ps.t.start + ps.t.fed*1000000000/75));
 			sdlpstrack(buf, Frame);
 			summedpstrack(++psplayed, buf, Frame);
@@ -436,14 +497,22 @@ static int
 psopen(uint64_t frame)
 {
 	Track t;
+	uint64_t all, len;
+	uint32_t n;
 
 	if (audioopen(ps.file, &t) < 0)
 		return 0;
-	if (frame >= t.n || trackseek(&t, frame*Frame) != 0) {
+	all = (uint64_t)t.n * Samples;
+	len = ps.samples != 0 ? ps.samples : all;
+	if (ps.first + len > all)
+		len = ps.first < all ? all - ps.first : 0;
+	n = (len + Samples - 1) / Samples;
+	if (frame >= n || trackseek(&t, (ps.first + frame*Samples)*4) != 0) {
 		trackclose(&t);
 		return 0;
 	}
 	ps.t = t;
+	ps.t.n = n;
 	ps.t.fed = frame;
 	ps.t.start = now - (frame*1000000000 + 74) / 75;
 	return 1;
@@ -458,6 +527,93 @@ pstrackplay(char *name)
 {
 	pstrackstop();
 	snprintf(ps.file, sizeof ps.file, "D:\\%s", name);
+	ps.first = 0;
+	ps.skip = 0;
+	ps.samples = 0;
+	ps.cut = NULL;
+	ps.from = ps.to = 100;
+	ps.fadestart = ps.fadeend = now;
+	ps.on = psopen(0);
+}
+
+/*
+ * The first sample of tune num's cut on this CD's track: where its mark
+ * falls, sought about its place on the PlayStation's tracks, the
+ * nearest first, or that place, for a CD whose samples differ there.
+ * Below 0 the cut starts before the track does.
+ */
+static int32_t
+cutplace(int32_t num)
+{
+	static uint8_t buf[(2*Markseek+Mark)*4];
+	Cut *c;
+	Track t;
+	int32_t at, d, p;
+	size_t got;
+
+	c = &cuts[num];
+	if (isplaced[num])
+		return placed[num];
+	isplaced[num] = 1;
+	placed[num] = c->first;
+	at = (int32_t)c->first + Markat - Markseek;
+	if (at < 0)
+		at = 0;
+	if (trackopen(c->track, &t) < 0)
+		return placed[num];
+	got = 0;
+	if (trackseek(&t, (uint64_t)at*4) == 0)
+		got = trackread(&t, buf, sizeof buf);
+	trackclose(&t);
+	for (d = 0; d <= Markseek; d++) {
+		p = (int32_t)c->first + Markat + d - at;
+		if (p >= 0 && (size_t)(p+Mark)*4 <= got && crc(0, buf + p*4, Mark*4) == c->mark) {
+			placed[num] = (int32_t)c->first + d;
+			break;
+		}
+		p = (int32_t)c->first + Markat - d - at;
+		if (d > 0 && p >= 0 && (size_t)(p+Mark)*4 <= got && crc(0, buf + p*4, Mark*4) == c->mark) {
+			placed[num] = (int32_t)c->first - d;
+			break;
+		}
+	}
+	return placed[num];
+}
+
+/*
+ * cutlength: the length in frames of tune num's cut, or 0 if it has none
+ * or the CD lacks its track.
+ */
+int32_t
+cutlength(int32_t num)
+{
+	Track t;
+
+	if (num < 0 || num >= Ntune || cuts[num].track == 0)
+		return 0;
+	if (trackopen(cuts[num].track, &t) < 0)
+		return 0;
+	trackclose(&t);
+	if (cuts[num].n == 0)
+		return t.n;
+	return (cuts[num].n + Samples - 1) / Samples;
+}
+
+/* cutplay: tune num's cut played from its start at full volume. */
+void
+cutplay(int32_t num)
+{
+	Cut *c;
+	int32_t at;
+
+	pstrackstop();
+	c = &cuts[num];
+	snprintf(ps.file, sizeof ps.file, "D:\\TRACK%02d.WAV", (int)c->track);
+	at = c->n != 0 ? cutplace(num) : 0;
+	ps.first = at > 0 ? at : 0;
+	ps.skip = at < 0 ? -at : 0;
+	ps.samples = c->n - ps.skip;
+	ps.cut = c->nknot != 0 ? c : NULL;
 	ps.from = ps.to = 100;
 	ps.fadestart = ps.fadeend = now;
 	ps.on = psopen(0);
