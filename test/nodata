@@ -36,7 +36,12 @@
 # copy beside none reads the text lba holds of lba.cfg to "No CD", the
 # OPL3's timbres said missing. And a second game directory holding
 # FLA\FLASAMP.HQR alone, the movies' samples, stands in for the CD: the
-# start goes past it to the inventory, the same screens.
+# start goes past it to the inventory, the same screens. Last lba starts
+# without -g or -c, as a player starts it from an install's folder: in
+# the Classic's, files of an HQR of one empty entry for the files it is
+# known by and the movies' samples in Common\Fla, it binds Common and
+# goes past the CD to the inventory, the same screens, and so in the
+# Enhanced Edition's, whose HQR holds the movies' samples.
 #
 # exe is build/linux-amd64-gcc/lba by default, cfgtest and lba.cfg
 # beside it. A Windows exe runs natively (Git Bash, MSYS2), SDL3.dll
@@ -202,3 +207,35 @@ mkdir -p movies/FLA
 printf 'x' > movies/FLA/FLASAMP.HQR
 run pref sums-movies 'HQR Inventory' -g game -g movies -c cd
 same sums-movies "with the movies in a game directory, "
+
+# startin dir pref sums want: lba started in dir without -g or -c, its
+# end want, which it must print, its output in out, its sums in sums
+startin() {
+	local dir=$1 pref=$2 sums=$3 want=$4
+	if ! (cd -- "$dir" && SDL_VIDEO_DRIVER=dummy SDL_AUDIO_DRIVER=dummy "$exe" -p "../$pref" -i ../rec -s "../$sums") > out 2>&1; then
+		echo "nodata: $exe failed in $dir" >&2
+		cat out >&2
+		exit 1
+	fi
+	if ! grep -q "$want" out; then
+		echo "nodata: $exe ended in $dir without \"$want\"" >&2
+		cat out >&2
+		exit 1
+	fi
+}
+
+# an HQR file of one entry, stored and empty: its offset, then its header's sizes and method
+mkdir -p classic/Common/Fla classic/CommonClassic
+for f in classic/Common/RESS.HQR classic/CommonClassic/TEXT.HQR; do
+	printf '\004\000\000\000\000\000\000\000\000\000\000\000\000\000' > "$f"
+done
+printf 'x' > classic/Common/Fla/FLASAMP.HQR
+startin classic pref sums-classic 'HQR Inventory'
+grep -q '^lba: the Classic in ' out || { echo "nodata: the Classic's folder not taken for the Classic" >&2; cat out >&2; exit 1; }
+same sums-classic "started in the Classic's folder, "
+mkdir -p ee/resources/LBA_FILES/HQR
+printf '\004\000\000\000\000\000\000\000\000\000\000\000\000\000' > ee/resources/LBA_FILES/HQR/RESS.HQR
+printf 'x' > ee/resources/LBA_FILES/HQR/FLASAMP.HQR
+startin ee pref sums-ee 'HQR Inventory'
+grep -q '^lba: the Enhanced Edition in ' out || { echo "nodata: the Enhanced Edition's folder not taken for it" >&2; cat out >&2; exit 1; }
+same sums-ee "started in the Enhanced Edition's folder, "

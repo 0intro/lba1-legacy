@@ -55,7 +55,7 @@
 enum
 {
 	Nfile = 32,
-	Nbind = Ngame + Ncd + 2,	/* -g's and -c's, then lba.cfg's file and text */
+	Nbind = Ngame + Ncd + Nrow + 3,	/* -g's and -c's, or an install's own, its saves' and -c's, then lba.cfg's file and text */
 	Hbase = 5,	/* DOS's first free handle */
 	Npath = 1024,
 	Nname = 256,
@@ -81,6 +81,7 @@ struct Bind
 	char	path[Npath];	/* with slashes, "" for the drive's root */
 	char	dir[Npath];	/* the host's directory, image or file */
 	Image	*img;	/* dir's image, or NULL */
+	char	in[Npath];	/* the image's directory bound, "" for its root */
 	int	file;	/* dir a file bound alone */
 	const char	*text;	/* the port's text bound alone, else NULL */
 };
@@ -237,6 +238,16 @@ setdirs(char *pref, char **game, int ngame, char **cd, int ncd)
 	for (i = 0; i < ngame; i++)
 		if (bindpath(0, "", game[i], err, sizeof err) < 0)
 			fatal("%s: %s", game[i], err);
+	bindcds(cd, ncd);
+}
+
+/* bindcds: the ncd CDs of cd, each a directory or a CD's image, bound in turn at the CD's drive's root. */
+void
+bindcds(char **cd, int ncd)
+{
+	char err[256];
+	int i;
+
 	for (i = 0; i < ncd; i++)
 		if (bindpath(1, "", cd[i], err, sizeof err) < 0)
 			fatal("%s: %s", cd[i], err);
@@ -286,6 +297,30 @@ bindpath(int cd, char *path, char *dir, char *err, int nerr)
 		b->img = imageopen(dir, err, nerr);
 		if (b->img == NULL)
 			return -1;
+	}
+	dirs.nbind++;
+	return 0;
+}
+
+/* bindimage binds the directory in of the CD's image at image at path, as bindpath binds a directory: 0, or -1 with the reason in err. */
+int
+bindimage(int cd, char *path, char *image, char *in, char *err, int nerr)
+{
+	Bind *b;
+
+	if ((b = newbind(cd, path, image, err, nerr)) == NULL)
+		return -1;
+	if (snprintf(b->in, sizeof b->in, "%s", in) >= (int)sizeof b->in) {
+		snprintf(err, nerr, "too long a path");
+		return -1;
+	}
+	b->img = imageopen(image, err, nerr);
+	if (b->img == NULL)
+		return -1;
+	if (!imagedir(b->img, b->in)) {
+		imageclose(b->img);
+		snprintf(err, nerr, "%s: no such directory", in);
+		return -1;
 	}
 	dirs.nbind++;
 	return 0;
@@ -821,10 +856,24 @@ bindconfig(char *name, const char *text)
 		fatal("%s: %s", name, err);
 }
 
+/* The image's path of r, below b, a bind of an image's directory, into out: 0, or -1 where its n bytes cannot hold it. */
+static int
+imagepath(Bind *b, const char *r, char *out, int n)
+{
+	int k;
+
+	if (b->in[0] == 0 || r[0] == 0)
+		k = snprintf(out, n, "%s%s", b->in, r);
+	else
+		k = snprintf(out, n, "%s/%s", b->in, r);
+	return k >= 0 && k < n ? 0 : -1;
+}
+
 /* Where rel lies in the first bind, on the CD's drive with cd set, that holds it: 0 if found. */
 static int
 locate(int cd, char *rel, Place *p)
 {
+	char ir[Npath];
 	Bind *b;
 	const char *r;
 
@@ -849,9 +898,11 @@ locate(int cd, char *rel, Place *p)
 		if (b->img == NULL) {
 			if (under(b->dir, r, p->path, sizeof p->path, 0) == 0)
 				return 0;
-		} else if (imagesound(b->img, (char*)r, &p->track, &p->first, &p->frames) == 0)
+		} else if (imagepath(b, r, ir, sizeof ir) < 0)
+			continue;
+		else if (imagesound(b->img, ir, &p->track, &p->first, &p->frames) == 0)
 			return 0;
-		else if (imagefile(b->img, (char*)r, &p->start, &p->size) == 0)
+		else if (imagefile(b->img, ir, &p->start, &p->size) == 0)
 			return 0;
 	}
 	return -1;
@@ -1389,6 +1440,22 @@ copybytes(uint8_t *b, uint32_t n)
 	return c;
 }
 
+/* The bytes of len of the image's file at its sector start, in a buffer of their own, or NULL. */
+static uint8_t*
+imagebytes(Image *img, uint32_t start, uint32_t len)
+{
+	uint8_t *b;
+
+	if (len > Maxfile)
+		return NULL;
+	b = malloc(len > 0 ? len : 1);
+	if (b != NULL && imageread(img, start, 0, b, len) != len) {
+		free(b);
+		b = NULL;
+	}
+	return b;
+}
+
 static int
 freeslot(void)
 {
@@ -1496,6 +1563,8 @@ OpenRead(char *name)
 	if (cd && locate(1, rel, &p) == 0 && p.img != NULL)
 		return p.track != 0 ? 0 : imagehandle(p.img, p.start, p.size);
 	if (readpath(name, path, sizeof path) < 0) {
+		if (!cd && locate(0, rel, &p) == 0 && p.img != NULL)
+			return p.track != 0 ? 0 : imagehandle(p.img, p.start, p.size);
 		if (cd || (t = textat(rel)) == NULL)
 			return 0;
 		b = copybytes((uint8_t*)t, strlen(t));
@@ -1553,6 +1622,7 @@ OpenReadWrite(char *name)
 	char path[Npath], from[Npath], rel[Npath];
 	const char *t;
 	uint8_t *b;
+	Place p;
 	uint32_t len;
 	Entry *d, *e;
 	int changed;
@@ -1572,6 +1642,10 @@ OpenReadWrite(char *name)
 	else if (inbinds(0, rel, from, sizeof from) == 0 && !isdir(from)) {
 		/* the preferences' copy written even if left as it is */
 		b = slurp(from, &len);
+		changed = 1;
+	} else if (locate(0, rel, &p) == 0 && p.img != NULL && p.track == 0) {
+		b = imagebytes(p.img, p.start, p.size);
+		len = p.size;
 		changed = 1;
 	} else if ((t = textat(rel)) != NULL) {
 		len = strlen(t);
@@ -1810,6 +1884,8 @@ FileSize(char *name)
 		return p.track != 0 ? 0 : p.size;
 	if (readpath(name, path, sizeof path) == 0)
 		return stat(path, &st) == 0 && !S_ISDIR(st.st_mode) ? st.st_size : 0;
+	if (!cd && locate(0, rel, &p) == 0 && p.img != NULL)
+		return p.track != 0 ? 0 : p.size;
 	if (!cd && (t = textat(rel)) != NULL)
 		return strlen(t);
 	return 0;
@@ -2230,7 +2306,7 @@ nextfound(struct find_t *ft)
 unsigned
 _dos_findfirst(const char *pattern, unsigned attr, struct find_t *ft)
 {
-	char rel[Npath], host[Npath], *dir, *pat;
+	char rel[Npath], host[Npath], ir[Npath], *dir, *pat;
 	const char *e, *r;
 	struct stat st;
 	Entry *vd, *ve;
@@ -2280,9 +2356,10 @@ _dos_findfirst(const char *pattern, unsigned attr, struct find_t *ft)
 		}
 		if (b->file || (r = below(b->path, dir)) == NULL)
 			continue;
-		if (b->img != NULL)
-			imagelist(b->img, (char*)r, imagefound, &s);
-		else if (under(b->dir, r, host, sizeof host, 0) == 0)
+		if (b->img != NULL) {
+			if (imagepath(b, r, ir, sizeof ir) == 0)
+				imagelist(b->img, ir, imagefound, &s);
+		} else if (under(b->dir, r, host, sizeof host, 0) == 0)
 			scan(host, pat, subdirs, max);
 	}
 	if (nfound > 1)

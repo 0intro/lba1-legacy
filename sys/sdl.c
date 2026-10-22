@@ -1540,12 +1540,14 @@ usage(void)
  * The directories: the game's (LBA.CFG and the HQR files), one or more,
  * read in the order given, the CD's (CD_LBA and LBA/, for the movies
  * and voices), one or more, each its root or a CD's image, read in the
- * order given, and the preferences, where everything written goes. By
- * default the game's is the current one, the CD's the first game
- * directory's parent, and the preferences SDL's. The configuration file
- * is read after them from the program's directory (files.c). The wide
- * screen takes its shape from the display, or from the size -D gives,
- * which a record keeps for its replays, and DisplaySync its pace and its
+ * order given, and the preferences, where everything written goes.
+ * Without -g the install the port starts in gives them, the current
+ * directory's or the program's (install.c), -c's CDs in place of its
+ * own. With -g the CD is by default the first game directory's parent.
+ * The preferences are by default SDL's. The configuration file is read
+ * after them from the program's directory (files.c). The wide screen
+ * takes its shape from the display, or from the size -D gives, which a
+ * record keeps for its replays, and DisplaySync its pace and its
  * presents' vsync from the display's refresh in hertz, -R's, 1 to 1000
  * or 0 for unknown, the pace else a record's, else the window's
  * display's, and vsync else the window's display's. The input can be
@@ -1558,7 +1560,7 @@ int
 main(int argc, char *argv[])
 {
 	char *game[Ngame], *cd[Ncd], *pref, *rec, *in, *sums, *e, cdbuf[1024];
-	const char *base;
+	const char *base, *saved;
 	uint32_t n, m, k;
 	long dw, dh;
 	double hz;
@@ -1645,15 +1647,22 @@ main(int argc, char *argv[])
 			fatal("SDL_GetPrefPath: %s", SDL_GetError());
 	}
 	base = SDL_GetBasePath();
+	saved = NULL;
+	if (rec != NULL || in != NULL)
+		setdrives(0);
+	else
+		saved = SDL_GetUserFolder(SDL_FOLDER_SAVEDGAMES);
 	if (ngame == 0)
-		game[ngame++] = ".";
-	if (ncd == 0) {
-		if (strlen(game[0]) + 3 >= sizeof cdbuf)
-			fatal("%s: too long a path", game[0]);
-		snprintf(cdbuf, sizeof cdbuf, "%s/..", game[0]);
-		cd[ncd++] = cdbuf;
+		startin(pref, base, cd, ncd, saved);
+	else {
+		if (ncd == 0) {
+			if (strlen(game[0]) + 3 >= sizeof cdbuf)
+				fatal("%s: too long a path", game[0]);
+			snprintf(cdbuf, sizeof cdbuf, "%s/..", game[0]);
+			cd[ncd++] = cdbuf;
+		}
+		setdirs(pref, game, ngame, cd, ncd);
 	}
-	setdirs(pref, game, ngame, cd, ncd);
 	if (base != NULL && setprogdir(base) < 0)
 		fatal("%s: too long a path", base);
 	if (rec != NULL)

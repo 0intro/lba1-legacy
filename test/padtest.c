@@ -70,6 +70,23 @@ setdirs(char *pref, char **game, int ngame, char **cd, int ncd)
 	(void)ncd;
 }
 
+char*
+startin(char *pref, const char *base, char **cd, int ncd, const char *saved)
+{
+	(void)pref;
+	(void)base;
+	(void)cd;
+	(void)ncd;
+	(void)saved;
+	return NULL;
+}
+
+void
+setdrives(int on)
+{
+	(void)on;
+}
+
 void
 setwriter(void (*fn)(int))
 {

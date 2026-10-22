@@ -225,6 +225,7 @@ PORT=\
 	sys/music.o\
 	sys/stream.o\
 	sys/cdimage.o\
+	sys/install.o\
 	sys/input.o\
 	sys/syskeys.o\
 
@@ -323,6 +324,17 @@ CDIMAGETEST=\
 	sys/files.o\
 	sys/cdimage.o\
 	sys/decode.o\
+
+# installtest: the install the port finds where it starts, and the
+# game's files through its binds.
+INSTALLTEST=\
+	test/installtest.o\
+	sys/compat.o\
+	sys/files.o\
+	sys/cdimage.o\
+	sys/install.o\
+	sys/decode.o\
+	sys/lbacfg.o\
 
 # pcm: a music file decoded as the port decodes it.
 PCM=\

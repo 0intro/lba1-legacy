@@ -1,0 +1,30 @@
+# The voices' entry on Steam's DOS copy (fixtures/sound: English texts
+# and voices on the Sound Blaster), the port started in its folder,
+# which holds the English voices alone. Right steps the voices from
+# English straight to None, past French and German, and Right again to
+# English, its test voice spoken. Left steps back to None, and Left
+# again straight to English.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Down Return
+sleep 3
+key Down Down Down Down Return
+sleep 3
+shot page
+key Down Down Right
+sleep 3
+shot none
+key Right
+sleep 6
+shot english
+key Left
+sleep 3
+shot noneback
+key Left
+sleep 6
+shot englishback
+key Up Up Return
+sleep 3
+shot options

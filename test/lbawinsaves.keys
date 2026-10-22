@@ -1,0 +1,15 @@
+# LbaWin's own save listed from the install the port starts in
+# (lbawin/run: LbaWin's tree, its LBA.CFG, and Save\S1.LBA beside
+# LbaWin.exe, the save of scene 9 named abc): Continue saved game lists
+# abc, and Return loads scene 9.
+
+hold 0.05
+sleep 40
+shot menu
+key Down Return
+sleep 3
+shot list
+key Return
+hold 0.15
+sleep 15
+shot loaded

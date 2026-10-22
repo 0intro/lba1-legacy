@@ -76,6 +76,7 @@ TESTS=\
 	clocktest\
 	filestest\
 	cdimagetest\
+	installtest\
 
 TESTS_linux=\
 	padtest\
@@ -167,6 +168,9 @@ $(O)/filestest$(EXE): $(addprefix $(O)/,$(FILESTEST) $(DECODE)) $(MANIFEST)
 	$(LINK) -lm
 
 $(O)/cdimagetest$(EXE): $(addprefix $(O)/,$(CDIMAGETEST) $(DECODE)) $(MANIFEST)
+	$(LINK) -lm
+
+$(O)/installtest$(EXE): $(addprefix $(O)/,$(INSTALLTEST) $(DECODE)) $(MANIFEST)
 	$(LINK) -lm
 
 $(O)/padtest$(EXE): $(addprefix $(O)/,$(PADTEST)) $(MANIFEST)

@@ -76,6 +76,7 @@ enum
 {
 	Ngame = 8,	/* the game's directories at most, -g's (sdl.c) */
 	Ncd = 8,	/* the CDs at most, -c's (sdl.c) */
+	Nrow = 10,	/* an install's binds of its own folders at most (install.c) */
 };
 
 /* sys/lba.cfg's bytes and a 0, made by the Makefile: the configuration's text (sys.c) */

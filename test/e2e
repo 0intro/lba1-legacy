@@ -3,10 +3,10 @@
 # e2e: record the port playing a scenario, and replay the records to
 # check that a build shows the same screens and leaves the same files.
 #
-#     test/e2e record [-f dir] [-c cd]... [-g game]... [-s scenario] [-D WxH] [-R hz] [-x exe] name
+#     test/e2e record [-f dir] [-c cd]... [-g game]... [-d folder] [-s scenario] [-D WxH] [-R hz] [-x exe] name
 #     test/e2e check [-x exe] [name...]
 #     test/e2e keep [-x exe] [name...]
-#     test/e2e derive [-c cd]... [-g game]... [-k 'key: value']... [-x exe] from name
+#     test/e2e derive [-c cd]... [-g game]... [-d folder] [-k 'key: value']... [-x exe] from name
 #
 # record plays test/name.keys (tools/xkeys), or test/scenario.keys with
 # -s, on the port in our Xephyr, its preferences starting as a copy of
@@ -49,14 +49,20 @@
 # said so. derive makes the record name from the input and preferences
 # of from, replayed on cd and game, each key of -k set in their lba.cfg:
 # the replay must show from's screens, the sound alone changing, and its
-# sums and the files it left are kept as name's reference. E2E, if set,
-# names the records' directory in place of $LBATMP/e2e. A record keeps
-# the display it was made on, which its replays take, so that the wide
-# screen has the record's width on every display: record's -D makes it
-# as on a display of WxH, the Xephyr's otherwise. With -R the port takes
-# the display's refresh as hz, 0 for unknown or 1 to 1000, which
-# DisplaySync paces the game and its presents by, and the record keeps
-# its frame, as it keeps the frame of the display it ran on otherwise.
+# sums and the files it left are kept as name's reference. With -d
+# folder, in place of -c and -g, the record starts as a player starts
+# the program put into an install's folder: in a farm of links to each
+# entry of $LBATMP/folder, the program copied into it, and its lba.cfg
+# beside it where the folder holds none of its own, the farm current and
+# no -g or -c given, so that the port finds the install there. The
+# record keeps folder (name.dir). E2E, if set, names the records'
+# directory in place of $LBATMP/e2e. A record keeps the display it was
+# made on, which its replays take, so that the wide screen has the
+# record's width on every display: record's -D makes it as on a display
+# of WxH, the Xephyr's otherwise. With -R the port takes the display's
+# refresh as hz, 0 for unknown or 1 to 1000, which DisplaySync paces
+# the game and its presents by, and the record keeps its frame, as it
+# keeps the frame of the display it ran on otherwise.
 
 set -Eeuo pipefail
 
@@ -68,10 +74,10 @@ E2E=${E2E:-$LBATMP/e2e}
 RUN=$E2E/run
 
 usage() {
-	echo "usage: e2e record [-f dir] [-c cd]... [-g game]... [-s scenario] [-D WxH] [-R hz] [-x exe] name" >&2
+	echo "usage: e2e record [-f dir] [-c cd]... [-g game]... [-d folder] [-s scenario] [-D WxH] [-R hz] [-x exe] name" >&2
 	echo "       e2e check [-x exe] [name...]" >&2
 	echo "       e2e keep [-x exe] [name...]" >&2
-	echo "       e2e derive [-c cd]... [-g game]... [-k 'key: value']... [-x exe] from name" >&2
+	echo "       e2e derive [-c cd]... [-g game]... [-d folder] [-k 'key: value']... [-x exe] from name" >&2
 	exit 2
 }
 
@@ -91,6 +97,7 @@ shift
 fixture=
 cdirs=()
 gdirs=()
+sdir=
 scenario=
 display=()
 refresh=()
@@ -101,6 +108,7 @@ while (( $# )); do
 	-f) fixture=$(cd -- "${2:?}" && pwd); shift 2 ;;
 	-c) cdirs+=("${2:?}"); shift 2 ;;
 	-g) gdirs+=("${2:?}"); shift 2 ;;
+	-d) sdir=${2:?}; shift 2 ;;
 	-s) scenario=${2:?}; shift 2 ;;
 	-D) [[ ${2:-} =~ ^[1-9][0-9]*x[1-9][0-9]*$ ]] || usage; display=(-D "$2"); shift 2 ;;
 	-R)
@@ -127,6 +135,9 @@ dll=$(dirname -- "$exe")/SDL3.dll
 (( ${#display[@]} == 0 )) || [[ $cmd == record ]] || usage
 (( ${#refresh[@]} == 0 )) || [[ $cmd == record ]] || usage
 (( ${#lines[@]} == 0 )) || [[ $cmd == derive ]] || usage
+[[ -z $sdir || $cmd == record || $cmd == derive ]] || usage
+[[ -z $sdir ]] || { [[ ${cdirs[*]} == pc ]] && (( ${#gdirs[@]} == 0 )); } || usage
+[[ -z $sdir ]] || inlbatmp "$sdir" || { echo "e2e: no install $LBATMP/$sdir" >&2; exit 1; }
 (( ${#gdirs[@]} )) || gdirs=(pc/LBA)
 for c in "${cdirs[@]}"; do
 	[[ $c == - ]] || incd "$c" || { echo "e2e: no CD $LBATMP/$c" >&2; exit 1; }
@@ -205,6 +216,40 @@ gameof() {
 	fi
 }
 
+# setdir name: the install's folder the record starts in, kept beside it
+setdir() {
+	if [[ -z $sdir ]]; then
+		rm -f -- "$E2E/$1.dir"
+	else
+		echo "$sdir" > "$E2E/$1.dir"
+	fi
+}
+
+# dirof name: the install's folder the record starts in, or nothing
+dirof() {
+	if [[ -f $E2E/$1.dir ]]; then
+		cat -- "$E2E/$1.dir"
+	fi
+}
+
+# farm dir name: $RUN/farm made again, a link to each entry of
+# $LBATMP/dir, exe copied in as name, and the lba.cfg beside exe where
+# the folder holds none of its own
+farm() {
+	local e
+	rm -rf -- "$RUN/farm"
+	mkdir -p "$RUN/farm"
+	for e in "$LBATMP/$1"/*; do
+		[[ -e $e || -L $e ]] || continue
+		ln -s "$e" "$RUN/farm/"
+	done
+	rm -f -- "$RUN/farm/$2"
+	cp "$exe" "$RUN/farm/$2"
+	if [[ -z $(cfgof "$LBATMP/$1") ]]; then
+		cp "$(dirname -- "$exe")/lba.cfg" "$RUN/farm/lba.cfg"
+	fi
+}
+
 # winof path: a directory of $LBATMP, or a CD's image there, as the
 # Windows build names it, the CD's own on L:, which winerun gives it
 winof() {
@@ -218,6 +263,11 @@ winof() {
 # missing name: the directory of the record that is not there, if one is
 missing() {
 	local c d
+	d=$(dirof "$1")
+	if [[ -n $d ]]; then
+		inlbatmp "$d" || echo "$d"
+		return
+	fi
 	while read -r c; do
 		if [[ $c != - ]] && ! incd "$c"; then
 			echo "$c"
@@ -261,6 +311,15 @@ record() {
 	cp -R "$RUN/pref" "$E2E/$name.pref"
 	setcd "$name"
 	setgame "$name"
+	setdir "$name"
+	if [[ -n $sdir ]]; then
+		farm "$sdir" lba
+		(cd -- "$RUN/farm" && SDL_AUDIO_DRIVER=dummy "$TOOLS/xkeys" -c lba -o "$LBATMP/cap/e2e/$name" \
+			"$keys" "$RUN/farm/lba" "${display[@]}" "${refresh[@]}" -p "$RUN/pref" -r "$E2E/$name.in" -s "$E2E/$name.sums")
+		left "$RUN/pref" "$E2E/$name.out"
+		echo "$name: recorded, $(screens "$E2E/$name.sums") screens, $(ls "$E2E/$name.out" | wc -l) files"
+		return
+	fi
 	for d in "${gdirs[@]}"; do
 		args+=(-g "$LBATMP/$d")
 	done
@@ -278,10 +337,20 @@ record() {
 # replay that fails, or hangs and is ended (sdl.c's watchdog), leaves
 # them short, which check reports
 replay() {
-	local name=$1 out=$2 c d args=()
+	local name=$1 out=$2 c d s args=()
+	s=$(dirof "$name")
 	fresh "$E2E/$name.pref"
 	: > "$out"
-	if [[ $exe == *.exe ]]; then
+	if [[ -n $s && $exe == *.exe ]]; then
+		farm "$s" lba.exe
+		cp "$dll" "$RUN/farm/"
+		"$TOOLS/winerun" -q "$RUN/farm/lba.exe" -p "$(win "$RUN/pref")" -i "$(win "$E2E/$name.in")" \
+			-s "$(win "$out")" > /dev/null || true
+	elif [[ -n $s ]]; then
+		farm "$s" lba
+		(cd -- "$RUN/farm" && SDL_VIDEO_DRIVER=dummy SDL_AUDIO_DRIVER=dummy ./lba \
+			-p "$RUN/pref" -i "$E2E/$name.in" -s "$out" > /dev/null) || true
+	elif [[ $exe == *.exe ]]; then
 		stage "$RUN/win" lba.exe
 		cp "$dll" "$RUN/win/"
 		while read -r d; do
@@ -369,7 +438,7 @@ keep() {
 }
 
 # derive from name: the record name made from from's input and
-# preferences, replayed on the CDs and game directories
+# preferences, replayed on the CDs, game directories or install's folder
 # given, which must show from's screens
 derive() {
 	local from=$1 name=$2 out=$RUN/$2.sums k
@@ -388,15 +457,16 @@ derive() {
 	done
 	setcd "$name"
 	setgame "$name"
+	setdir "$name"
 	replay "$name" "$out"
 	if ! cmp -s <(grep '^[0-9]' "$E2E/$from.sums") <(grep '^[0-9]' "$out"); then
 		echo "e2e: $name: the screens differ from $from's" >&2
-		rm -rf -- "$E2E/$name.in" "$E2E/$name.pref" "$E2E/$name.cd" "$E2E/$name.game"
+		rm -rf -- "$E2E/$name.in" "$E2E/$name.pref" "$E2E/$name.cd" "$E2E/$name.game" "$E2E/$name.dir"
 		exit 1
 	fi
 	cp "$out" "$E2E/$name.sums"
 	left "$RUN/pref" "$E2E/$name.out"
-	echo "$name: derived from $from on ${cdirs[*]}, $(grep -c '^[0-9]' "$out") screens," \
+	echo "$name: derived from $from on ${sdir:-${cdirs[*]}}, $(grep -c '^[0-9]' "$out") screens," \
 		"$(ls "$E2E/$name.out" | wc -l) files"
 }
 

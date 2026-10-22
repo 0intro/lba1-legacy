@@ -92,6 +92,7 @@ sys/files.c freeslot lba1	game: each game's file calls, lib386's OpenRead, Read 
 sys/files.c grow apart	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
 sys/files.c havecd lba1	game: the CD's frames handed to cd.c, LBA1's
 sys/files.c havefile lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
+sys/files.c imagebytes lba1	game: lib386's file calls read an image's file whole into a buffer, LBA2's C library through its handles
 sys/files.c imagehandle lba1	game: each game's file calls, lib386's OpenRead, Read and Write on WORD handles in LBA1, the C library's on the port's handles in LBA2
 sys/files.c inbinds lba1	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
 sys/files.c ingame lba2	game: each game's paths, LBA1's below its directory, LBA2's through DOS's drives and current directories
@@ -147,6 +148,24 @@ sys/files.c where lba2	game: DOS's drives and current directories, which the 199
 sys/fns.h * apart	game: each port's functions, its game's modules' among them, which follow their files
 sys/fns.h * lba1	game: each port's functions, its game's modules' among them, which follow their files
 sys/fns.h * lba2	game: each port's functions, its game's modules' among them, which follow their files
+sys/install.c bindinstall apart	game: LBA2's rows of a text, the EU CD's languages, and of a decoded file, the Classic's track 2, and each game's saves' place, LBA1's root and LBA2's SAVE
+sys/install.c cdconfig lba2	game: the EU CD's empty languages, which LBA2's installer filled
+sys/install.c cddrive apart	game: each game's CD, LBA1's known by its CD_LBA, LBA2's by the VIDEO.HQR of its LBA2 or TWINSEN
+sys/install.c cdgame lba2	game: the installs each game knows
+sys/install.c cdholds lba2	game: each game's CD, LBA1's known by its CD_LBA, LBA2's by the VIDEO.HQR of its LBA2 or TWINSEN
+sys/install.c cdmount apart	game: each game's CD, LBA1's known by its CD_LBA, LBA2's by the VIDEO.HQR of its LBA2 or TWINSEN
+sys/install.c enum Npath apart	game: each game's install table, its rows and its markers
+sys/install.c enum Rdir lba2	game: the installs each game knows
+sys/install.c eucfg lba2	game: the EU CD's two empty languages
+sys/install.c findimage apart	game: LBA2's discs name the game's directory by version (imagegame), LBA1's is LBA
+sys/install.c imagegame lba2	game: the installs each game knows
+sys/install.c imagehas lba1	game: LBA1's game lies in the image's LBA, LBA2's in a directory named by version (imagegame)
+sys/install.c installs apart	game: the installs each game knows
+sys/install.c searchcd apart	game: each game's CD, LBA1's known by its CD_LBA, LBA2's by the VIDEO.HQR of its LBA2 or TWINSEN
+sys/install.c startin apart	game: each game's CD, LBA1's known by its CD_LBA, LBA2's by the VIDEO.HQR of its LBA2 or TWINSEN
+sys/install.c struct Row apart	game: the installs each game knows
+sys/install.c wholecd apart	game: LBA2's discs name the game's directory by version and give their settings (cdgame, cdconfig), LBA1's is LBA
+sys/install.c wholeimage apart	game: LBA2's discs name the game's directory by version and give their settings (cdconfig), LBA1's is LBA
 sys/keyb.c #include <stddef.h> lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c #include <stdlib.h> lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c #include <system/adeline.h> lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
@@ -593,6 +612,35 @@ test/filestest.c voices lba1	game: each game's cases, through its calls and its 
 test/filestest.c volumes lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
 test/filestest.c writable lba1	game: each game's cases, through its calls and its paths: LBA1's saves at the root, lba.cfg's writes and the program's text, LBA2's SAVE, streams, utime and the Classic's jingles
 test/filestest.c writeall apart	game: each game's file calls, lib386's OpenRead, OpenWrite, Delete and renamefile in LBA1, the C library's on the port's handles in LBA2
+test/installtest.c #define O_BINARY lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/installtest.c #endif#3 lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/installtest.c #ifndef O_BINARY lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/installtest.c #include <fcntl.h> lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/installtest.c #include <io.h> lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/installtest.c alone apart	game: each game's images and cue sheets by their names
+test/installtest.c cases apart	game: each game's installs, CDs and saves, by their files
+test/installtest.c cdcases apart	game: each game's installs, CDs and saves, by their files
+test/installtest.c cddir apart	game: each game's installs, CDs and saves, by their files
+test/installtest.c cds apart	game: each game's installs, CDs and saves, by their files
+test/installtest.c cfg apart	game: each game's settings file
+test/installtest.c check apart	game: LBA2's port decodes the Classic's music into the WAV files MSS reads
+test/installtest.c classicsaves apart	game: each game's installs, CDs and saves, by their files
+test/installtest.c common apart	game: each game's installs, CDs and saves, by their files
+test/installtest.c decl portclose lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/installtest.c decl portlseek lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/installtest.c decl portopen lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/installtest.c decl portread lba2	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
+test/installtest.c eecds lba1	game: LBA1's Enhanced Edition, DotEmu's tree
+test/installtest.c eesaves lba1	game: LBA1's Enhanced Edition, DotEmu's tree
+test/installtest.c enum Npath apart	game: LBA2's Classic's music as MP3 frames and its port's handles, which LBA2's file calls give
+test/installtest.c image apart	game: each game's images and cue sheets by their names
+test/installtest.c make apart	game: each game's CD, its image, its cue sheets and the files that mark it
+test/installtest.c makeiso apart	game: each game's CD, its image, its cue sheets and the files that mark it
+test/installtest.c makemp3 lba2	game: each game's CD, its image, its cue sheets and the files that mark it
+test/installtest.c mounts apart	game: each game's CD, its image, its cue sheets and the files that mark it
+test/installtest.c nobin apart	game: each game's installs, CDs and saves, by their files
+test/installtest.c otheriso apart	game: each game's installs, CDs and saves, by their files
+test/installtest.c readall apart	game: each game's file calls, lib386's OpenRead and the CD's tracks as sys/cd.c plays them in LBA1, the C library's open on the port's handles in LBA2
 test/padtest.c AsciiMode apart	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
 test/padtest.c FlagGamePad lba1	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse
 test/padtest.c LbaWinSettings lba1	game: the data and the calls each game's sys/sdl.c reads, LBA1's start in sys/sys.c and its keys without XT codes, LBA2's start in sdl.c's main and its mouse

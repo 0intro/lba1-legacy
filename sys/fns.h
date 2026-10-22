@@ -12,6 +12,13 @@ int32_t	tracknum(const char*);
 int	imagesound(Image*, char*, int32_t*, uint32_t*, uint32_t*);
 uint32_t	imagetrackread(Image*, int32_t, uint64_t, uint8_t*, uint32_t);
 
+/* install.c */
+char*	startin(char*, const char*, char**, int, const char*);
+void	setdrives(int);
+#ifndef _WIN32
+int	cdmount(char*, char*, int);
+#endif
+
 /* compat.c */
 int	watcomstricmp(const char*, const char*);
 int	watcomstrnicmp(const char*, const char*, size_t);
@@ -32,7 +39,9 @@ unsigned	watcomseed(void);
 /* files.c */
 void	setpref(char*);
 void	setdirs(char*, char**, int, char**, int);
+void	bindcds(char**, int);
 int	bindpath(int, char*, char*, char*, int);
+int	bindimage(int, char*, char*, char*, char*, int);
 int	bindfile(int, char*, char*, char*, int);
 int	bindtext(int, char*, const char*, char*, int);
 void	bindconfig(char*, const char*);
