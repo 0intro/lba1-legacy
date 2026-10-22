@@ -1,3 +1,4 @@
+#pragma pack(push, 2)	/* every structure laid out as Watcom's /zp2 did */
 /*---------------- RESSOURCE (RESS_HQR) ------------------*/
 
 #define	RESS_PAL		0
@@ -559,3 +560,4 @@ typedef struct	{	WORD	Num ;
 #define	NOT_ENOUGH_MEM		1
 #define	PROGRAM_OK		2
 #define	NAME_NOT_FOUND		3
+#pragma pack(pop)

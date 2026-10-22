@@ -1,7 +1,5 @@
 #include 	"c_extern.h"
 
-#include	<process.h>
-
 #ifdef	DEMO
 char	*Version	= "LBA Demo ("
 			  __DATE__

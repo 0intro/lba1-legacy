@@ -1,1 +1,1 @@
-extern void DoTrack(short );
+extern void DoTrack(int16_t );

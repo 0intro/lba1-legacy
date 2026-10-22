@@ -251,7 +251,7 @@ dosname() {
 compiler() {
 	printf 'set path=%s\\watcom\\bin;%s\\watcom\\binb\r\n' "$1" "$1"
 	printf 'set watcom=%s\\watcom\r\n' "$1"
-	printf 'set include=d:\\lib386\\lib_midi\\ail32;%s\\watcom\\h\r\n' "$1"
+	printf 'set include=e:\\h;d:\\lib386\\lib_midi\\ail32;%s\\watcom\\h\r\n' "$1"
 }
 
 # failed what: the batch's line that notes a step's failure in FAILED.TXT,
@@ -278,7 +278,8 @@ build() {
 		n=${m##*/}
 		rm -f -- "$dir/$m.obj" "$dir/${m%/*}/${n^^}.OBJ"
 	done
-	mkdir -p "$c"
+	mkdir -p "$c" "$dir/h"
+	echo '/* Watcom C 9 has none: dos/compat.h gives the types */' > "$dir/h/stdint.h"
 	# libraries: name and list
 	local -a libs=(lib_sys:DOSSYS lib_svga:DOSSVGA lib_3d:DOS3D lib_mix:DOSMIX
 		lib_wave:DOSWAVE lib_midi:DOSMIDI lib_cd:DOSCD)
@@ -304,7 +305,7 @@ build() {
 			failed "$m.obj"
 		done
 		compiler f:
-		printf 'set wcc386=-oeaxt -zp2 -4s -zq -s -dWATCOM9 -dCDROM=1%s -fi=d:\\dos\\compat.h\r\n' "${DOSDEFS:+ $DOSDEFS}"
+		printf 'set wcc386=-oeaxt -zp2 -4s -zq -s -dWATCOM9 -dCDROM=1 -dDOS%s -fi=d:\\dos\\compat.h\r\n' "${DOSDEFS:+ $DOSDEFS}"
 		printf 'd:\r\n'
 		for m in $DOSGAME $DOSSYS $DOSSVGA $DOS3D $DOSMIX $DOSWAVE $DOSMIDI $DOSCD; do
 			[[ " ${DOSASM:-} " == *" $m "* ]] && continue

@@ -1,11 +1,10 @@
 extern void InitGameLists(void);
 extern void InitGame(int ,unsigned char **);
 extern void Introduction(void);
-extern long MainLoop(void);
+extern int32_t MainLoop(void);
 extern void ReadVolumeSettings(void);
 extern void WriteVolumeSettings(void);
 extern void InitProgram(void);
-extern void TheEnd(short ,unsigned char *);
-extern int __far Critical_Error_Handler(unsigned int ,unsigned int ,unsigned int __far *);
-extern void Message(unsigned char *,short );
-extern void main(int ,unsigned char **);
+extern void TheEnd(int16_t ,unsigned char *);
+extern void Message(unsigned char *,int16_t );
+extern int main(int ,char **);

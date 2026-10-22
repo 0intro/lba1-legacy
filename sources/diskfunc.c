@@ -1,13 +1,10 @@
 #include	"c_extern.h"
-#include	"direct.h"
-
-#include	<dos.h>
 
 UBYTE	*PtrSce ;
 UBYTE	*PtrScene ;
 
 #define	GET_BYTE	(*PtrSce++)
-#define	GET_WORD	(*(WORD*)PtrSce) ; PtrSce+=2
+#define	GET_WORD	PeekWord( PtrSce ) ; PtrSce+=2
 
 /*══════════════════════════════════════════════════════════════════════════*
 	     █▀▀▀▄  █    ██▀▀▀ █  ▄▀       █▀▀▀▀ █   █ ██▄ █ █▀▀▀▀

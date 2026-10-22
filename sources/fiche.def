@@ -1,4 +1,4 @@
-extern void ThrowMagicBall(short ,short ,short ,short ,short ,short ,unsigned char );
-extern void GereAnimAction(T_OBJET *,short );
-extern short SearchAnim(unsigned char ,short );
-extern short SearchBody(unsigned char ,short );
+extern void ThrowMagicBall(int16_t ,int16_t ,int16_t ,int16_t ,int16_t ,int16_t ,unsigned char );
+extern void GereAnimAction(T_OBJET *,int16_t );
+extern int16_t SearchAnim(unsigned char ,int16_t );
+extern int16_t SearchBody(unsigned char ,int16_t );

@@ -54,7 +54,7 @@ DATE=1994-10-14T10:43:15Z
 unexport OS ARCH CC FIXES
 
 .DELETE_ON_ERROR:
-.PHONY: usage fetch all dist test check lint clean
+.PHONY: usage fetch all dist test check lint defs clean
 
 # usage lists the goals.
 usage::
@@ -74,16 +74,40 @@ usage::
 	@echo ''
 	@echo 'the tree:'
 	@echo "  lint         check the tree's rules a program can"
+	@echo "  defs         make the game's .def files again (tools/defs)"
 	@echo '  clean        remove build/ and dist/'
+
+# The game's modules whose .def files make defs writes.
+DEFS=\
+	ambiance\
+	diskfunc\
+	extra\
+	fiche\
+	flipbox\
+	gamemenu\
+	gerelife\
+	geretrak\
+	grille\
+	holomap\
+	incrust\
+	message\
+	object\
+	perso\
+	playfla\
 
 # lint checks with shellcheck every bash script, with tools/lint.py the
 # tree's text, the new C in the layout of The Practice of Programming
 # and the Python tools, on the standard library alone.
 lint:
 	shellcheck -S warning $$(git grep -l --untracked '^#!/usr/bin/env bash')
-	python3 -I tools/lint.py -c sys/qsort.c $(wildcard dos/*.h)\
+	python3 -I tools/lint.py -c sys/qsort.c $(wildcard sys/*.h dos/*.h)\
 		-p $$(git ls-files -co --exclude-standard '*.py')\
 		-- $$(git ls-files -co --exclude-standard)
+
+# defs makes each module's .def again, the prototypes of the functions
+# it defines (tools/defs, tools/mkdefs.py), into build/defs first.
+defs:
+	tools/defs -o build/defs $(DEFS)
 
 # clean removes what make built.
 clean:

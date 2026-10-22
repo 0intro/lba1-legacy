@@ -10,6 +10,7 @@
 
 /*──────────────────────────────────────────────────────────────────────────*/
 
+#pragma pack(push, 2)	/* every structure laid out as Watcom's /zp2 did */
 typedef	struct	{	ULONG	SizeFile ;
 			ULONG	CompressedSizeFile ;
 			WORD	CompressMethod ;	/* 0 stored */
@@ -20,13 +21,22 @@ void	Expand( void *ptrsourcecomp, void *ptrblocdest, ULONG sizefile ) ;
 
 /*──────────────────────────────────────────────────────────────────────────*/
 
+#ifdef	DOS
 LONG	HQRM_Load( UBYTE *name, UWORD index, void **ptrptr )
+#else
+LONG	HQRM_Load( UBYTE *name, UWORD index, void *ptr )
+#endif
 {
+#ifndef	DOS
+	void		**ptrptr = ptr ;
+#endif
 	LONG		handle ;
 	UWORD		nbbloc ;
 	ULONG		buffer ;
 	ULONG		seekindex ;
-//	UBYTE		*ptrbloc ;
+#ifndef	DOS
+	UBYTE		*ptrbloc ;
+#endif
 	UBYTE		*ptrdecomp ;
 	T_HEADER	header ;
 
@@ -48,21 +58,38 @@ LONG	HQRM_Load( UBYTE *name, UWORD index, void **ptrptr )
 	{
 		return FALSE ;
 	}
+#ifndef	DOS
+	memcpy( &ptrbloc, ptrptr, sizeof( ptrbloc ) ) ;	// may lie in a packed structure
+#endif
 
 	switch( header.CompressMethod )
 	{
 		case 0:		/* Stored */
+#ifdef	DOS
 			Read(	handle,	*ptrptr, header.SizeFile ) ;
+#else
+			Read(	handle,	ptrbloc, header.SizeFile ) ;
+#endif
 			break ;
 
 		case 1:		/* LZS */
+#ifdef	DOS
 			ptrdecomp = (UBYTE*)(*ptrptr) + header.SizeFile - header.CompressedSizeFile + RECOVER_AREA ;
 			Read(	handle, ptrdecomp, header.CompressedSizeFile ) ;
 			Expand( ptrdecomp, *ptrptr, header.SizeFile ) ;
+#else
+			ptrdecomp = ptrbloc + header.SizeFile - header.CompressedSizeFile + RECOVER_AREA ;
+			Read(	handle, ptrdecomp, header.CompressedSizeFile ) ;
+			Expand( ptrdecomp, ptrbloc, header.SizeFile ) ;
+#endif
 			break ;
 
 		default:
+#ifdef	DOS
 			HQM_Free( *ptrptr ) ;
+#else
+			HQM_Free( ptrbloc ) ;
+#endif
 			return FALSE ;	/* UnKnown version */
 	}
 
@@ -71,3 +98,4 @@ LONG	HQRM_Load( UBYTE *name, UWORD index, void **ptrptr )
 	return header.SizeFile ;
 }
 
+#pragma pack(pop)

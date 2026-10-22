@@ -6,10 +6,11 @@
 #include 	"adeline.h"
 #include 	"lib_sys.h"
 
-#include <i86.h>
-#include <dos.h>
 #include <stdio.h>
 #include <stdlib.h>
+#ifndef	DOS
+#include <string.h>
+#endif
 #include <fcntl.h>
 
 /*══════════════════════════════════════════════════════════════════════════*

@@ -2,6 +2,7 @@
 //----------------------------------------------------------------------------
 
 
+
 extern  WORD    BufferData[]    ;
 extern  WORD    DriveCDR        ;//     Lettre drive 0=A 1=B etc. apres InitCDR
 extern  ULONG   LeadOut         ;
@@ -18,28 +19,32 @@ LONG    InitCDR( char *nameid )         ;
 LONG    PlayTrackCDR( LONG track )      ;
 
 //      Arreter le PlayTrackCDR
-void    StopCDR()                       ;
+void    StopCDR( void )                 ;
 
 //      Verouiller ou déverouiller la porte du lecteur
-void    LockCDR()                       ;
-void    UnLockCDR()                     ;
+void    LockCDR( void )                 ;
+void    UnLockCDR( void )               ;
 
 //      Reset, Init ou suite a une erreur par exemple
-void    ResetCDR()                      ;
+void    ResetCDR( void )                ;
+/* declared for C99: DOS calls them undeclared, as LBA.EXE was compiled */
+#ifndef	DOS
+void    ClearCDR( void )                ;
+#endif
 
 //      Ejecter le cdrom quand c'est possible ( pas toujours motorisé )
-void    EjectCDR()                      ;
+void    EjectCDR( void )                ;
 
 //      Fermer tiroir electrique quand c'est possible ( pas toujours motorisé )
-void    CloseTrayCDR()                  ;
+void    CloseTrayCDR( void )            ;
 
 //      Reprends une track apres un stopCDR
-void    ResumeCDR()                     ;
+void    ResumeCDR( void )               ;
 
 //-------------------------------------- Fonction bas niveau
 
 //      Return pointeur sur Copyright File name ( pas forcement file )
-char    *GetCopyrightName()             ;
+char    *GetCopyrightName( void )       ;
 
 //      Conversion Red to Hsg ( belle jambe non ;-) )
 LONG    Red2Hsg( LONG value )           ;
@@ -51,16 +56,16 @@ LONG    GetLengthTrackCDR( LONG track ) ;
 LONG    StartTrackCDR( LONG track )     ;
 
 //      Return status of CD Drive
-LONG    StatusCDR()                     ;
+LONG    StatusCDR( void )               ;
 
 //      Return Track currently play or 0
-LONG    GetMusicCDR()                   ;
+LONG    GetMusicCDR( void )             ;
 
 //      Change volume selon chanel
 void    ControlCDR( WORD chan0, WORD vol0, WORD chan1, WORD vol1 )      ;
 
 //      Return position de la tete
-LONG    LocateHeadCDR()                 ;
+LONG    LocateHeadCDR( void )           ;
 
 //      Play a part of cd
 LONG    PlayCDR( LONG debut, LONG duree );

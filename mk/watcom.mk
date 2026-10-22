@@ -8,7 +8,7 @@
 # code, and with FIXES=1 the fixes of its faults, which the code holds
 # under #ifdef FIXES (IFDEF FIXES in the assembly). CC=openwatcom takes
 # them always, as OpenWatcom's code needs two of them to run. The C takes
-# Watcom's /oeaxt /zp2 /4s /s with WATCOM9 and CDROM defined, and
+# Watcom's /oeaxt /zp2 /4s /s with WATCOM9, CDROM and DOS defined, and
 # dos/compat.h read first. The assembly takes the 1994 makefiles' flags,
 # /Cx /Zm and NoLanguage=SYSCALL, lib_cd.mak's for cdrom.asm, JWasm's -Zg
 # laying out frames as MASM did, and AIL/32 is assembled as a32wr.mak
@@ -141,7 +141,7 @@ $(O)/lib386/lib_cd/cdrom.obj: dos/tasm.inc
 $(O)/lib386/lib_midi/ail32/ail32.obj: DOSASFLAGS=-c -q -X -W0 -Cp -Zd -DDPMI
 
 DOSCFLAGS=-bt=dos -oeaxt -zp2 -4s -zq -s -w0 -x -i=$(WATCOM)/h -i=$(O)/ail32\
-	-dWATCOM9 -dCDROM=1 -dFIXES -fi=dos/compat.h
+	-dWATCOM9 -dCDROM=1 -dDOS -dFIXES -fi=dos/compat.h
 DOSLIBS=$(addprefix $(O)/,lib_sys.lib lib_svga.lib lib_3d.lib lib_mix.lib\
 	lib_wave.lib lib_midi.lib lib_cd.lib qsort.lib)
 $(DOSC:%=$(O)/%.obj) $(DOSQSORT:%=$(O)/%.obj): $(O)/%.obj: %.c dos/compat.h $(OW2_OK) | $(DIRS)
@@ -178,10 +178,11 @@ $(DOSDLL:%=$(O)/%.dll): $(O)/%.dll: $(O)/lib386/lib_samp/%.obj $(OW2_OK)
 else
 # MASM 6.11 assembles DOSML and TASM 3.1 DOSTASM from the tree, Watcom C
 # 9.01 compiles the C, and 9.5 lib_midi's (DOS95), as their 1994
-# makefiles say, the C from a copy of the sources in $(O)/src. One
-# DOSBox assembles and compiles every module, makes the libraries and
-# links again when any source changes (dos/watcom build). The run-time's
-# own qsort is LBA.EXE's.
+# makefiles say, the C from a copy of the sources in $(O)/src less the
+# push and pop of #pragma pack, which 9.01 rejects (-zp2 lays every
+# structure out alike). One DOSBox assembles and compiles every module,
+# makes the libraries and links again when any source changes (dos/watcom
+# build). The run-time's own qsort is LBA.EXE's.
 DOS4GW=$(W901)/WATCOM/BIN/DOS4GW.EXE
 DOS95=lib386/lib_midi/midi
 DOSDEFS=$(DOSFIXES:%=-d%)
@@ -191,7 +192,7 @@ export DOSGAME DOSSYS DOSSVGA DOS3D DOSMIX DOSWAVE DOSMIDI DOSCD DOSASM DOSML DO
 export W901 W95 W100A MASM TASM DOSDEFS DOSMLDEFS DOSTASMDEFS
 export $(DOSDLL:%=%_DEFS)
 $(O)/src/%: % | $(DIRS)
-	cp $< $@
+	LC_ALL=C sed '/^#pragma pack(\(push\|pop\)/d' $< >$@
 
 # lba0.map comes with lba0.exe
 $(O)/lba0.exe: $(DOS9SRC:%=$(O)/src/%) $(DOSASM:%=%.asm) $(DOSINC) $(O)/qsort10.obj dos/watcom\

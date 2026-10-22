@@ -59,14 +59,13 @@ extern  LONG            Mouse_X_Dep ;
 extern  LONG            Mouse_Y_Dep ;
 extern	UBYTE		*GphMouse ;
 
-extern void __loadds __far click_handler(int ,int ,int );
-extern void SetMouseBox(long ,long ,long ,long );
-extern void SetMouseSpeed(long ,long );
-extern void SetMousePos(long ,long );
+extern void SetMouseBox(int32_t ,int32_t ,int32_t ,int32_t );
+extern void SetMouseSpeed(int32_t ,int32_t );
+extern void SetMousePos(int32_t ,int32_t );
 extern void GetMouseDep(void);
-extern void ShowMouse(long );
+extern void ShowMouse(int32_t );
 extern void AffMouse(void);
-extern void SetMouse(short );
+extern void SetMouse(int16_t );
 extern void InitMouse(void);
 extern void ClearMouse(void);
 
@@ -95,12 +94,39 @@ void    SetClip( LONG x0, LONG y0, LONG x1, LONG y1 )   ;
 void    UnSetClip( void )                               ;
 void    MemoClip( void )                                ;
 void    RestoreClip( void )                             ;
+/* declared for C99: DOS calls them undeclared, as LBA.EXE was compiled */
+#ifndef	DOS
+void    InitMcgaMode( void )                            ;
+void    SimpleInitSvga( void )                          ;
+#endif
 /*-----------------------------------------------------------------------------*/
 /*                      Box.asm                                                 */
 void    Box( LONG x0, LONG y0, LONG x1, LONG y1, LONG couleur ) ;
 /*-----------------------------------------------------------------------------*/
 /*                      Line.asm                                                        */
 void    Line( LONG x0, LONG y0, LONG x1, LONG y1, LONG couleur )        ;
+/*-----------------------------------------------------------------------------*/
+/*                      S_Poly.asm                                              */
+#ifndef	DOS
+LONG    ComputePoly( void )                                     ;
+#endif
+/*-----------------------------------------------------------------------------*/
+/*                      S_FillV.asm                                             */
+#ifndef	DOS
+void    FillVertic( LONG typepoly, LONG coulpoly )              ;
+void    SetFillDetails( LONG level )                            ;
+#endif
+/*-----------------------------------------------------------------------------*/
+/*                      Texture.asm                                             */
+#ifndef	DOS
+void    AsmTexturedTriangleNoClip( void )                       ;
+void    FillTextPolyNoClip( LONG ymin, LONG ymax, void *source ) ;
+#endif
+/*-----------------------------------------------------------------------------*/
+/*                      Gif.c                                                   */
+#ifndef	DOS
+void    Read_Gif( LONG fd, UBYTE *screen, UBYTE *tabcol, UBYTE *buffers ) ;
+#endif
 /*-----------------------------------------------------------------------------*/
 /*                      Zoom.asm                                                        */
 void    ScaleLine( LONG xa0, LONG xa1, void *src, LONG xb0, LONG xb1, void *dst )       ;
@@ -161,38 +187,38 @@ void    RestoreBlock( void *screen, void *buffer, LONG x, LONG y, LONG dx, LONG 
 extern	WORD Lbm_Width ;	// 640 or 320 (for source format)
 
 extern unsigned char ReadIff(void);
-extern void WriteIff(void *,unsigned long );
-extern void WriteIffLong(unsigned long );
+extern void WriteIff(void *,uint32_t );
+extern void WriteIffLong(uint32_t );
 extern void itoml(void *);
 extern void lit_bmhd(void);
 extern void lit_bloc(void);
-extern void lit_ligne(unsigned char *,short );
-extern void ConvertMCGA(unsigned char *,unsigned char *,unsigned short ,short );
+extern void lit_ligne(unsigned char *,int16_t );
+extern void ConvertMCGA(unsigned char *,unsigned char *,uint16_t ,int16_t );
 extern void lit_bodyILBM(unsigned char *);
 extern void lit_bodyPBM(unsigned char *);
-extern long Load_Lbm(char *,unsigned char *,unsigned char *);
-extern long Save_Lbm(char *,unsigned char *,unsigned char *);
+extern int32_t Load_Lbm(char *,unsigned char *,unsigned char *);
+extern int32_t Save_Lbm(char *,unsigned char *,unsigned char *);
 
 /*-----------------------------------------------------------------------------*/
 /*                      PCX.c	640*480					*/
 
 extern void line_out(unsigned char *);
-extern unsigned char next_char(unsigned long ,unsigned char *);
+extern unsigned char next_char(uint32_t ,unsigned char *);
 extern void Load_Pcx(char *,unsigned char *,unsigned char *);
 extern void Save_Pcx(char *,unsigned char *,unsigned char *);
 
 /*-----------------------------------------------------------------------------*/
 /*                      s_dll.c						*/
 
-extern long SvgaInitDLL(char *);
+extern int32_t SvgaInitDLL(char *);
 /*-----------------------------------------------------------------------------*/
 /*                      s_text.c					       */
-extern void Text(short ,short ,char * ,... );
+extern void Text(int16_t ,int16_t ,char * ,... );
 
 /*-----------------------------------------------------------------------------*/
 /*                      s_rect.c					       */
 
-extern void Rect(long ,long ,long ,long ,long );
+extern void Rect(int32_t ,int32_t ,int32_t ,int32_t ,int32_t );
 
 /*-----------------------------------------------------------------------------*/
 /*                      initmode.c					       */

@@ -3,8 +3,6 @@
 
 #include	<stdlib.h>
 #include	<stdio.h>
-#include	<dos.h>
-#include	<i86.h>
 
 #include	"grille.h"
 
@@ -45,6 +43,7 @@ WORD	YpOrgw ;
 
 WORD	NbBrickColon[NB_COLON] ;
 
+#pragma pack(push, 2)	/* every structure laid out as Watcom's /zp2 did */
 typedef	struct
 {
 	WORD	Xm ;
@@ -100,7 +99,7 @@ LONG	LoadUsedBrick( ULONG size )
 	ULONG	i, j, b	;
 	UBYTE	*pt	;
 	UBYTE	*ptb	;
-	UWORD	*ptw	;
+	UBYTE	*ptw	;
 	ULONG	*ptoff	;
 	UBYTE	*ptdata	;
 	UBYTE	*ptsrc	;
@@ -135,13 +134,13 @@ LONG	LoadUsedBrick( ULONG size )
 		b = pt[i>>3] & (1<<(7-(i&7)))	;/*	Recup Bit Block	*/
 		if ( !b )	continue	;
 
-		ptb = TabBlock + *(ULONG *)(TabBlock+((i-1)<<2));
-		ptw = (UWORD *)(ptb + 5)	;/* Jump dx dy dz et collis */
+		ptb = TabBlock + PeekULong( TabBlock+((i-1)<<2) );
+		ptw = ptb + 5			;/* Jump dx dy dz et collis */
 		maxbrk = *ptb * *(ptb+1) * *(ptb+2)	;/* dx*dy*dz*/
 
-		for ( j = 0 ; j < maxbrk ; j++, ptw += 2 )
+		for ( j = 0 ; j < maxbrk ; j++, ptw += 4 )
 		{
-			brick = *ptw	;
+			brick = PeekUWord( ptw )	;
 
 			if ( brick )
 			{
@@ -225,13 +224,13 @@ LONG	LoadUsedBrick( ULONG size )
 		b = pt[i>>3] & (1<<(7-(i&7)))	;/*	Recup Bit Block	*/
 		if ( !b )	continue	;
 
-		ptb = TabBlock + *(ULONG *)(TabBlock+((i-1)<<2));
-		ptw = (UWORD *)(ptb + 5)	;/* Jump dx dy dz et collis */
+		ptb = TabBlock + PeekULong( TabBlock+((i-1)<<2) );
+		ptw = ptb + 5			;/* Jump dx dy dz et collis */
 		maxbrk = *ptb * *(ptb+1) * *(ptb+2)		;/* dx*dy*dz*/
 
-		for ( j = 0 ; j < maxbrk ; j++, ptw += 2 )
+		for ( j = 0 ; j < maxbrk ; j++, ptw += 4 )
 		{
-			if ( *ptw )	*ptw = tabflag[(*ptw)-1];
+			if ( PeekUWord( ptw ) )	PokeUWord( ptw, tabflag[PeekUWord( ptw )-1] ) ;
 		}
 	}
 
@@ -285,7 +284,7 @@ LONG	InitGrille( UWORD numcube )
 	size = CreateMaskGph( BufferBrick, BufferMaskBrick ) ;
 	Mshrink( BufferMaskBrick, size )	;// Reduc no test
 */
-	NbBlock = (*(ULONG*)TabBlock)/4		;
+	NbBlock = PeekULong( TabBlock )/4		;
 
 	CopyMapToCube()				;
 
@@ -326,7 +325,7 @@ UBYTE	*GetAdrColonneMap( LONG x, LONG z )
 	ULONG	offset	;
 
 	offset = (x+(z*SIZE_CUBE_Z))*2		;
-	offset = *(UWORD*)(BufMap+offset )	;
+	offset = PeekUWord( BufMap+offset )	;
 
 	return(BufMap+offset)			;
 }
@@ -358,7 +357,7 @@ void	GetShadow( WORD xw, WORD yw, WORD zw )
 
 	for( y = ym; y>0; y-- )
 	{
-		if( *(WORD*)ptc != 0 )	break ;
+		if( PeekWord( ptc ) != 0 )	break ;
 		ptc -= 2 ;
 	}
 
@@ -401,14 +400,15 @@ ULONG	CreateMaskGph( UBYTE *ptsrc, UBYTE *ptdst )
 {
 	UBYTE	*ptd	;
 	ULONG   nbg, off;
-	ULONG	*ptoff	;
+	UBYTE	*ptoff	;
 	ULONG	size, i	;
 
-	ptoff = (ULONG*)ptdst		;
+	ptoff = ptdst			;
 
-	off = *(ULONG *)ptsrc		;/*	First Offset Src	*/
+	off = PeekULong( ptsrc )	;/*	First Offset Src	*/
 
-	*ptoff++ = off			;/*	First Offset	*/
+	PokeULong( ptoff, off )		;/*	First Offset	*/
+	ptoff += 4			;
 
 	ptd = ptdst+off			;
 
@@ -419,7 +419,8 @@ ULONG	CreateMaskGph( UBYTE *ptsrc, UBYTE *ptdst )
 		size = CalcGraphMsk( i, ptsrc, ptd )	;
 
 		off += size			;/*	Maj Offset	*/
-		*ptoff++ = off			;/*	Write Offset 	*/
+		PokeULong( ptoff, off )		;/*	Write Offset 	*/
+		ptoff += 4			;
 		ptd += size			;/*	Maj Pt Dest	*/
 	}
 	return(off)	;
@@ -439,7 +440,7 @@ void	MixteMapToCube( UBYTE *map )
 		for ( x = 0 ; x < SIZE_CUBE_X ; x++ )
 		{
 			offset = (x+(z*SIZE_CUBE_Z))*2		;
-			offset = *(UWORD*)(map+offset )		;
+			offset = PeekUWord( map+offset )		;
 
 			pts = map+offset			;
 			ptd = GetAdrColonneCube( x, z )		;
@@ -612,7 +613,7 @@ void	AffBrickBlock( LONG block, LONG brick, LONG x, LONG y, LONG z )
 	adr += ( brick<<2 )		;/* 4 Bytes to Jump	*/
 	adr += 2			;
 
-	numbrick = *(UWORD*)adr		;	/* & 32767 */
+	numbrick = PeekUWord( adr )		;	/* & 32767 */
 
 	if ( numbrick )
 	{
@@ -733,3 +734,4 @@ void	IncrustGrm( WORD numgrm )
 
 
 
+#pragma pack(pop)

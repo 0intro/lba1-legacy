@@ -1,3 +1,4 @@
+#pragma pack(push, 2)	/* every structure laid out as Watcom's /zp2 did */
 typedef	struct
 	{
 		ULONG	LongHandle;
@@ -198,3 +199,4 @@ void	WaveMove(		void  *DestAddr,
 /*	Returns		: a pointer (FLAT)				*/
 /*----------------------------------------------------------------------*/
 void	*WaveGetAddr(		void			);
+#pragma pack(pop)

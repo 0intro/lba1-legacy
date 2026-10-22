@@ -124,7 +124,11 @@ void	HQ_3D_MixSample(	WORD numsample, WORD decalage, WORD repeat,
 		longhandle = HQ_MixSample(	numsample, decalage, repeat,
 						volleft, volright ) ;
 
+#ifdef	DOS
 		WaveGiveInfo0( longhandle, (LONG)Xp<<16 + Yp ) ;
+#else
+		WaveGiveInfo0( longhandle, (ULONG)Xp<<((16 + Yp)&31) ) ;
+#endif
 	}
 }
 

@@ -900,7 +900,11 @@ void	InitBody(	UBYTE gennewbody,
 	WORD	newbody ;
 	WORD	oldbody ;
 	T_OBJET *ptrobj ;
+#ifdef	DOS
 	WORD	*ptr ;
+#else
+	UBYTE	*ptr ;
+#endif
 	WORD	size ;
 	WORD	x0,x1,z0,z1 ;
 	UBYTE	*ptr3do ;
@@ -944,6 +948,7 @@ void	InitBody(	UBYTE gennewbody,
 
 			if( M_Xmin == -32000 )
 			{
+#ifdef	DOS
 				ptr = (WORD*)(PtrBody[ptrobj->Body] + 2) ;
 
 				x0 =  *ptr++ ;
@@ -952,6 +957,16 @@ void	InitBody(	UBYTE gennewbody,
 				ptrobj->Ymax =  *ptr++ ;
 				z0 =  *ptr++ ;
 				z1 =  *ptr++ ;
+#else
+				ptr = PtrBody[ptrobj->Body] + 2 ;
+
+				x0 =  PeekWord( ptr ) ;
+				x1 =  PeekWord( ptr+2 ) ;
+				ptrobj->Ymin =  PeekWord( ptr+4 ) ;
+				ptrobj->Ymax =  PeekWord( ptr+6 ) ;
+				z0 =  PeekWord( ptr+8 ) ;
+				z1 =  PeekWord( ptr+10 ) ;
+#endif
 
 				if( ptrobj->Flags & MINI_ZV )
 				{
@@ -2244,13 +2259,13 @@ void	DoDir( WORD numobj  )
 							ptrobj->SRot,
 							&ptrobj->RealAngle ) ;
 
-				*(ULONG*)(&ptrobj->Info) = TimerRef + Rnd( 300 ) + 300 ;
+				PokeULong( &ptrobj->Info, TimerRef + Rnd( 300 ) + 300 ) ;
 				InitAnim( GEN_ANIM_RIEN, ANIM_REPEAT, NO_ANIM, numobj ) ;
 			}
 			if( !ptrobj->RealAngle.TimeValue )
 			{
 				InitAnim( GEN_ANIM_MARCHE, ANIM_REPEAT, NO_ANIM, numobj ) ;
-				if( TimerRef > *(ULONG*)(&ptrobj->Info) )
+				if( TimerRef > PeekULong( &ptrobj->Info ) )
 				{
 					angle = (ptrobj->Beta + (rand()&511) - 256) & 1023 ;
 					InitRealAngleConst(	ptrobj->Beta,
@@ -2258,7 +2273,7 @@ void	DoDir( WORD numobj  )
 								ptrobj->SRot,
 								&ptrobj->RealAngle ) ;
 
-					*(ULONG*)(&ptrobj->Info) = TimerRef + Rnd( 300 ) + 300 ;
+					PokeULong( &ptrobj->Info, TimerRef + Rnd( 300 ) + 300 ) ;
 				}
 			}
 		}

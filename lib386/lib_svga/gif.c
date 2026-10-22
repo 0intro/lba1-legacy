@@ -19,8 +19,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <dos.h>
-#include <conio.h>
 #include <ctype.h>
 
 /*
@@ -45,6 +43,7 @@ WORD next_code(LONG fd);
 
 //union REGS reg;
 
+#pragma pack(push, 2)	/* every structure laid out as Watcom's /zp2 did */
 struct
 {
 	char name[3]	;
@@ -157,7 +156,7 @@ void	Read_Gif( LONG fd, UBYTE *screen, UBYTE *tabcol, UBYTE *buffers )
 
 	last  = buffers ;		// 4096
 	stack = buffers + 4096 ;	// 4096
-	link  = buffers + 8192 ;	// 8192
+	link  = (short unsigned int *)(buffers + 8192) ;	// 8192
 
 	Read( fd, &gif_header, 13L )	;
 
@@ -399,3 +398,4 @@ WORD next_code( LONG fd )
 }
 /*--------------------------------------------------------------------------*/
 
+#pragma pack(pop)

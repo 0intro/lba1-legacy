@@ -1,9 +1,26 @@
 /*
  * What the DOS build's compilers need to build the 1994 tree as Watcom C
- * 9.01 did, read before every C file (wcc386 -fi), after the C library's
- * headers that its renames must leave alone. __WATCOMC__ is 901 for
- * Watcom C 9.01, 950 for 9.5 and 1300 for OpenWatcom 2.
+ * 9.01 did, read before every C file (wcc386 -fi), as gcc reads
+ * sys/compat.h before the old files. The C files that name no DOS header
+ * find dos.h and direct.h here, after the C library's that the renames
+ * below must leave alone. __WATCOMC__ is 901 for Watcom C
+ * 9.01, 950 for 9.5 and 1300 for OpenWatcom 2.
  */
+
+/*
+ * The exact-width types as the 1994 LONG and its kin were, long and short:
+ * Watcom C 9 has no stdint.h, and OpenWatcom's makes the 32-bit ones int,
+ * where a function called before its definition takes the type of its
+ * arguments, as 1994's did, and its definition must agree. OpenWatcom's
+ * stdint.h skips its own when _EXACT_WIDTH_INTS is defined.
+ */
+#define _EXACT_WIDTH_INTS
+typedef signed char		int8_t;
+typedef unsigned char		uint8_t;
+typedef short			int16_t;
+typedef unsigned short		uint16_t;
+typedef long			int32_t;
+typedef unsigned long		uint32_t;
 
 #include <stddef.h>
 #include <stdlib.h>

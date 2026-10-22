@@ -1,4 +1,7 @@
 #include 	"c_extern.h"
+#ifndef	DOS
+#include 	"balance.h"	// DOS calls Balance undeclared, as LBA.EXE was compiled
+#endif
 
 /*══════════════════════════════════════════════════════════════════════════*
  *══════════════════════════════════════════════════════════════════════════*/
@@ -1129,7 +1132,11 @@ void	CopyBlockPhysMCGA( LONG x0, LONG y0, LONG x1, LONG y1 )
 	if( y > 480-200 )	y = 480-200 ;
 	if( y < 0 )		y = 0 ;
 
+#ifdef	DOS
 	CopyBlockMCGA( x,y, x+319, y+199, Log, 0,0,0xA0000 ) ;
+#else
+	CopyBlockMCGA( x,y, x+319, y+199, Log, 0,0,Phys ) ;
+#endif
 }
 
 /*══════════════════════════════════════════════════════════════════════════*

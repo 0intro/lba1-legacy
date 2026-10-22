@@ -6,8 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <dos.h>
-#include <conio.h>
 #include <ctype.h>
 
 /*══════════════════════════════════════════════════════════════════════════*
@@ -18,6 +16,7 @@
 /*──────────────────────────────────────────────────────────────────────────*/
 
 
+#pragma pack(push, 2)	/* every structure laid out as Watcom's /zp2 did */
 struct  ffblk   {
     char        ff_reserved[21];
     char        ff_attrib;
@@ -27,10 +26,12 @@ struct  ffblk   {
     char        ff_name[13];
 };
 
+#ifdef	DOS
 union REGS reg;
 
 struct SREGS segregs;
 
+#endif
 static struct {
 	char password;
 	char version;
@@ -216,3 +217,4 @@ void Save_Pcx( char *filename, UBYTE *screen, UBYTE *ptrpalette )
 }
 
 
+#pragma pack(pop)

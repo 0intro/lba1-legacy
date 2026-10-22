@@ -1,10 +1,11 @@
 
 #include "../lib_sys/adeline.h"
 #include "../lib_sys/lib_sys.h"
+#ifndef	DOS
+#include "lib_svga.h"	// DOS calls Line undeclared, as LBA.EXE was compiled
+#endif
 
 #include <stdio.h>
-#include <dos.h>
-#include <i86.h>
 
 void	Rect( LONG x0, LONG y0, LONG x1, LONG y1, LONG coul )
 {

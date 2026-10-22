@@ -131,7 +131,7 @@ void	ComputeCoorGlobe()
 
 int z_sort( const void *a, const void *b)
 {
-	return( *(WORD*)a - *(WORD*)b ) ;
+	return( PeekWord( a ) - PeekWord( b ) ) ;
 }
 
 void	ComputeGlobeProj()

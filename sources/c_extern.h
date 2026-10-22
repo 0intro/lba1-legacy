@@ -26,17 +26,43 @@ char    *GetMultiText( LONG text, char *dst ) ;
 WORD	GiveObjSelect( WORD type, LONG xm, LONG ym ) ;
 
 UBYTE	WorldColBrick( WORD xw, WORD yw, WORD zw ) ;
+/* declared for C99: DOS calls them undeclared, as LBA.EXE was compiled */
+#ifndef	DOS
+LONG	WorldColBrickFull( LONG xw, LONG yw, LONG zw, LONG ymax ) ;
+LONG	WorldCodeBrick( LONG xw, LONG yw, LONG zw ) ;
+void	Map2Screen( LONG xm, LONG ym, LONG zm ) ;
+void	DecompColonne( void *pts, void *ptd ) ;
+void	MixteColonne( void *pts, void *ptd ) ;
+#endif
+
+#ifndef	DOS
+void	BlackFrame( void ) ;
+void	CopyFrame( void *ptsrc ) ;
+void	DrawFrame( void *ptframe, LONG deltax, LONG deltay ) ;
+void	UpdateFrame( void *ptframe, LONG deltax ) ;
+void	Mcga_Cls( void ) ;
+void	Mcga_Flip( void ) ;
+
+void	DoFire( LONG lig, LONG coul ) ;
+
+LONG	ComputeTime( void ) ;
+LONG	GetHDFreeSize( void ) ;
+void	ShadeBox( LONG x0, LONG y0, LONG x1, LONG y1, LONG deccoul ) ;
+void	SmallSort( void *objetlist, LONG nbobjets, LONG structsize ) ;
+void	CopyBlockMCGA(	LONG x0, LONG y0, LONG x1, LONG y1, void *src,
+			LONG xd, LONG yd, void *dst ) ;
+#endif
 
 WORD	ThrowExtra(	WORD owner,
 			WORD x, WORD y, WORD z, WORD num,
 			WORD alpha, WORD beta, WORD vitesse, WORD poids,
 			WORD hitforce ) ;
-WORD	GetValue() ;
+WORD	GetValue( void ) ;
 
 WORD	GetListObjet( WORD x0, WORD y0 ) ;
 
-LONG	SceReadWord() ;
-WORD	SearchLastZoneSce() ;
+LONG	SceReadWord( void ) ;
+WORD	SearchLastZoneSce( void ) ;
 
 ULONG	HQ_MixSample( WORD numsample, WORD decalage, WORD repeat, WORD volleft, WORD volright ) ;
 void	HQ_StopOneSample( WORD num ) ;

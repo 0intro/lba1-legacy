@@ -10,6 +10,7 @@
 extern	UBYTE	*Screen ;		/* background clean */
 
 
+#pragma pack(push, 2)	/* every structure laid out as Watcom's /zp2 did */
 typedef	struct
 {
 	WORD	x0 ;
@@ -138,3 +139,4 @@ void	ClsBoxes()
 	}
 }
 
+#pragma pack(pop)

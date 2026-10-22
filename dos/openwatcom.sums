@@ -1,4 +1,4 @@
-acabd527ea657a0d0d460967a81b5b16b3f9bd5d54aba2ce10915a6ba95ebbb4  lba0.exe
+eb37def9507e7eba86a7763bfd39b92f18324fef976d6bb5f3af5e725e29dcaf  lba0.exe
 3d869d3a7a1ff8d808a2ad9bb1b320ee4e36d1d6c8235faf46ce3cf7ffed7cc9  w_sb.dll
 b2574cbbd3682cad43a43844c7835a8de90fe36df3a5b4a464814c1411385e56  w_sb2.dll
 53ae366f2dd3f7deb3952e3acc6f3a6a423ca3050003c27ced248ef526ee208d  w_sbpro.dll
@@ -126,7 +126,7 @@ ClearGraphSvga	27	61674e97
 ClearKeyboard	63	8b961d23
 ClearMidi	43	730ccdbe
 ClearRealAngle	80	f3f0b72f
-ClearScene	78	82ee9550
+ClearScene	78	68e74fd3
 ClearScreenMinMax	37	eb7a6808
 ClearSvga	11	8ca97cf7
 ClearSystem	0	d202ef8d
@@ -247,7 +247,7 @@ DrawHoloMap	448	68e8149f
 DrawHoloObj	207	7f3f26ef
 DrawInfoMenu	949	d0e011d6
 DrawListInventory	117	ba6368e4
-DrawListPos	624	000f528b
+DrawListPos	624	bf4daac8
 DrawMenuComportement	347	2858e953
 DrawNextFrameFla	560	04038e13
 DrawObj3D	176	4fa36ef0
@@ -449,7 +449,7 @@ InitFileNar	191	83d35007
 InitFla	363	1a1c8b74
 InitFly	127	6390a47a
 InitGame	287	76af25a3
-InitGameLists	207	05a8f0e2
+InitGameLists	207	762bcfb5
 InitGraphMcga	29	7c1de3fe
 InitGraphSvga	31	fea208de
 InitGrille	60	1e9e1068
@@ -576,10 +576,10 @@ LongProjettePoint	167	fb1591ad
 LongWorldRot	132	a4db36fe
 LongWorldRotatePoint	27	6765ea0b
 LowTrack	1	41d912ff
-M_Xmax	2	ff41d912
+M_Xmax	4	c622f71d
 M_Xmin	2	efef129a
 M_Ymax	2	ff41d912
-M_Ymin	4	c622f71d
+M_Ymin	2	ff41d912
 M_Zmax	2	ff41d912
 M_Zmin	2	ff41d912
 MagicBall	2	d2fd108d
@@ -688,9 +688,9 @@ NumObjSpeak	4	d2433660
 NumPingouin	2	d2fd108d
 NumVersion	2	ff41d912
 NumXmi	2	d33f7aba
-Nxw	4	c622f71d
+Nxw	2	ff41d912
 Nyw	2	ff41d912
-Nzw	2	ff41d912
+Nzw	4	c622f71d
 OldVideo	1	d2fdef8d
 OldX	2	ff41d912
 OldY	2	ff41d912

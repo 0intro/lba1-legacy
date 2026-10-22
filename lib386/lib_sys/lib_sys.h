@@ -1,3 +1,4 @@
+#pragma pack(push, 2)	/* every structure laid out as Watcom's /zp2 did */
 /*--------------------------------------------------------------------------*/
 /*══════════════════════════════════════════════════════════════════════════*
 		█  ▄▀ █▀▀▀▀ █  ▄▀ █▀▀█  █▀▀▀█ █▀▀▀█ █▀▀▀█ █▀▀▀▄
@@ -245,7 +246,7 @@ extern	UWORD	CmptFrame ;
 extern	UWORD	Cmpt_18 ;
 
 void	SetTimer( WORD divisor ) ;
-WORD	GetTimer() ;
+WORD	GetTimer( void ) ;
 
 /*──────────────────────────────────────────────────────────────────────────*/
 /*				DEF_FILE.C				*/
@@ -255,6 +256,10 @@ LONG	Def_WriteValue( UBYTE *deffic, UBYTE *indentificateur, LONG value ) ;
 
 UBYTE	*Def_ReadString( UBYTE *deffic, UBYTE *indentificateur ) ;
 LONG	Def_ReadValue( UBYTE *deffic, UBYTE *indentificateur ) ;
+/* declared for C99: DOS calls them undeclared, as LBA.EXE was compiled */
+#ifndef	DOS
+LONG	Def_ReadValue2( UBYTE *deffic, UBYTE *identificateur, LONG *result ) ;
+#endif
 /*──────────────────────────────────────────────────────────────────────────*/
 /*				BUFFER_A.ASM				*/
 void	RazMem( void *pt, ULONG size )	;
@@ -262,6 +267,16 @@ void	MovMem( void *pt0, void *pt1, ULONG size )	;
 LONG	CompBuf( void *pt0, void *pt1, ULONG size )	;
 
 char	*Itoa( LONG value )	;
+/*──────────────────────────────────────────────────────────────────────────*/
+/*				EXPAND.ASM				*/
+#ifndef	DOS
+void	Expand( void *src, void *dest, ULONG count )	;
+#endif
+/*──────────────────────────────────────────────────────────────────────────*/
+/*				FILES_A.ASM				*/
+#ifndef	DOS
+void	Touch( char *filename )	;
+#endif
 
 
 
@@ -295,10 +310,15 @@ LONG		HQR_Change_Ressource( T_HQR_HEADER *header, char *newhqrname ) ;
 void		HQR_Reset_Ressource( T_HQR_HEADER *header ) ;
 void    	HQR_Free_Ressource( T_HQR_HEADER *header ) ;
 
+#ifdef	DOS
 /* LBA.EXE's callers pass the index unsigned, hq_ress.c reads it signed */
 #ifndef	HQ_RESS
 void		*HQR_Get( T_HQR_HEADER *header, UWORD index ) ;
 void		*HQR_GetSample( T_HQR_HEADER *header, UWORD index ) ;
+#endif
+#else
+void		*HQR_Get( T_HQR_HEADER *header, WORD index ) ;
+void		*HQR_GetSample( T_HQR_HEADER *header, WORD index ) ;
 #endif
 
 UWORD		HQR_Del_Bloc( T_HQR_HEADER *header, WORD index ) ;
@@ -312,11 +332,11 @@ extern	ULONG	Size_HQM_Memory ;
 extern	ULONG	Size_HQM_Free ;
 
 LONG	HQM_Init_Memory( ULONG size ) ;
-void	HQM_Clear_Memory() ;
+void	HQM_Clear_Memory( void ) ;
 LONG	HQM_Alloc( ULONG size, void *ptrptr ) ;
-void	HQM_Free_All() ;
+void	HQM_Free_All( void ) ;
 void	HQM_Free( void *ptr ) ;
-LONG	HQM_Check() ;
+LONG	HQM_Check( void ) ;
 void	HQM_Shrink_Last( void *ptr, ULONG newsize ) ;
 
 /*──────────────────────────────────────────────────────────────────────*/
@@ -337,7 +357,8 @@ LONG	HQRM_Load( UBYTE *name, UWORD index, void *ptr ) ;
 #define	INIT_MCGA	32
 
 void	InitAdelineSystem( char *name, LONG inits ) ;
-void	ClearAdelineSystem() ;
+void	ClearAdelineSystem( void ) ;
 
 extern	char	PathConfigFile[]	;
 extern	char	MidiFM			;
+#pragma pack(pop)

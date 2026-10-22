@@ -29,9 +29,6 @@
 #include        <stdlib.h>
 #include        <string.h>
 #include        <stdio.h>
-#include        <conio.h>
-#include        <dos.h>
-#include        <i86.h>
 #else
 #include        "c_extern.h"
 #endif
@@ -162,6 +159,7 @@ char    *ListFileText[] = {     "sys",
 
 WORD	FlagMessageShade = TRUE ;
 
+#pragma pack(push, 2)	/* every structure laid out as Watcom's /zp2 did */
 typedef struct
 {
 	WORD    c       ;
@@ -869,8 +867,8 @@ void    InitDial( LONG file )
 
 	for ( i = 0 ; i < MaxText ; i++ )
 	{
-		offset0 = *(UWORD*)(BufText+(i+0)*2)	;
-		offset1 = *(UWORD*)(BufText+(i+1)*2)	;
+		offset0 = PeekUWord( BufText+(i+0)*2 )	;
+		offset1 = PeekUWord( BufText+(i+1)*2 )	;
 
 		size = offset1 - offset0		;
 
@@ -1036,8 +1034,8 @@ LONG    GetText( LONG text )
 	num = FindText( text )          ;/*     Must have good number   */
 	if ( num == -1 )        return(0L);
 
-	offset0 = *(UWORD*)(BufText+((num+0)*2L));
-	offset1 = *(UWORD*)(BufText+((num+1)*2L));
+	offset0 = PeekUWord( BufText+((num+0)*2L) );
+	offset1 = PeekUWord( BufText+((num+1)*2L) );
 
 	PtText = BufText+offset0	;
 
@@ -1560,3 +1558,4 @@ void    CleanMessage( UBYTE *string, LONG flag )
 
 
 
+#pragma pack(pop)

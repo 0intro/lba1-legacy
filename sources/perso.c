@@ -1,7 +1,5 @@
 #include 	"c_extern.h"
 
-#include	<process.h>
-
 extern	char	*Version ;
 
 extern	LONG	MixMusic  ;
@@ -581,7 +579,7 @@ startloop:
 								ptrobj->SRot,
 								&ptrobj->RealAngle ) ;
 
-					*(ULONG*)(&ptrobj->Info) = TimerRef + 30 * 50 ;
+					PokeULong( &ptrobj->Info, TimerRef + 30 * 50 ) ;
 
 					ListFlagGame[FLAG_MECA_PINGOUIN] = 0 ; // a plus
 				}
@@ -1195,6 +1193,7 @@ void	TheEnd( WORD num, UBYTE *error )
 
 /*══════════════════════════════════════════════════════════════════════════*/
 
+#ifdef	DOS
 int	__far	Critical_Error_Handler( unsigned deverr,
 					unsigned errcode,
 					unsigned far *devhdr )
@@ -1203,6 +1202,7 @@ int	__far	Critical_Error_Handler( unsigned deverr,
 }
 
 /*══════════════════════════════════════════════════════════════════════════*/
+#endif
 
 #ifdef	DEBUG_TOOLS
 void	Message( UBYTE *mess, WORD flag )
@@ -1234,14 +1234,16 @@ void	Message(  UBYTE *mess, WORD flag )
 /*══════════════════════════════════════════════════════════════════════════*/
 /*══════════════════════════════════════════════════════════════════════════*/
 
-void	main( int argc, UBYTE *argv[] )
+int	main( int argc, char *argv[] )
 {
 	WORD	n ;
 	ULONG	memory ;
 	ULONG	memotimer ;
 
+#ifdef	DOS
 	_harderr_( Critical_Error_Handler )	;
 
+#endif
 #ifdef	DEBUG_TOOLS
 	MemoMemory = (ULONG)Malloc( -1 ) ;	// memory at start
 	MemoDosMemory = (ULONG)DosMalloc( -1, NULL ) ;// Dos memory at start

@@ -1,5 +1,4 @@
 #include	"c_extern.h"
-#include	<dos.h>
 
 #ifdef	COMPILATOR
 extern	UBYTE	*PtrCompil ;
@@ -141,7 +140,7 @@ void	ThrowMagicBall(	WORD x, WORD y, WORD z,
 /* recherche des options d'anims */
 
 #define	GET_BYTE	(*ptrc++)
-#define	GET_WORD	(*(WORD*)ptrc) ; ptrc+=2
+#define	GET_WORD	PeekWord( ptrc ) ; ptrc+=2
 
 void	GereAnimAction( T_OBJET *ptrobj, WORD numobj )
 {
@@ -186,7 +185,7 @@ void	GereAnimAction( T_OBJET *ptrobj, WORD numobj )
 
 			if( ptrobj->Frame == *ptrc++ )
 			{
-				HQ_3D_MixSample( *(WORD*)ptrc, 0x1000, 1,
+				HQ_3D_MixSample( PeekWord( ptrc ), 0x1000, 1,
 					ptrobj->PosObjX, ptrobj->PosObjY, ptrobj->PosObjZ ) ;
 			}
 			ptrc += 2 ;
@@ -538,7 +537,7 @@ WORD	SearchAnim( UBYTE numanim, WORD numobj )
 			{
 				ptrc++ ; // saute size anim
 
-				hqranim = *(WORD*)ptrc ;
+				hqranim = PeekWord( ptrc ) ;
 
 /*if( numobj==2)
 {
@@ -600,7 +599,7 @@ WORD	SearchBody( UBYTE numbody, WORD numobj )
 			{
 				ptrc++ ; // saute size body
 
-				hqrbody = *(UWORD*)ptrc ;
+				hqrbody = PeekUWord( ptrc ) ;
 
 				if( hqrbody & (1<<15) )	// already loaded
 				{
@@ -627,7 +626,7 @@ WORD	SearchBody( UBYTE numbody, WORD numobj )
 					NbBodys++ ;
 //Text( 10,130, "%FNbBodys %d", NbBodys ) ;
 
-					*(UWORD*)ptrc = hqrbody + (1<<15) ;
+					PokeUWord( ptrc, hqrbody + (1<<15) ) ;
 				}
 				ptrc += 2 ;
 
@@ -637,17 +636,17 @@ WORD	SearchBody( UBYTE numbody, WORD numobj )
 				{
 					if( *ptrc++ == 14 ) // ZV
 					{
-						M_Xmin = *(WORD*)ptrc ;
+						M_Xmin = PeekWord( ptrc ) ;
 						ptrc += 2 ;
-						M_Ymin = *(WORD*)ptrc ;
+						M_Ymin = PeekWord( ptrc ) ;
 						ptrc += 2 ;
-						M_Zmin = *(WORD*)ptrc ;
+						M_Zmin = PeekWord( ptrc ) ;
 						ptrc += 2 ;
-						M_Xmax = *(WORD*)ptrc ;
+						M_Xmax = PeekWord( ptrc ) ;
 						ptrc += 2 ;
-						M_Ymax = *(WORD*)ptrc ;
+						M_Ymax = PeekWord( ptrc ) ;
 						ptrc += 2 ;
-						M_Zmax = *(WORD*)ptrc ;
+						M_Zmax = PeekWord( ptrc ) ;
 						ptrc += 2 ;
 					}
 				}

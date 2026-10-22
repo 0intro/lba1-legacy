@@ -1,5 +1,5 @@
-extern void AddOptBox(short ,short ,short ,short );
-extern void AddPhysBox(short ,short ,short ,short );
+extern void AddOptBox(int16_t ,int16_t ,int16_t ,int16_t );
+extern void AddPhysBox(int16_t ,int16_t ,int16_t ,int16_t );
 extern void FlipOptList(void);
 extern void FlipBoxes(void);
 extern void ClsBoxes(void);

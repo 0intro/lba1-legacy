@@ -4,6 +4,7 @@
 // **************************************************************
 #include	"c_extern.h"
 
+#pragma pack(push, 2)	/* every structure laid out as Watcom's /zp2 did */
 typedef	struct	{	ULONG	SizeFile ;
 			ULONG	CompressedSizeFile ;
 			WORD	CompressMethod ;	/* 0 stored */
@@ -667,3 +668,4 @@ void	PlayDiskFla( UBYTE *name_anim )
 
 /*──────────────────────────────────────────────────────────────────────────*/
 
+#pragma pack(pop)

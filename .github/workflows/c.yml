@@ -7,10 +7,10 @@ name: C
 # Watcom C/C++ 10.0a's qsort, each tool as make fetch installs it
 # (mk/fetch.mk), against their sums (dos/CC.sums,
 # dos/watcom-fixes.sums) and DOSBox (dos/nodata). The tree's rules (make
-# lint) and the workflows read by actionlint and zizmor. On a pushed tag
-# v*, once every other job has passed, the release job publishes the
-# tag's GitHub release: make dist's archives, with the tag's annotation
-# as its notes.
+# lint), the modules' .def files made again (make defs), and the
+# workflows read by actionlint and zizmor. On a pushed tag v*, once
+# every other job has passed, the release job publishes the tag's GitHub
+# release: make dist's archives, with the tag's annotation as its notes.
 
 on:
   push:
@@ -78,7 +78,7 @@ jobs:
     timeout-minutes: 15
     steps:
     - name: dnf install
-      run: dnf -y install --setopt=install_weak_deps=False make git-core findutils python3 ShellCheck
+      run: dnf -y install --setopt=install_weak_deps=False make gcc glibc-devel.i686 git-core findutils diffutils python3 ShellCheck
     - uses: actions/checkout@v7
       with:
         persist-credentials: false
@@ -86,6 +86,8 @@ jobs:
       run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
     - name: make lint
       run: make lint
+    - name: make defs
+      run: make defs && git diff --exit-code
 
   actions:
     runs-on: ubuntu-latest

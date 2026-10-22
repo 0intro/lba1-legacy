@@ -1,1 +1,1 @@
-extern long MixerInitDLL(char *);
+extern int32_t MixerInitDLL(char *);

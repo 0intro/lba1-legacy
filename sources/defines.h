@@ -41,9 +41,8 @@
 
 #include	<stdlib.h>
 #include	<string.h>
-#include	<dos.h>
-#include	<conio.h>
 #include	<stdio.h>
+#pragma pack(push, 2)	/* every structure laid out as Watcom's /zp2 did */
 
 #include 	"../lib386/lib_sys/adeline.h"
 #include 	"../lib386/lib_sys/lib_sys.h"
@@ -257,3 +256,4 @@ typedef	struct
 	WORD	Y ;
 	WORD	Z ;		}	T_TRACK ;
 
+#pragma pack(pop)

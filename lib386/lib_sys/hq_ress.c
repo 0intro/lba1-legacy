@@ -1,7 +1,8 @@
-#include <i86.h>
-#include <dos.h>
 #include <stdio.h>
 #include <stdlib.h>
+#ifndef	DOS
+#include <string.h>
+#endif
 #include <fcntl.h>
 
 #include "adeline.h"
@@ -20,6 +21,7 @@
 
 WORD	HQR_Flag = FALSE ;
 
+#pragma pack(push, 2)	/* every structure laid out as Watcom's /zp2 did */
 typedef	struct	{	ULONG	SizeFile ;
 			ULONG	CompressedSizeFile ;
 			WORD	CompressMethod ;	/* 0 stored */
@@ -628,3 +630,4 @@ void	*HQR_GetSample( T_HQR_HEADER *header, WORD index )
 	}
 }
 
+#pragma pack(pop)

@@ -1,3 +1,4 @@
+#pragma pack(push, 2)	/* every structure laid out as Watcom's /zp2 did */
 #define	NORMAL_UNIT	64
 
 #define	INFO_TRI	1
@@ -108,6 +109,36 @@ LONG	AffObjetIso(LONG xwr, LONG ywr, LONG zwr,
 
 void	PatchObjet(void *ptrobj);
 
+/* declared for C99: LBA.EXE's C calls them undeclared, its assembly alone the last nine */
+#ifndef	DOS
+void	SaveTimer( void ) ;
+void	RestoreTimer( void ) ;
+
+void	SetAnimObjet( LONG numframe, void *ptranim, void *ptrobj ) ;
+LONG	SetInterAnimObjet( LONG framedest, void *ptranimdest, void *ptrobj ) ;
+LONG	SetInterAnimObjet2( LONG framedest, void *ptranimdest, void *ptrobj ) ;
+LONG	SetInterDepObjet( LONG framedest, void *ptranimdest, void *ptrobj ) ;
+void	CopyInterAnim( void *ptrobjs, void *ptrobjd ) ;
+LONG	GetBouclageAnim( void *ptranim ) ;
+LONG	GetNbFramesAnim( void *ptranim ) ;
+
+LONG	BoundRegleTrois( LONG valeur1, LONG valeur2, LONG nbstep, LONG step ) ;
+LONG	GetAngle( LONG x0, LONG z0, LONG x1, LONG z1 ) ;
+void	InitRealAngleConst(	LONG startvalue,
+				LONG endvalue,
+				LONG timevalue,
+				T_REAL_VALUE *ptrstruct ) ;
+
+void	Rotate( LONG coorx, LONG coory, LONG angle ) ;
+void	SetAngleCamera( LONG palpha, LONG pbeta, LONG pgamma ) ;
+void	SetInverseAngleCamera( LONG palpha, LONG pbeta, LONG pgamma ) ;
+void	SetPosCamera( LONG poswx, LONG poswy, LONG poswz ) ;
+void	SetFollowCamera(	LONG targetx, LONG targety, LONG targetz,
+				LONG camalpha, LONG cambeta, LONG camgamma,
+				LONG camzoom ) ;
+LONG	TestVuePoly( void *ptrpoly ) ;
+#endif
+
 LONG	ProjettePoint(LONG CoorX, LONG CoorY, LONG CoorZ);
 LONG	LongProjettePoint(LONG CoorX, LONG CoorY, LONG CoorZ);
 
@@ -115,3 +146,4 @@ void	SetProjection(LONG xc, LONG yc, LONG kfact, LONG lfactx, LONG lfacty);
 void	SetIsoProjection(LONG xc, LONG yc, LONG scale);
 
 ULONG	Sqr(ULONG x);
+#pragma pack(pop)

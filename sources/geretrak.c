@@ -42,35 +42,35 @@ void	DoTrack( WORD	numobj )
 		{
 /*-------------------------------------------------------------------------*/
 		case TM_SAMPLE:
-			HQ_3D_MixSample( *(WORD*)ptrtrack, 0x1000, 1,
+			HQ_3D_MixSample( PeekWord( ptrtrack ), 0x1000, 1,
 			ptrobj->PosObjX, ptrobj->PosObjY, ptrobj->PosObjZ ) ;
 			ptrobj->OffsetTrack += 2 ;
 			break ;
 
 		case TM_SAMPLE_RND:
-			HQ_3D_MixSample( *(WORD*)ptrtrack, 0x800+Rnd(0x800), 1,
+			HQ_3D_MixSample( PeekWord( ptrtrack ), 0x800+Rnd(0x800), 1,
 			ptrobj->PosObjX, ptrobj->PosObjY, ptrobj->PosObjZ ) ;
 			ptrobj->OffsetTrack += 2 ;
 			break ;
 
 		case TM_SAMPLE_ALWAYS:
-			HQ_3D_MixSample( *(WORD*)ptrtrack, 0x1000, 0,
+			HQ_3D_MixSample( PeekWord( ptrtrack ), 0x1000, 0,
 			ptrobj->PosObjX, ptrobj->PosObjY, ptrobj->PosObjZ ) ;
 			ptrobj->OffsetTrack += 2 ;
 			break ;
 
 		case TM_SAMPLE_STOP:
-			HQ_StopOneSample( *(WORD*)ptrtrack  ) 	;
+			HQ_StopOneSample( PeekWord( ptrtrack )  ) 	;
 			ptrobj->OffsetTrack += 2 ;
 			break ;
 
 		case TM_REPEAT_SAMPLE:
-			BigSampleRepeat = *(WORD*)ptrtrack ;
+			BigSampleRepeat = PeekWord( ptrtrack ) ;
 			ptrobj->OffsetTrack += 2 ;
 			break ;
 
 		case TM_SIMPLE_SAMPLE:
-			HQ_MixSample( *(WORD*)ptrtrack, 0x1000, BigSampleRepeat, 128, 128 ) ;
+			HQ_MixSample( PeekWord( ptrtrack ), 0x1000, BigSampleRepeat, 128, 128 ) ;
 			BigSampleRepeat = 1 ;
 			ptrobj->OffsetTrack += 2 ;
 			break ;
@@ -163,17 +163,17 @@ void	DoTrack( WORD	numobj )
 		case TM_WAIT_NB_SECOND:
 			ptrobj->OffsetTrack += 5 ;
 
-			if( *(ULONG*)(ptrtrack+1) == 0 )
+			if( PeekULong( ptrtrack+1 ) == 0 )
 			{
-				*(ULONG*)(ptrtrack+1) = TimerRef + ( *ptrtrack * 50 ) ;
+				PokeULong( ptrtrack+1, TimerRef + ( *ptrtrack * 50 ) ) ;
 			}
 
-			if ( TimerRef < *(ULONG*)(ptrtrack+1) )
+			if ( TimerRef < PeekULong( ptrtrack+1 ) )
 			{
 				ptrobj->OffsetTrack -= 6 ;
 				flag = FALSE ;
 			}
-			else *(ULONG*)(ptrtrack+1) = 0	;
+			else PokeULong( ptrtrack+1, 0 )	;
 			break ;
 
 /*-------------------------------------------------------------------------*/
@@ -315,7 +315,7 @@ void	DoTrack( WORD	numobj )
 		{
 //			if( !(ptrobj->WorkFlags & ANIM_MASTER_ROT) )
 			{
-				Value = *(WORD*)ptrtrack ;
+				Value = PeekWord( ptrtrack ) ;
 
 				if( !ptrobj->RealAngle.TimeValue )
 				{
@@ -351,7 +351,7 @@ void	DoTrack( WORD	numobj )
 		{
 //			if( !(ptrobj->WorkFlags & ANIM_MASTER_ROT) )
 			{
-				Value = *(WORD*)ptrtrack ;
+				Value = PeekWord( ptrtrack ) ;
 
 				if( Value == -1 )
 				{
@@ -366,7 +366,7 @@ void	DoTrack( WORD	numobj )
 									Value,
 									ptrobj->SRot,
 									&ptrobj->RealAngle ) ;
-						*(WORD*)ptrtrack = Value ;
+						PokeUWord( ptrtrack, Value ) ;
 					}
 				}
 
@@ -378,7 +378,7 @@ void	DoTrack( WORD	numobj )
 				else
 				{
 					ClearRealAngle( ptrobj ) ;
-					*(WORD*)ptrtrack = -1 ;
+					PokeUWord( ptrtrack, -1 ) ;
 				}
 			}
 /*			else
@@ -398,7 +398,7 @@ void	DoTrack( WORD	numobj )
 		{
 //			if( !(ptrobj->WorkFlags & ANIM_MASTER_ROT) )
 			{
-				Value = *(WORD*)(ptrtrack+2) ;
+				Value = PeekWord( ptrtrack+2 ) ;
 
 				if( Value == -1 )
 				{
@@ -406,19 +406,19 @@ void	DoTrack( WORD	numobj )
 					{
 						if( rand()&1 )
 						{
-							Value = *(WORD*)ptrtrack ;
+							Value = PeekWord( ptrtrack ) ;
 							Value = (ptrobj->Beta + 256 + Value/2 - Rnd( Value ))&1023 ;
 						}
 						else
 						{
-							Value = *(WORD*)ptrtrack ;
+							Value = PeekWord( ptrtrack ) ;
 							Value = (ptrobj->Beta - 256 - Value/2 + Rnd( Value ))&1023 ;
 						}
 						InitRealAngleConst(	ptrobj->Beta,
 									Value,
 									ptrobj->SRot,
 									&ptrobj->RealAngle ) ;
-						*(WORD*)(ptrtrack+2) = Value ;
+						PokeUWord( ptrtrack+2, Value ) ;
 					}
 				}
 				if( ptrobj->Beta != Value )
@@ -429,7 +429,7 @@ void	DoTrack( WORD	numobj )
 				else
 				{
 					ClearRealAngle( ptrobj ) ;
-					*(WORD*)(ptrtrack+2) = -1 ;
+					PokeUWord( ptrtrack+2, -1 ) ;
 				}
 			}
 /*			else
@@ -466,7 +466,7 @@ void	DoTrack( WORD	numobj )
 				ptrobj->Beta = 0 ;
 				break ;
 			}
-			ptrobj->DoorWidth = *(WORD*)ptrtrack ;
+			ptrobj->DoorWidth = PeekWord( ptrtrack ) ;
 			ptrobj->WorkFlags |= AUTO_STOP_DOOR ;
 	//speed porte
 			ptrobj->SRot = 1000 ; /* reglage global 8( */
@@ -505,7 +505,7 @@ void	DoTrack( WORD	numobj )
 		ptrobj->OffsetTrack += 2 ;
 //		if( !(ptrobj->WorkFlags & ANIM_MASTER_ROT) )
 		{
-			ptrobj->Beta = *(WORD*)ptrtrack ;
+			ptrobj->Beta = PeekWord( ptrtrack ) ;
 			if( !(ptrobj->Flags & SPRITE_3D) )
 			{
 				ClearRealAngle( ptrobj ) ;
@@ -540,7 +540,7 @@ void	DoTrack( WORD	numobj )
 
 /*-------------------------------------------------------------------------*/
 		case TM_GOTO:
-			ptrobj->OffsetTrack = *(WORD*)ptrtrack ;
+			ptrobj->OffsetTrack = PeekWord( ptrtrack ) ;
 			break ;
 
 /*-------------------------------------------------------------------------*/
@@ -552,7 +552,7 @@ void	DoTrack( WORD	numobj )
 /*-------------------------------------------------------------------------*/
 		case TM_SPEED:
 			ptrobj->OffsetTrack += 2 ;
-			ptrobj->SRot = *(WORD*)ptrtrack ;
+			ptrobj->SRot = PeekWord( ptrtrack ) ;
 			if( ptrobj->Flags & SPRITE_3D )
 			{	/* voir pour les 2 types ? */
 				InitRealValue( 0, ptrobj->SRot,

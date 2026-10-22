@@ -368,7 +368,7 @@ WORD    DoTest()
 
 	case RET_WORD:
 
-		valueword = *(WORD*)PtrPrg ;
+		valueword = PeekWord( PtrPrg ) ;
 		PtrPrg += 2 ;
 		switch( test )
 		{
@@ -542,14 +542,14 @@ void	DoLife( WORD numobj )
 
 			case LM_SET_LIFE:
 			case LM_SET_COMPORTEMENT:
-				ptrobj->OffsetLife = *(WORD*)PtrPrg ;
+				ptrobj->OffsetLife = PeekWord( PtrPrg ) ;
 				PtrPrg += 2 ;
 				break ;
 
 			case LM_SET_LIFE_OBJ:
 			case LM_SET_COMPORTEMENT_OBJ:
 				num = *PtrPrg++ ;
-				ListObjet[num].OffsetLife = *(WORD*)PtrPrg ;
+				ListObjet[num].OffsetLife = PeekWord( PtrPrg ) ;
 				PtrPrg += 2 ;
 				break ;
 
@@ -571,13 +571,13 @@ void	DoLife( WORD numobj )
 				break ;
 
 			case LM_SET_TRACK:
-				ptrobj->OffsetTrack = *(WORD*)PtrPrg ;
+				ptrobj->OffsetTrack = PeekWord( PtrPrg ) ;
 				PtrPrg += 2 ;
 				break ;
 
 			case LM_SET_TRACK_OBJ:
 				num = *PtrPrg++ ;
-				ListObjet[num].OffsetTrack = *(WORD*)PtrPrg ;
+				ListObjet[num].OffsetTrack = PeekWord( PtrPrg ) ;
 				PtrPrg += 2 ;
 				break ;
 
@@ -594,7 +594,7 @@ void	DoLife( WORD numobj )
 				DoFuncLife( ptrobj ) ;
 				if( !DoTest() )
 				{
-					PtrPrg = ptrobj->PtrLife + *(WORD*)PtrPrg ;
+					PtrPrg = ptrobj->PtrLife + PeekWord( PtrPrg ) ;
 				}
 				else
 				{
@@ -606,7 +606,7 @@ void	DoLife( WORD numobj )
 				DoFuncLife( ptrobj ) ;
 				if( DoTest() )
 				{
-					PtrPrg = ptrobj->PtrLife + *(WORD*)PtrPrg ;
+					PtrPrg = ptrobj->PtrLife + PeekWord( PtrPrg ) ;
 				}
 				else
 				{
@@ -618,7 +618,7 @@ void	DoLife( WORD numobj )
 				DoFuncLife( ptrobj ) ;
 				if( !DoTest() )
 				{
-					PtrPrg = ptrobj->PtrLife + *(WORD*)PtrPrg ;
+					PtrPrg = ptrobj->PtrLife + PeekWord( PtrPrg ) ;
 				}
 				else
 				{
@@ -633,14 +633,14 @@ void	DoLife( WORD numobj )
 				{
 					*ptrmacro = LM_SWIF ;
 				}
-				PtrPrg = ptrobj->PtrLife + *(WORD*)PtrPrg ;
+				PtrPrg = ptrobj->PtrLife + PeekWord( PtrPrg ) ;
 				break ;
 
 			case LM_ONEIF:
 				DoFuncLife( ptrobj ) ;
 				if( !DoTest() )
 				{
-					PtrPrg = ptrobj->PtrLife + *(WORD*)PtrPrg ;
+					PtrPrg = ptrobj->PtrLife + PeekWord( PtrPrg ) ;
 				}
 				else
 				{
@@ -652,15 +652,15 @@ void	DoLife( WORD numobj )
 			case LM_NEVERIF:
 				DoFuncLife( ptrobj ) ;
 				DoTest() ;
-				PtrPrg = ptrobj->PtrLife + *(WORD*)PtrPrg ;
+				PtrPrg = ptrobj->PtrLife + PeekWord( PtrPrg ) ;
 				break ;
 
 			case LM_OFFSET: 	/* jmp à offset */
-				PtrPrg = ptrobj->PtrLife + *(WORD*)PtrPrg ;
+				PtrPrg = ptrobj->PtrLife + PeekWord( PtrPrg ) ;
 				break ;
 
 			case LM_ELSE:
-				PtrPrg = ptrobj->PtrLife + *(WORD*)PtrPrg ;
+				PtrPrg = ptrobj->PtrLife + PeekWord( PtrPrg ) ;
 				break ;
 
 			case LM_BODY:
@@ -696,7 +696,7 @@ void	DoLife( WORD numobj )
 #ifdef	CDROM
 				NumObjSpeak = num ;
 #endif
-				Dial( *(WORD*)PtrPrg ) ;
+				Dial( PeekWord( PtrPrg ) ) ;
 				PtrPrg += 2 ;
 				RestoreTimer() ;
 
@@ -712,7 +712,7 @@ void	DoLife( WORD numobj )
 #ifdef	CDROM
 				NumObjSpeak = numobj ;
 #endif
-				Dial( *(WORD*)PtrPrg ) ;
+				Dial( PeekWord( PtrPrg ) ) ;
 				PtrPrg += 2 ;
 				RestoreTimer() ;
 				AffScene(TRUE)	;
@@ -721,7 +721,7 @@ void	DoLife( WORD numobj )
 
 			case LM_SAY_MESSAGE_OBJ:
 				obj = *PtrPrg++ ;
-				num = *(WORD*)PtrPrg	;
+				num = PeekWord( PtrPrg )	;
 				InitIncrustDisp( INCRUST_TEXT,
 						 num,
 						 0, 0,
@@ -735,7 +735,7 @@ void	DoLife( WORD numobj )
 				break ;
 
 			case LM_SAY_MESSAGE:
-				num = *(WORD*)PtrPrg	;
+				num = PeekWord( PtrPrg )	;
 				InitIncrustDisp( INCRUST_TEXT,
 						 num,
 						 0, 0,
@@ -769,7 +769,7 @@ void	DoLife( WORD numobj )
 
 			case LM_GIVE_GOLD_PIECES:
 				num = NbGoldPieces ;
-				NbGoldPieces -= *(WORD*)PtrPrg ;
+				NbGoldPieces -= PeekWord( PtrPrg ) ;
 				if( NbGoldPieces < 0 )
 				{
 					NbGoldPieces = 0 ;
@@ -843,7 +843,7 @@ void	DoLife( WORD numobj )
 
 			case LM_SET_DOOR_LEFT:
 				ptrobj->Beta = 768 ;
-				ptrobj->PosObjX = ptrobj->AnimStepX - *(WORD*)PtrPrg ;
+				ptrobj->PosObjX = ptrobj->AnimStepX - PeekWord( PtrPrg ) ;
 				ptrobj->WorkFlags &= ~AUTO_STOP_DOOR ;
 				ptrobj->SRot = 0 ;
 				PtrPrg += 2 ;
@@ -851,7 +851,7 @@ void	DoLife( WORD numobj )
 
 			case LM_SET_DOOR_RIGHT:
 				ptrobj->Beta = 256 ;
-				ptrobj->PosObjX = ptrobj->AnimStepX + *(WORD*)PtrPrg ;
+				ptrobj->PosObjX = ptrobj->AnimStepX + PeekWord( PtrPrg ) ;
 				ptrobj->WorkFlags &= ~AUTO_STOP_DOOR ;
 				ptrobj->SRot = 0 ;
 				PtrPrg += 2 ;
@@ -859,7 +859,7 @@ void	DoLife( WORD numobj )
 
 			case LM_SET_DOOR_UP:
 				ptrobj->Beta = 512 ;
-				ptrobj->PosObjZ = ptrobj->AnimStepZ - *(WORD*)PtrPrg ;
+				ptrobj->PosObjZ = ptrobj->AnimStepZ - PeekWord( PtrPrg ) ;
 				ptrobj->WorkFlags &= ~AUTO_STOP_DOOR ;
 				ptrobj->SRot = 0 ;
 				PtrPrg += 2 ;
@@ -867,7 +867,7 @@ void	DoLife( WORD numobj )
 
 			case LM_SET_DOOR_DOWN:
 				ptrobj->Beta = 0 ;
-				ptrobj->PosObjZ = ptrobj->AnimStepZ + *(WORD*)PtrPrg ;
+				ptrobj->PosObjZ = ptrobj->AnimStepZ + PeekWord( PtrPrg ) ;
 				ptrobj->WorkFlags &= ~AUTO_STOP_DOOR ;
 				ptrobj->SRot = 0 ;
 				PtrPrg += 2 ;
@@ -1003,7 +1003,7 @@ void	DoLife( WORD numobj )
 				break ;
 
 			case LM_ADD_CHOICE:
-				GameListChoice[GameNbChoices] = *(WORD*)PtrPrg ;
+				GameListChoice[GameNbChoices] = PeekWord( PtrPrg ) ;
 				PtrPrg += 2 ;
 				GameNbChoices++ ;
 				break ;
@@ -1014,7 +1014,7 @@ void	DoLife( WORD numobj )
 				TestRestoreModeSVGA( TRUE ) ;
 				if( Bulle )	DrawBulle( numobj ) ;
 				TestCoulDial( ptrobj->CoulObj ) ;
-				GameAskChoice( *(WORD*)PtrPrg ) ;
+				GameAskChoice( PeekWord( PtrPrg ) ) ;
 				GameNbChoices = 0 ;
 				PtrPrg += 2 ;
 //				FlagFade = TRUE ;
@@ -1031,7 +1031,7 @@ void	DoLife( WORD numobj )
 				TestRestoreModeSVGA( TRUE ) ;
 				if( Bulle )	DrawBulle( num ) ;
 				TestCoulDial( ListObjet[num].CoulObj ) ;
-				GameAskChoice( *(WORD*)PtrPrg ) ;
+				GameAskChoice( PeekWord( PtrPrg ) ) ;
 				GameNbChoices = 0 ;
 				PtrPrg += 2 ;
 //				FlagFade = TRUE ;
@@ -1050,7 +1050,7 @@ void	DoLife( WORD numobj )
 #ifdef	CDROM
 				NumObjSpeak = numobj ;
 #endif
-				Dial( *(WORD*)PtrPrg ) ;
+				Dial( PeekWord( PtrPrg ) ) ;
 				PtrPrg += 2 ;
 				NormalWinDial() ;
 				AffScene(TRUE)	;
@@ -1064,7 +1064,7 @@ void	DoLife( WORD numobj )
 				break ;
 
 			case LM_BETA:
-				ptrobj->Beta = *(WORD*)PtrPrg ;
+				ptrobj->Beta = PeekWord( PtrPrg ) ;
 				ClearRealAngle( ptrobj ) ;
 				PtrPrg += 2 ;
 				break ;
@@ -1254,7 +1254,7 @@ void	DoLife( WORD numobj )
 			case LM_TEXT:
 				if( TextLig < 440 )
 				{
-					num = *(WORD*)PtrPrg ;
+					num = PeekWord( PtrPrg ) ;
 					if( !Version_US )
 					{
 						if( num == 0 )	num = 16 ;
