@@ -1165,6 +1165,13 @@ void	DoFoundObj( WORD numobj )
 	}
 	else	// coupe music cd si on
 	{
+#ifndef	DOS
+		/*
+		 * FEATURE: with MusicTracks: Classic the music's file plays on,
+		 * as in the Classic's DoFoundObj. Taken from the Classic 3.2.3.
+		 */
+		if( MusicTracks != TRACKS_CLASSIC )
+#endif
 		StopMusicCD() ;
 		memoflagspeak = FlagSpeak ;
 		FlagSpeak = FALSE ;

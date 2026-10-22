@@ -1,0 +1,34 @@
+# The voices read from the CD over the Classic's CD stream
+# (fixtures/classicbook: the sweep's save of scene 58, whose tune 6 the
+# CD plays, with the Book of Bû, the game's flag 5, byte 11, a file
+# named VOX where the copies of the voices would go, and classicflute's
+# lba.cfg, on the CD clmusic and the game's directory novox, the game's
+# files less VOX). LBA.EXE stops the CD's track before it copies a bank
+# of voices from the CD, reads them from the CD when the copy fails,
+# and then plays tunes 1 to 9 as XMIDI, the drive busy. The Classic
+# plays on: the island's bank opens at the load, and the scene's tune
+# plays from Track_07.mp3. Shift opens the inventory, Right and Down go
+# to the book, and Return reads it, which opens bank 2: its text 161 is
+# said over the tune. Return turns its page.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 12
+shot start
+key Shift_L
+sleep 3
+shot inventory
+key Right
+sleep 1
+key Down
+sleep 1
+key Return
+sleep 10
+shot book
+key Return
+sleep 10
+shot page

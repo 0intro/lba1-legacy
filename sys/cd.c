@@ -289,6 +289,10 @@ PlayTrackCDR(int32_t t)
 void
 PauseCD(void)
 {
+	if (MusicTracks == Tclassic) {
+		musicpause(0);
+		return;
+	}
 	pausedtrack = 0;
 	if (!trackon(&track))
 		return;
@@ -300,13 +304,18 @@ PauseCD(void)
 /*
  * FEATURE: ResumeCD is LBA2's CD.CPP ResumeCD: the track PauseCD stopped
  * played on from its frame to its end, as from the time the clock had
- * then reached. Taken from LBA2.
+ * then reached. Taken from LBA2. With MusicTracks: Classic the two act
+ * on the Classic's CD stream (music.c).
  */
 void
 ResumeCD(void)
 {
 	Track nt;
 
+	if (MusicTracks == Tclassic) {
+		musicresume(0);
+		return;
+	}
 	if (pausedtrack == 0)
 		return;
 	StopCDR();

@@ -121,6 +121,12 @@ miditick(uint64_t t)
 }
 
 void
+soundtick(uint64_t t)
+{
+	USED(t);
+}
+
+void
 sdlshow(void)
 {
 }
@@ -262,9 +268,9 @@ same(int cmpt)
 	return 0;
 }
 
-/* The port's clock moved to its next tick: 1 if it came. */
+/* The port's clock moved to its tick k, which comes at k times 20 ms: 1 if it came. */
 static int
-porttick(void)
+porttick(int k)
 {
 	uint32_t t;
 	int i;
@@ -274,6 +280,10 @@ porttick(void)
 		idle();
 	if (TimerSystem != t + 1) {
 		fail("the port's clock ticked %u times in %d idles", TimerSystem - t, i);
+		return 0;
+	}
+	if (timegettime() / 20 != (uint32_t)k) {
+		fail("the port's tick %d at %u ms", k, timegettime());
 		return 0;
 	}
 	return 1;
@@ -323,7 +333,7 @@ ticks(void *v)
 			fail("the BIOS's handler chained to %d times, %d with Cmpt_18 %u", chained(8) - c,
 				carry, Cmpt_18);
 		nbios += chained(8) - c;
-		if (!porttick())
+		if (!porttick(i + 1))
 			break;
 		same(1);
 	}
@@ -341,7 +351,7 @@ proc(void *v)
 		gamewrites();
 		snprintf(what, sizeof what, "tick %d", i);
 		acall(as.newproc08, 0);
-		if (!porttick())
+		if (!porttick(i + 1))
 			break;
 		same(0);
 	}

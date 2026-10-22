@@ -81,6 +81,8 @@ static struct {
 	{"MusicTracks: Midis\r\n", "MusicTracks", tracknames, -1},
 	{"MusicTracks: CD Midi\r\n", "MusicTracks", tracknames, -1},
 	{"MusicTracks: PlayStation\r\n", "MusicTracks", tracknames, -1},
+	{"MusicTracks: Classic\r\n", "MusicTracks", tracknames, 2},
+	{"MusicTracks: CLASSIC\r\n", "MusicTracks", tracknames, 2},
 	{"MusicJingles: Midi\r\n", "MusicTracks", tracknames, 0},	/* missing */
 	{"MusicJingles: Midi\r\n", "MusicJingles", jinglenames, 0},
 	{"MusicJingles: PlayStation\r\n", "MusicJingles", jinglenames, 1},
@@ -89,10 +91,12 @@ static struct {
 	{"MusicJingles: PS\r\n", "MusicJingles", jinglenames, -1},
 	{"MusicJingles: CD\r\n", "MusicJingles", jinglenames, 2},
 	{"MusicJingles: cd\r\n", "MusicJingles", jinglenames, 2},
+	{"MusicJingles: Classic\r\n", "MusicJingles", jinglenames, 3},
+	{"MusicJingles: DotEmu\r\n", "MusicJingles", jinglenames, -1},
 	{"MusicTracks: Midi\r\n", "MusicJingles", jinglenames, 0},
-	{"MusicTracks: Auto\r\n", "MusicTracks", tracknames, 2},
-	{"MusicTracks: auto\r\n", "MusicTracks", tracknames, 2},
-	{"MusicJingles: AUTO\r\n", "MusicJingles", jinglenames, 3},
+	{"MusicTracks: Auto\r\n", "MusicTracks", tracknames, 3},
+	{"MusicTracks: auto\r\n", "MusicTracks", tracknames, 3},
+	{"MusicJingles: AUTO\r\n", "MusicJingles", jinglenames, 4},
 	{"MusicJingles: Automatic\r\n", "MusicJingles", jinglenames, -1},
 };
 
@@ -142,9 +146,11 @@ static struct {
 };
 
 /*
- * The files a CD's directory holds and the modes Auto takes there for the
- * tracks and the jingles: the CD's tracks, their cuts for the jingles,
- * the PlayStation's recordings, the XMIDI, in that order
+ * The files a CD's directory holds, empty where a - leads the name, and
+ * the modes Auto takes there for the tracks and the jingles: the
+ * Classic's files, MP3 or OGG, the CD's tracks, their cuts for the
+ * jingles, the PlayStation's recordings, the XMIDI, in that order, an
+ * empty file none of them
  */
 static struct {
 	char	*files[4];
@@ -155,6 +161,12 @@ static struct {
 	{{"TRACK02.WAV", "TRACK08.WAV"}, 0, 2},	/* and track 8, tune 0's cut */
 	{{"JINGLES\\J08MID.WAV"}, 1, 1},	/* the PlayStation's recordings */
 	{{"JINGLES\\J08MID.WAV", "TRACK08.WAV"}, 1, 2},	/* the cuts before them */
+	{{"COMMON\\MUSIC\\TRACK_02.OGG", "TRACK02.WAV"}, 2, 0},	/* DotEmu's OGG */
+	{{"Common\\Music\\Track_02.mp3"}, 2, 0},
+	{{"-Common\\Music\\Track_02.mp3", "TRACK02.WAV"}, 0, 0},	/* an empty MP3: the tracks */
+	{{"common\\midi\\lba1-01.MP3", "TRACK08.WAV", "JINGLES\\J08MID.WAV"}, 1, 3},
+	{{"Common\\Midi\\LBA1-01.ogg", "Common\\Music\\Track_02.ogg"}, 2, 3},
+	{{"Common\\Midi\\LBA1-02.mp3", "Common\\Music\\Track_03.mp3"}, 1, 0},	/* later tunes' alone */
 };
 
 /* SetSmoothScaling is sys/video.c's: here the flag kept. */
@@ -286,13 +298,19 @@ static void
 cdfile(char *name, int make)
 {
 	LONG h;
+	int n;
 
+	n = 1;
+	if (name[0] == '-') {
+		n = 0;
+		name++;
+	}
 	if (!make) {
 		Delete(name);
 		return;
 	}
 	h = OpenWrite(name);
-	if (h == 0 || Write(h, "x", 1) != 1)
+	if (h == 0 || (n > 0 && Write(h, "x", 1) != 1))
 		fatal("cannot write %s", name);
 	Close(h);
 }
@@ -356,9 +374,10 @@ record(uint8_t *p, uint32_t s, uint32_t size, int dir, char *name, int namelen)
 
 /*
  * A CD's image in the preferences, its path given back: a data track
- * holding JINGLES\J08MID.WAV, the file of the first tune of the
- * PlayStation's recordings (the volume at sector 16, the root at 18,
- * JINGLES at 21, the file at 23), as auto.iso, or
+ * holding COMMON\MUSIC\TRACK_02.MP3 and JINGLES\J08MID.WAV, the files
+ * of the first tunes of the Classic's tracks and of the PlayStation's
+ * recordings (the volume at sector 16, the root at 18, COMMON at 19,
+ * MUSIC at 20, JINGLES at 21, the files at 22 and 23), as auto.iso, or
  * with audio 1 as auto.cue over auto.bin, the data track's raw sectors
  * then audio tracks 2 and 8 of 10 frames each, or with audio 2 audio
  * track 2 alone, of 20 frames, J08MID.WAV two of them from its second,
@@ -380,11 +399,16 @@ autoimage(int audio)
 	memcpy(p+1, "CD001", 5);
 	p[6] = 1;
 	record(p+156, 18, Sector, 1, "\0", 1);
-	record(iso + 18*Sector, 21, Sector, 1, "JINGLES", 7);
+	p = iso + 18*Sector;
+	p += record(p, 19, Sector, 1, "COMMON", 6);
+	record(p, 21, Sector, 1, "JINGLES", 7);
+	record(iso + 19*Sector, 20, Sector, 1, "MUSIC", 5);
+	record(iso + 20*Sector, 22, 1, 0, "TRACK_02.MP3;1", 14);
 	if (audio == 2)
 		record(iso + 21*Sector, Nauto+1, 2*Sector, 0, "J08MID.WAV;1", 12);
 	else
 		record(iso + 21*Sector, 23, 1, 0, "J08MID.WAV;1", 12);
+	iso[22*Sector] = 'x';
 	iso[23*Sector] = 'x';
 	snprintf(path, sizeof path, "%s/auto.iso", pref);
 	if (!audio) {

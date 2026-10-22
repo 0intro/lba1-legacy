@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "dat.h"
 #include "fns.h"
+#include "tlba1c.h"
 
 /*
  * Sound, as lib386's lib_samp (samples and voices), lib_midi (the music
@@ -61,6 +62,12 @@ gains(void)
 	sdlwavegain(gain(volumes[Vwave]) * gain(volumes[Vmaster]));
 	sdlcdgain(gain(volumes[Vcd]) * gain(volumes[Vmaster]));
 	midimix(volumes[Vmidi], volumes[Vmaster], gain(volumes[Vmidi]) * gain(volumes[Vmaster]));
+	/*
+	 * FEATURE: the Classic's streams play the music's files at the CD's
+	 * gain, as recordings, its voice's at the samples'. The port's own.
+	 */
+	SetMusicVolume(gain(volumes[Vcd]) * gain(volumes[Vmaster]));
+	SetVoiceVolume(gain(volumes[Vwave]) * gain(volumes[Vmaster]));
 }
 
 void
@@ -78,7 +85,19 @@ soundinit(void)
 		if ((uint32_t)PlayRate > 22000)
 			PlayRate = 22000;
 	}
-	Midi_Driver_Enable = driver("MidiDriver", "NoMidi") && midiinit();
+	/*
+	 * FEATURE: with MusicJingles: Classic the Classic's midi module
+	 * starts its music in the XMIDI driver's place, Midi_Driver_Enable
+	 * its answer, as its InitAdelineSystem does, and with MusicTracks:
+	 * Classic the music starts as its InitCDR starts it from lba_main.
+	 * Taken from the Classic 3.2.3.
+	 */
+	if (MusicJingles == Jclassic)
+		tlba1c.InitMidi();
+	else
+		Midi_Driver_Enable = driver("MidiDriver", "NoMidi") && midiinit();
+	if (MusicTracks == Tclassic)
+		InitMusic();
 	mixer = driver("MixerDriver", "NoMixer");
 	if (mixer)
 		gains();

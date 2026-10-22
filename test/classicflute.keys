@@ -1,0 +1,26 @@
+# The flute's movie on the Classic's files (fixtures/classicflute: the
+# sweep's save of scene 58 with the game's flag 205 set, byte 211, the
+# flute's movie seen, and Twinsen put in the scene's zone 4, its
+# scenario's zone 3: SceneStartX, Y, Z at bytes 270-275, 28672 768
+# 27136, and soundout's lba.cfg with MusicTracks: Classic and
+# MusicJingles: Classic, on the CD clmusic). The action key, in the
+# normal behaviour, runs Twinsen's script there, which plays the movies
+# seen: the dream's, which Escape ends, then the flute's, whose tune 26
+# plays from LBA1-27.mp3.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 12
+shot start
+key space
+sleep 4
+shot dream
+key Escape
+sleep 6
+shot flute
+sleep 12
+shot end

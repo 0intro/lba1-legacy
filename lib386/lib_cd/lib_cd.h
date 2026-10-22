@@ -65,11 +65,19 @@ void    cutplay( LONG num )             ;
 //      The port's own.
 #define TRACKS_CD               0       // the CD's tracks
 #define TRACKS_MIDI             1       // the XMIDI, as the disk version
+#define TRACKS_CLASSIC          2       // the Classic's files, as the Classic plays them
 #define JINGLES_MIDI            0       // the XMIDI
 #define JINGLES_PLAYSTATION     1       // the PlayStation's recordings
 #define JINGLES_CD              2       // cut from the CD's tracks, as DotEmu cut them
+#define JINGLES_CLASSIC         3       // the Classic's files, as the Classic plays them
 extern  LONG    MusicTracks     ;
 extern  LONG    MusicJingles    ;
+
+//      FEATURE: timeGetTime, Windows' clock in ms, which the Classic's
+//      music counts a track's end by, and the name of a voice's Ogg
+//      Vorbis file. Taken from the Classic 3.2.3.
+ULONG   timegettime( void )     ;
+void    VoiceOggName( char *name, ULONG num ) ;
 #endif
 
 //-------------------------------------- Fonction bas niveau

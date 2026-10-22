@@ -771,11 +771,12 @@ void	InitFileNar( char *file, LONG from )
 
 #ifndef	DOS
 	/*
-	 * FEATURE: the CD's track plays on under the language page's test
-	 * voice (FlagVoiceTest), as in the Classic, whose InitFileNar leaves
-	 * the music. Taken from the Classic 3.2.3.
+	 * FEATURE: with MusicTracks: Classic the music's file plays on, and
+	 * so does the CD's track under the language page's test voice
+	 * (FlagVoiceTest), as in the Classic, whose InitFileNar leaves the
+	 * music. Taken from the Classic 3.2.3.
 	 */
-	if( !FlagVoiceTest )
+	if( (MusicTracks != TRACKS_CLASSIC) AND !FlagVoiceTest )
 #endif
 	if (( from == FROM_CD ) AND ( GetMusicCD() != -1 ))
 		StopMusicCD()	;
@@ -806,12 +807,40 @@ void	InitFileNar( char *file, LONG from )
 	FlagVoiceCD = from	;//	0 si HD, 1 si CD (cf InitSpeak )
 }
 /*-------------------------------------------------------------------------*/
+#ifndef	DOS
+/*
+ * FEATURE: VoiceOggName is TLBA1C.exe 0x41a5d0: the Ogg Vorbis file of
+ * voice num of the bank SpeakFile (0x8dd2a8) names, which the Classic's
+ * InitSpeak sets. The Classic's Speak plays two such files, DotEmu's
+ * cuts of two voices it shortened with their texts, on the music's
+ * voice stream. The port plays every voice from the VOX files, and the
+ * music's MusicFileName names a voice's file through this for a voice's
+ * code, which the Classic's Speak alone gives. Taken from the Classic
+ * 3.2.3.
+ */
+LONG	SpeakFile ;
+
+void	VoiceOggName( char *name, ULONG num )
+{
+	snprintf( name, 0x104, "CommonClassic\\Voices\\%sVOICE\\%s%s\\%s%s_%03d.ogg",
+		ListLanguage[LanguageCD], ListLanguage[LanguageCD], ListFileText[SpeakFile],
+		ListLanguage[LanguageCD], ListFileText[SpeakFile], (int)num ) ;
+}
+#endif
 /*-------------------------------------------------------------------------*/
 void    InitSpeak( LONG file )
 {
 	LONG	size		;
 	char	filehd[256]	;
 	char	filenar[256]	;
+
+#ifndef	DOS
+	/*
+	 * FEATURE: the bank, whose voices' files VoiceOggName names. Taken
+	 * from the Classic 3.2.3.
+	 */
+	SpeakFile = file ;
+#endif
 
 //	if ( DriveCDR < 0 )	return		;// a virer
 
@@ -835,11 +864,12 @@ void    InitSpeak( LONG file )
 
 #ifndef	DOS
 	/*
-	 * FEATURE: the CD's track plays on under the language page's test
-	 * voice (FlagVoiceTest), as in the Classic, whose InitSpeak leaves
-	 * the music. Taken from the Classic 3.2.3.
+	 * FEATURE: with MusicTracks: Classic the music's file plays on as the
+	 * voices are read, and so does the CD's track under the language
+	 * page's test voice (FlagVoiceTest), as in the Classic, whose
+	 * InitSpeak leaves the music. Taken from the Classic 3.2.3.
 	 */
-	if( !FlagVoiceTest )
+	if( (MusicTracks != TRACKS_CLASSIC) AND !FlagVoiceTest )
 #endif
 	if ( GetMusicCD() != -1 )	StopMusicCD()				;
 

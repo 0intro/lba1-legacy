@@ -113,3 +113,4 @@ void	poparea(void);
 void	windowpicture(void*);
 
 #include "dos.h"
+#include "tlba1c.h"

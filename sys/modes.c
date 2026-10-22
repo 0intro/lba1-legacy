@@ -16,8 +16,8 @@
 int32_t	MusicTracks;
 int32_t	MusicJingles;
 
-char	*tracknames[] = {"CD", "Midi", "Auto", NULL};
-char	*jinglenames[] = {"Midi", "PlayStation", "CD", "Auto", NULL};
+char	*tracknames[] = {"CD", "Midi", "Classic", "Auto", NULL};
+char	*jinglenames[] = {"Midi", "PlayStation", "CD", "Classic", "Auto", NULL};
 
 /*
  * A source Auto takes, its mode, where the CD holds its file, the one
@@ -31,18 +31,25 @@ struct Source
 	char	*file;
 };
 
-/* The tracks' sources in Auto's order: the CD's tracks, the XMIDI. */
+/*
+ * The tracks' sources in Auto's order: the Classic's files, MP3 or
+ * DotEmu's OGG, the CD's tracks, the XMIDI.
+ */
 static Source tracksources[] = {
+	{Tclassic, "D:\\Common\\Music\\Track_02.mp3"},
+	{Tclassic, "D:\\Common\\Music\\Track_02.ogg"},
 	{Tcd, "D:\\TRACK02.WAV"},
 	{Tmidi, NULL},
 };
 
 /*
- * The jingles' sources in Auto's order: the cuts from the CD's tracks
- * (tune 0's from track 8), the PlayStation's recordings (tune 0's
- * J08MID), the XMIDI.
+ * The jingles' sources in Auto's order: the Classic's files, the cuts
+ * from the CD's tracks (tune 0's from track 8), the PlayStation's
+ * recordings (tune 0's J08MID), the XMIDI.
  */
 static Source jinglesources[] = {
+	{Jclassic, "D:\\Common\\Midi\\LBA1-01.mp3"},
+	{Jclassic, "D:\\Common\\Midi\\LBA1-01.ogg"},
 	{Jcd, "D:\\TRACK08.WAV"},
 	{Jplaystation, "D:\\JINGLES\\J08MID.WAV"},
 	{Jmidi, NULL},

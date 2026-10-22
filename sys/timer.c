@@ -156,6 +156,7 @@ pump(void)
 	wavetick(now);
 	cdtick(now);
 	miditick(now);
+	soundtick(now);
 	t = now - now%frame();
 	if (t > retrace) {
 		retrace = t;
@@ -171,6 +172,17 @@ idle(void)
 {
 	pump();
 	advance(now + Idle);
+}
+
+/*
+ * FEATURE: timegettime: the clock in ms, cut to 32 bits, what the
+ * Classic's music takes from Windows' timeGetTime. Taken from the
+ * Classic 3.2.3.
+ */
+uint32_t
+timegettime(void)
+{
+	return (uint32_t)(now / 1000000);
 }
 
 /* How many pumps so far: the record's measure of when. */

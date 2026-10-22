@@ -335,7 +335,7 @@ addfile(Image *m, char *cue, char *name, char *kind, char *err, int nerr)
 		m->size[i] = Raw;
 	} else if (watcomstricmp(kind, "MP3") == 0 || watcomstricmp(kind, "OGG") == 0) {
 		m->kind[i] = Fcoded;
-		m->dec[i] = decopen(path);
+		m->dec[i] = decopen(path, Gapless);
 		if (m->dec[i] == NULL) {
 			seterr(err, nerr, "%s: neither MP3 nor Ogg Vorbis", name);
 			return -1;

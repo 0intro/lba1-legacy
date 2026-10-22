@@ -308,6 +308,20 @@ void	DrawNextFrameFla()
 				switch( HeaderInfo.Info )
 				{
 					case 1:	// fla flute
+#ifndef	DOS
+						/*
+						 * FEATURE: with MusicJingles: Classic
+						 * the flute plays as the Classic's
+						 * DrawNextFrameFla (TLBA1C.exe
+						 * 0x4226ef) plays it, tune 26 from its
+						 * file. Taken from the Classic 3.2.3.
+						 */
+						if( MusicJingles == JINGLES_CLASSIC )
+						{
+							if( Midi_Driver_Enable )	PlayMidiFile( 26 ) ;
+							break ;
+						}
+#endif
 						if( Midi_Driver_Enable )
 						{
 							if( (26 != NumXmi)

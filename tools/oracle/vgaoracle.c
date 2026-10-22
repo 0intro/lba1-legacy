@@ -263,6 +263,12 @@ miditick(uint64_t t)
 }
 
 void
+soundtick(uint64_t t)
+{
+	USED(t);
+}
+
+void
 sdlshow(void)
 {
 }

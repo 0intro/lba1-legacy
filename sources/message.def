@@ -16,6 +16,7 @@ extern int32_t CopyFileCD_HD(char *,char *);
 extern int32_t TryCopyFileCD_HD(char *,char *);
 extern void CloseFdNar(void);
 extern void InitFileNar(char *,int32_t );
+extern void VoiceOggName(char *,uint32_t );
 extern void InitSpeak(int32_t );
 extern void PlaySpeakVoc(int32_t );
 extern int32_t TestSpk(int32_t );

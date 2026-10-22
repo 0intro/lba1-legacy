@@ -725,6 +725,13 @@ void	StopMusicCD( void )
 	 * starts first, as LBA.EXE had it playing by then. The port's own.
 	 */
 	RestartCubeMusic() ;
+	/*
+	 * FEATURE: with MusicTracks: Classic the CD's stream stops, as the
+	 * Classic's StopMusicCD (TLBA1C.exe 0x40bb40) stops it. Taken from
+	 * the Classic 3.2.3.
+	 */
+	if( MusicTracks == TRACKS_CLASSIC )	tlba1c.StopCDR( 0 ) ;
+	else
 #endif
 	StopCDR() ;
 	CurrentMusicCD = -1 ;
@@ -783,6 +790,18 @@ void	PlayMusic( WORD num )
 
 #ifdef	CDROM
 
+#ifndef	DOS
+	/*
+	 * FEATURE: with MusicTracks: Classic tunes 1 to 9 play from the CD's
+	 * stream whatever reads the voices, as the Classic's PlayMusic
+	 * (TLBA1C.exe 0x40bc10) plays them. Taken from the Classic 3.2.3.
+	 */
+	if( (MusicTracks == TRACKS_CLASSIC) AND (num >= 1) AND (num <= 9) )
+	{
+		PlayCdTrack( num ) ;
+		return ;
+	}
+#endif
 	if( FlagVoiceCD		// voix sur CD music fm
 	OR (num < 1)
 	OR (num > 9) )		// ou jingle que FM
@@ -814,6 +833,26 @@ void	PlayMidiFile( WORD num )
 	 * starts first, as LBA.EXE had it playing by then. The port's own.
 	 */
 	RestartCubeMusic() ;
+	/*
+	 * FEATURE: with MusicJingles: Classic the tune plays from its file on
+	 * the tune's stream, as the Classic's PlayMidiFile (TLBA1C.exe
+	 * 0x40bba0) plays it: a tune playing plays on, another is stopped,
+	 * and the music's volume is the stream's. Taken from the Classic
+	 * 3.2.3.
+	 */
+	if( MusicJingles == JINGLES_CLASSIC )
+	{
+		if( !Midi_Driver_Enable )	return ;
+		StopMusicCD() ;
+		if( (num != NumXmi)
+		OR  (!IsMidiPlaying()) )
+		{
+			StopMusicMidi() ;
+			tlba1c.PlayMidi( num ) ;
+		}
+		return ;
+	}
+
 	/*
 	 * FEATURE: with MusicJingles: PlayStation, the PlayStation's
 	 * recording of the tune, its track on the CD (GetPsTrackFile), plays
@@ -874,6 +913,18 @@ void	PlayMidiFile( WORD num )
 #ifdef	CDROM
 LONG	GetMusicCD()
 {
+#ifndef	DOS
+	/*
+	 * FEATURE: with MusicTracks: Classic the track counts as playing until
+	 * the clock in ms passes its end, as in the Classic's GetMusicCD
+	 * (TLBA1C.exe 0x40bc40). Taken from the Classic 3.2.3.
+	 */
+	if( MusicTracks == TRACKS_CLASSIC )
+	{
+		if( timegettime() > EndMusicCD )	CurrentMusicCD = -1 ;
+		return CurrentMusicCD ;
+	}
+#endif
 	if ( TimerSystem > EndMusicCD)	CurrentMusicCD = -1 ;
 	return CurrentMusicCD ;
 }
@@ -900,6 +951,28 @@ void	PlayCdTrack( WORD num )
 		PlayMidiFile( num ) ;
 		return ;
 	}
+	/*
+	 * FEATURE: with MusicTracks: Classic the tune's track plays from its
+	 * file on the CD's stream, as the Classic's PlayCdTrack (TLBA1C.exe
+	 * 0x40bc70) plays it: CurrentMusicCD the track's number, and its end
+	 * the clock in ms it started at and its length. Taken from the
+	 * Classic 3.2.3.
+	 */
+	if( MusicTracks == TRACKS_CLASSIC )
+	{
+		SaveTimer() ;
+		FadeMusicMidi( 1 ) ;
+		NumXmi = -1 ;
+		if( num+1 != GetMusicCD() )
+		{
+			StopMusicCD() ;
+			t = timegettime() ;
+			EndMusicCD = (ULONG)tlba1c.PlayTrackCDR( num+1 ) + (ULONG)t ;
+			CurrentMusicCD = num+1 ;
+		}
+		RestoreTimer() ;
+		return ;
+	}
 #endif
 	SaveTimer() ;
 
@@ -923,6 +996,8 @@ void	PlayCdTrack( WORD num )
 void	PlayAllMusic( WORD num )
 {
 #ifndef	DOS
+	ULONG	t ;
+
 	/*
 	 * FEATURE: with MusicTracks: Midi, the volumes' tune plays from the
 	 * XMIDI alone, as in the disk version. Taken from the disk version.
@@ -938,6 +1013,12 @@ void	PlayAllMusic( WORD num )
 	 * driver or without. Taken from the PlayStation.
 	 */
 	if( pstrackplaying() )	StopMusicMidi() ;
+	/*
+	 * FEATURE: with MusicJingles: Classic the volumes' tune plays from the
+	 * CD's stream alone, as the Classic's PlayAllMusic (TLBA1C.exe
+	 * 0x40bcd0) plays it. Taken from the Classic 3.2.3.
+	 */
+	if( MusicJingles != JINGLES_CLASSIC )
 #endif
 	if( Midi_Driver_Enable )
 	{
@@ -952,6 +1033,25 @@ void	PlayAllMusic( WORD num )
 		}
 	}
 
+#ifndef	DOS
+	/*
+	 * FEATURE: with MusicTracks: Classic track 10 plays from its file on
+	 * the CD's stream, as the Classic's PlayAllMusic (TLBA1C.exe
+	 * 0x40bcd0) plays it, whatever tune is asked for. Taken from the
+	 * Classic 3.2.3.
+	 */
+	if( MusicTracks == TRACKS_CLASSIC )
+	{
+		if( GetMusicCD() != 10 )
+		{
+			StopMusicCD() ;
+			t = timegettime() ;
+			EndMusicCD = (ULONG)tlba1c.PlayTrackCDR( 10 ) + t ;
+			CurrentMusicCD = 10 ;
+		}
+		return ;
+	}
+#endif
 //	if( (n=num+1) != GetMusicCDR() )
 	if( num != GetMusicCD() )
 	{
@@ -988,7 +1088,13 @@ void	PauseMusic( void )
 
 #ifdef	CDROM
 	PausedMusicCD = GetMusicCD() ;
-	PausedTimeCD = EndMusicCD - TimerSystem ;
+	/*
+	 * FEATURE: with MusicTracks: Classic the track's end is the clock's
+	 * in ms, as the Classic's PlayCdTrack counts it. Taken from the
+	 * Classic 3.2.3. Its stream is set aside (PauseCD), the port's own.
+	 */
+	if( MusicTracks == TRACKS_CLASSIC )	PausedTimeCD = EndMusicCD - timegettime() ;
+	else					PausedTimeCD = EndMusicCD - TimerSystem ;
 	PauseCD() ;
 	CurrentMusicCD = -1 ;
 #endif
@@ -1012,7 +1118,12 @@ void	ResumeMusic( void )
 	if( PausedMusicCD != -1 )
 	{
 		CurrentMusicCD = PausedMusicCD ;
-		EndMusicCD = TimerSystem + PausedTimeCD ;
+		/*
+		 * FEATURE: with MusicTracks: Classic the track's end is the
+		 * clock's in ms again. Taken from the Classic 3.2.3.
+		 */
+		if( MusicTracks == TRACKS_CLASSIC )	EndMusicCD = timegettime() + PausedTimeCD ;
+		else					EndMusicCD = TimerSystem + PausedTimeCD ;
 	}
 	PausedMusicCD = -1 ;
 #endif

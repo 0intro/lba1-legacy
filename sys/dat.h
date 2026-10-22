@@ -3,7 +3,7 @@
 
 enum
 {
-	Ahead = 8,	/* the CD's frames handed on before the clock passes them */
+	Ahead = 8,	/* the CD's and the music's files' frames handed on before the clock passes them */
 };
 
 enum
@@ -54,6 +54,7 @@ enum
 {
 	Tcd,		/* the CD's tracks */
 	Tmidi,		/* the XMIDI, as the disk version */
+	Tclassic,	/* the Classic's files, as the Classic */
 	Tauto,		/* the first of them the CD's directory holds */
 };
 
@@ -62,6 +63,7 @@ enum
 	Jmidi,		/* the XMIDI */
 	Jplaystation,	/* the PlayStation's recordings on the CD */
 	Jcd,		/* cut from the CD's tracks, as DotEmu */
+	Jclassic,	/* the Classic's files, as the Classic */
 	Jauto,		/* the first of them the CD's directory holds */
 };
 
@@ -90,6 +92,13 @@ enum
 
 /* a decoder of an MP3 or Ogg Vorbis file (decode.c) */
 typedef struct Decoder Decoder;
+
+/* decopen's ways of reading an MP3 */
+enum
+{
+	Gapless,	/* its encoder's delay and padding left out */
+	Padded,	/* kept as silence, as the Classic decodes its music's files */
+};
 
 /* a CD's image, a cue sheet and its files or an ISO (cdimage.c) */
 typedef struct Image Image;
@@ -128,6 +137,26 @@ struct Cut
 };
 
 extern Cut	cuts[Ntune];	/* each tune's cut, DotEmu's (cuts.c) */
+
+typedef struct Wavstream Wavstream;
+typedef struct Stream Stream;
+
+/* A stream of the Classic's music: its file, the voice playing it, its code (music.c). */
+struct Stream
+{
+	Wavstream	*stream;
+	uint32_t	handle;
+	uint32_t	code;
+};
+
+extern Stream	StreamCD;	/* the CD's tunes' stream (music.c) */
+extern Stream	StreamMidi;	/* the XMIDI's tunes' */
+extern Stream	StreamVoice;	/* the voices' */
+extern int32_t	StreamLengthCD[11];	/* tracks 2 to 10's lengths, in ms */
+extern int32_t	StreamLengthMidi[33];	/* tunes 0 to 32's */
+extern float	MusicStreamVolume;	/* the music's streams' volume */
+extern float	MixVoice;	/* the voices' */
+extern int16_t	NumXmi;	/* the XMIDI's tune playing, -1 for none, -2 at the start (global.c) */
 
 typedef struct Drvrdesc Drvrdesc;
 typedef struct Synth Synth;

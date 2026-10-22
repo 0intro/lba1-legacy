@@ -23,9 +23,9 @@
  * rate, on a display the window moved to, and as SetDisplaySync sets
  * them, the pace from the run's display frame (sdlrefresh) and vsync
  * from its window's (sdlwindowframe). Then the timer's ticks from frame
- * to frame with DisplaySync off and on: TimerRef and TimerSystem step
- * together, 0 or 1 a frame. The clock runs as outside a replay, its
- * sleeps stubs that return at once.
+ * to frame with DisplaySync off and on: TimerRef and TimerSystem a tick
+ * for each 20 ms of the clock, as timer_a.asm's 50 Hz moved them. The
+ * clock runs as outside a replay, its sleeps stubs that return at once.
  * Each failure is a line, and clocktest exits 1 after any.
  */
 
@@ -34,6 +34,7 @@ enum
 	Turns = 100,	/* the turns a case counts */
 	Vgaframe = 16683217,	/* ns, VGA's frame at 640x480, timer.c's Frame */
 	Vgaframe13 = 14268123,	/* ns, in mode 13h, timer.c's Frame13 */
+	Tickms = 20,	/* ms, the timer's tick */
 	Steps = 30,	/* the frames whose steps a case checks */
 };
 
@@ -201,6 +202,12 @@ miditick(uint64_t t)
 	USED(t);
 }
 
+void
+soundtick(uint64_t t)
+{
+	USED(t);
+}
+
 /* One turn's calls. */
 static void
 turn(const char *s)
@@ -253,13 +260,13 @@ synced(int mode, int32_t flag, uint64_t r, uint64_t d, uint64_t pace, int vsync)
 /*
  * SetDisplaySync(flag) in the screen's mode on a display of frames d
  * ns: TimerRef and TimerSystem step together, 0 or 1 from frame to
- * frame, the frames lasting less than a tick, a line where they do
- * otherwise.
+ * frame, the frames lasting less than a tick, and over Steps frames by
+ * the clock's milliseconds over 20, a line where they do otherwise.
  */
 static void
 ticks(int mode, int32_t flag, uint64_t d)
 {
-	uint32_t r, t;
+	uint32_t ref, sys, r, t, ms;
 	int k;
 
 	vga.mode = mode;
@@ -267,6 +274,9 @@ ticks(int mode, int32_t flag, uint64_t d)
 	SetDisplaySync(flag);
 	turn("f");
 	turn("f");
+	ref = TimerRef;
+	sys = TimerSystem;
+	ms = timegettime();
 	for (k = 0; k < Steps; k++) {
 		r = TimerRef;
 		t = TimerSystem;
@@ -277,6 +287,13 @@ ticks(int mode, int32_t flag, uint64_t d)
 			failed = 1;
 			return;
 		}
+	}
+	ms = timegettime() - ms;
+	r = TimerRef - ref;
+	if (r + 1 < ms/Tickms || r > ms/Tickms + 1 || TimerSystem - sys != r) {
+		fprintf(stderr, "clocktest: with DisplaySync %d in mode %d on a display of frames %" PRIu64 " ns, TimerRef steps %u ticks and TimerSystem %u in %u ms, want %u\n",
+			(int)flag, mode, d, (unsigned)r, (unsigned)(TimerSystem - sys), (unsigned)ms, (unsigned)(ms/Tickms));
+		failed = 1;
 	}
 }
 

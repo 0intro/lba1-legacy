@@ -14,10 +14,12 @@
  * (sys/decode.c), its 16-bit samples on standard output, little-endian
  * and interleaved.
  *
- *	pcm [-i] file
+ *	pcm [-c] [-i] file
  *
- * -i prints instead the file's rate in Hz, its channels and its length
- * in frames, on a line.
+ * -c decodes an MP3 as the port decodes the Classic's music files, its
+ * encoder delay first and its padding after as silence (Padded), where
+ * by default they are left out (Gapless). -i prints instead the file's
+ * rate in Hz, its channels and its length in frames, on a line.
  */
 
 enum
@@ -28,7 +30,7 @@ enum
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: pcm [-i] file\n");
+	fprintf(stderr, "usage: pcm [-c] [-i] file\n");
 }
 
 int
@@ -39,14 +41,17 @@ main(int argc, char **argv)
 	Decoder *d;
 	uint32_t rate, channels;
 	uint64_t frames, n, i;
-	int info, a;
+	int info, mode, a;
 
 #ifdef _WIN32
 	_setmode(_fileno(stdout), _O_BINARY);
 #endif
 	info = 0;
+	mode = Gapless;
 	for (a = 1; a < argc && argv[a][0] == '-'; a++) {
-		if (strcmp(argv[a], "-i") == 0)
+		if (strcmp(argv[a], "-c") == 0)
+			mode = Padded;
+		else if (strcmp(argv[a], "-i") == 0)
 			info = 1;
 		else {
 			usage();
@@ -57,7 +62,7 @@ main(int argc, char **argv)
 		usage();
 		return 2;
 	}
-	d = decopen(argv[a]);
+	d = decopen(argv[a], mode);
 	if (d == NULL) {
 		fprintf(stderr, "pcm: %s: cannot decode\n", argv[a]);
 		return 1;

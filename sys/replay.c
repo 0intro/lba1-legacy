@@ -36,11 +36,14 @@
  * is on, it adds a line per period of its timer: m, the chip's samples
  * made so far, the sum of the period's. A PlayStation's track playing
  * in the XMIDI's place adds a line per frame of it handed on: r, its
- * number, its sum. A frame a decoder gives, whose samples the builds
- * decode a few bits apart, is summed by its place: in a c line its
- * audio track's number and its byte, in an r line those, its frame's
- * number and its volume. The halves can be written too, raw, 16-bit
- * stereo at the samples' rate, and the chip's samples, at its rate.
+ * number, its sum, and a stream of the Classic's music a line per frame
+ * of it handed on: s, its number, the sum of its file's name, its
+ * frame's number and its volume. A frame a decoder gives, whose samples
+ * the builds decode a few bits apart, is summed by its place: in a c
+ * line its audio track's number and its byte, in an r line those, its
+ * frame's number and its volume. The halves can be written too, raw,
+ * 16-bit stereo at the samples' rate, and the chip's samples, at its
+ * rate.
  */
 
 static FILE *rec;
@@ -414,6 +417,14 @@ summedpstrack(uint64_t n, uint8_t *buf, int len)
 {
 	if (sums != NULL)
 		fprintf(sums, "r %" PRIu64 " %08" PRIx32 "\n", n, crc(0, buf, (size_t)len));
+}
+
+/* A stream's frame n of the Classic's music, handed on: the sum of its place. */
+void
+summedstream(uint64_t n, uint8_t *place, int len)
+{
+	if (sums != NULL)
+		fprintf(sums, "s %" PRIu64 " %08" PRIx32 "\n", n, crc(0, place, (size_t)len));
 }
 
 void

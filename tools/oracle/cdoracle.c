@@ -299,9 +299,12 @@ static uint8_t cbuf[32*Sector];
 static int	sectread(Disc*, uint32_t, int, uint8_t*);
 
 /*
- * sdl.c's and replay.c's, for cd.c. sdlcd compares each frame the port
- * hands with the one the model reads for the assembly's play.
+ * sdl.c's, replay.c's, music.c's and modes.c's, for cd.c. sdlcd
+ * compares each frame the port hands with the one the model reads for
+ * the assembly's play.
  */
+int32_t	MusicTracks;
+
 void
 sdlcd(const void *buf, int n)
 {
@@ -363,6 +366,18 @@ crc(uint32_t c, const uint8_t *p, size_t n)
 			c = (c >> 1) ^ (0xedb88320 & -(c & 1));
 	}
 	return ~c;
+}
+
+void
+musicpause(int c)
+{
+	USED(c);
+}
+
+void
+musicresume(int c)
+{
+	USED(c);
 }
 
 /* Sector a as Red Book gives it: frame, second and minute from the low byte. */

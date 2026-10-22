@@ -1928,6 +1928,16 @@ int	main( int argc, char *argv[] )
 
 // déclarations HQR ressource
 
+#ifndef	DOS
+	/*
+	 * FEATURE: with MusicJingles: Classic the tunes play from their
+	 * files, and the start passes over the XMIDI's bank, as the Classic's
+	 * lba_main (TLBA1C.exe 0x422170) does, so that a game's directory
+	 * holding the tunes' files in the bank's place, as the Classic's
+	 * Common does, keeps its tunes. Taken from the Classic 3.2.3.
+	 */
+	if( MusicJingles != JINGLES_CLASSIC )
+#endif
 	if( Midi_Driver_Enable )
 	{
 		if( MidiFM )

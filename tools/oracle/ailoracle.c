@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include "dat.h"
 #include "fns.h"
+#include "tlba1c.h"
 #include "nuked/opl3.h"
 #include "dll.h"
 #include "abi.h"
@@ -200,6 +201,8 @@ static uint32_t pitcount, pitlow;
 
 /* the rest of the program's, for sys/midi.c: the configuration, the files, the features' streams, SDL, the records, the AWE32 and the OPL3 */
 char	PathConfigFile[] = "LBA.CFG";
+int32_t	MusicJingles = Jmidi;
+Tlba1c	tlba1c;
 Synth	awe32;
 
 static void
@@ -311,6 +314,18 @@ pstrackpause(void)
 void
 pstrackresume(void)
 {
+}
+
+void
+musicpause(int w)
+{
+	USED(w);
+}
+
+void
+musicresume(int w)
+{
+	USED(w);
 }
 
 void

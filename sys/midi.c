@@ -5,6 +5,7 @@
 #include <string.h>
 #include "dat.h"
 #include "fns.h"
+#include "tlba1c.h"
 #include "nuked/opl3.h"
 
 /*
@@ -304,10 +305,22 @@ midiinit(void)
 	return 1;
 }
 
+/*
+ * FEATURE: with MusicJingles: Classic the music's calls act on the
+ * Classic's tune stream (music.c): ClearMidi, StopMidi, IsMidiPlaying
+ * and FadeMidiDown are its midi module's. Its InitMidi takes the XMIDI
+ * driver's place (sound.c), the chip silent. Taken from the Classic
+ * 3.2.3. LBA2's pause sets the stream aside, the port's own.
+ */
+
 /* ClearMidi is midi.c's: AIL/32 shut down, the driver signed off, out of the music. */
 void
 ClearMidi(void)
 {
+	if (MusicJingles == Jclassic) {
+		tlba1c.ClearMidi();
+		return;
+	}
 	if (!Midi_Driver_Enable)
 		return;
 	heard = 0;
@@ -362,6 +375,10 @@ PlayMidi(unsigned char *xmi)
 void
 StopMidi(void)
 {
+	if (MusicJingles == Jclassic) {
+		tlba1c.StopMidi();
+		return;
+	}
 	midipaused = 0;
 	pstrackstop();
 	if (hseq != -1) {
@@ -379,6 +396,10 @@ StopMidi(void)
 void
 PauseMidi(void)
 {
+	if (MusicJingles == Jclassic) {
+		musicpause(1);
+		return;
+	}
 	if (midipaused == 0) {
 		if (pstrackplaying())
 			pstrackpause();
@@ -398,6 +419,10 @@ PauseMidi(void)
 void
 ResumeMidi(void)
 {
+	if (MusicJingles == Jclassic) {
+		musicresume(1);
+		return;
+	}
 	if (midipaused == 0 || --midipaused != 0)
 		return;
 	pstrackresume();
@@ -409,6 +434,8 @@ ResumeMidi(void)
 int32_t
 IsMidiPlaying(void)
 {
+	if (MusicJingles == Jclassic)
+		return tlba1c.IsMidiPlaying(0x10000);
 	return pstrackplaying() || (hseq != -1 && seqstatus(hseq) == 1);
 }
 
@@ -416,6 +443,10 @@ IsMidiPlaying(void)
 void
 FadeMidiDown(int16_t nbsec)
 {
+	if (MusicJingles == Jclassic) {
+		tlba1c.FadeMidiDown();
+		return;
+	}
 	pstrackfade(1000 * nbsec);
 	if (hseq != -1)
 		setrelvolume(0, 0, 1000 * nbsec);
@@ -474,7 +505,7 @@ miditick(uint64_t ns)
 {
 	uint64_t n, t;
 
-	if (!Midi_Driver_Enable)
+	if (!Midi_Driver_Enable || MusicJingles == Jclassic)
 		return;
 	for (;;) {
 		n = ticks + 1;

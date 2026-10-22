@@ -6,6 +6,7 @@
 #include <string.h>
 #include "dat.h"
 #include "fns.h"
+#include "tlba1c.h"
 #include "dll.h"
 #include "abi.h"
 #include "pc.h"
@@ -82,11 +83,14 @@ static uint8_t *dll;	/* M_SB16.DLL's bytes */
 static long ndll;
 static int32_t pmidi = -1;	/* the MIDI volume the port gave its music */
 
-/* def_file.c's, midi.c's, sys.c's, wave.c's and sdl.c's, for sys/sound.c */
+/* def_file.c's, music.c's, midi.c's, modes.c's, sys.c's, wave.c's and sdl.c's, for sys/sound.c */
 char	PathConfigFile[1];
 int32_t	PlayRate = 22000;
 int32_t	Wave_Driver_Enable;
 int16_t	Midi_Driver_Enable;
+int32_t	MusicTracks = Tcd;
+int32_t	MusicJingles = Jmidi;
+Tlba1c	tlba1c;
 
 /* The configuration: M_SB16.DLL for the mixer, NoWave and NoMidi. */
 unsigned char*
@@ -107,6 +111,24 @@ Def_ReadValue2(unsigned char *path, unsigned char *key, int32_t *v)
 	USED(key);
 	USED(v);
 	return 0;
+}
+
+int32_t
+InitMusic(void)
+{
+	return 0;
+}
+
+void
+SetMusicVolume(float g)
+{
+	USED(g);
+}
+
+void
+SetVoiceVolume(float g)
+{
+	USED(g);
 }
 
 int

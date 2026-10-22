@@ -1,0 +1,22 @@
+# LBA2's pause of the Classic's CD stream (fixtures/classicpause: the
+# sweep's save of scene 2, whose tune 5 the CD plays, and menumusic's
+# lba.cfg with MusicTracks: Classic and MusicJingles: Classic, on the CD
+# clmusic). The save loads from the list, and the scene's tune plays
+# from Track_06.mp3. Escape pauses it under the main menu, whose track
+# 10 plays from Track_10.mp3, and Resume Game plays it on where it
+# stopped.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 15
+shot playing
+key Escape
+sleep 6
+shot menu
+key Return
+sleep 10
+shot resumed

@@ -222,6 +222,8 @@ PORT=\
 	sys/yamaha.o\
 	sys/cuts.o\
 	sys/decode.o\
+	sys/music.o\
+	sys/stream.o\
 	sys/cdimage.o\
 	sys/input.o\
 	sys/syskeys.o\

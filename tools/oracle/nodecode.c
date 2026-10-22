@@ -11,9 +11,10 @@
  */
 
 Decoder*
-decopen(const char *path)
+decopen(const char *path, int mode)
 {
 	USED(path);
+	USED(mode);
 	return NULL;
 }
 

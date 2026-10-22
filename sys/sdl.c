@@ -961,6 +961,76 @@ sdlpstrackstop(void)
 	psstart = 1;
 }
 
+/*
+ * FEATURE: the voices of the Classic's music (stream.c), each to a
+ * stream of its own at its file's rate and channels, at its volume, its
+ * lead made as the CD's. The port's own.
+ */
+static SDL_AudioStream *voicestream[3];
+static SDL_AudioSpec voicespec[3];
+static int voicelead[3];	/* bytes */
+static int voicestart[3] = {1, 1, 1};	/* the voice's next frame a play's first */
+static float voicegain[3] = {1, 1, 1};
+static int novoice;
+
+/* n bytes of voice i, a frame at rate of channels, to its stream, opened if need be. */
+void
+sdlvoice(int i, void *buf, int n, int rate, int channels)
+{
+	SDL_AudioSpec spec;
+	int q;
+
+	if (novoice)
+		return;
+	spec.format = SDL_AUDIO_S16LE;
+	spec.channels = channels;
+	spec.freq = rate;
+	if (voicestream[i] == NULL) {
+		if (!SDL_InitSubSystem(SDL_INIT_AUDIO)
+		|| (voicestream[i] = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL)) == NULL) {
+			fprintf(stderr, "lba: no music's streams: %s\n", SDL_GetError());
+			novoice = 1;
+			return;
+		}
+		SDL_SetAudioStreamGain(voicestream[i], voicegain[i]);
+		SDL_ResumeAudioStreamDevice(voicestream[i]);
+		voicespec[i] = spec;
+	} else if (spec.freq != voicespec[i].freq || spec.channels != voicespec[i].channels) {
+		SDL_ClearAudioStream(voicestream[i]);
+		SDL_SetAudioStreamFormat(voicestream[i], &spec, NULL);
+		voicespec[i] = spec;
+		voicestart[i] = 1;
+	}
+	if (voicestart[i]) {
+		voicelead[i] = leadof(voicestream[i], rate)/2*channels;
+		fill(voicestream[i], voicelead[i] - Ahead*n);
+		voicestart[i] = 0;
+	}
+	q = SDL_GetAudioStreamQueued(voicestream[i]);
+	if (q > rate/2*2*channels)
+		return;
+	SDL_PutAudioStreamData(voicestream[i], buf, n);
+	steer(voicestream[i], q + n, voicelead[i]);
+}
+
+/* What waits of voice i dropped, as it stops. */
+void
+sdlvoicestop(int i)
+{
+	if (voicestream[i] != NULL)
+		SDL_ClearAudioStream(voicestream[i]);
+	voicestart[i] = 1;
+}
+
+/* Voice i's gain. */
+void
+sdlvoicegain(int i, float g)
+{
+	voicegain[i] = g;
+	if (voicestream[i] != NULL)
+		SDL_SetAudioStreamGain(voicestream[i], g);
+}
+
 /* The mixer chip's gain on the CD, the PlayStation's tracks' too. */
 void
 sdlcdgain(float g)
@@ -1054,6 +1124,8 @@ sdlmidigain(float g)
 void
 sdllate(void)
 {
+	int i;
+
 	if (wavestream != NULL)
 		fill(wavestream, wavelead);
 	if (cdstream != NULL)
@@ -1062,6 +1134,9 @@ sdllate(void)
 		fill(psstream, cdlead);
 	if (midistream != NULL)
 		fill(midistream, midilead);
+	for (i = 0; i < 3; i++)
+		if (voicestream[i] != NULL)
+			fill(voicestream[i], voicelead[i]);
 }
 
 uint64_t
