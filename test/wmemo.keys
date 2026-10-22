@@ -1,0 +1,33 @@
+# The behaviour kept across a sequence (fixtures/wmemo: a save with
+# Twinsen outside the prison's back door and facing
+# it, and the CD's LBA.CFG with LbaWinSettings: 214). He walks into the
+# door's zone, F2 makes him sporty, and W opens the door: its script
+# makes him normal and walks him in, into the prison, whose script gives
+# him back his moves and the sporty behaviour he had. Space makes him
+# jump.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 12
+shot start
+down Up
+sleep 0.8
+up Up
+sleep 1
+key F2
+sleep 2
+shot sporty
+key w
+sleep 2
+shot door
+sleep 8
+shot inside
+key space
+sleep 0.5
+shot jump
+sleep 3
+shot end

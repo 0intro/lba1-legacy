@@ -1,0 +1,29 @@
+# W as the action key in the sporty behaviour (fixtures/waction: a
+# save with Twinsen put in scene 1's zone 12, a
+# message zone by the prison's back door: SceneStartX, Y, Z at bytes
+# 270-275, 27904 768 23552, and the CD's LBA.CFG with LbaWinSettings:
+# 214). F2 makes him sporty, W opens the zone's message, "Keep the
+# planet clean!", as Space does in the normal behaviour, and W pressed
+# again closes it, held: the game waits for its release, and the
+# message stays closed.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 12
+shot start
+key F2
+sleep 2
+shot sporty
+key w
+sleep 4
+shot message
+down w
+sleep 2
+shot held
+up w
+sleep 2
+shot end

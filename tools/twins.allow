@@ -148,6 +148,7 @@ sys/keyb.c FlagExtendScan lba2	game: keyboard.asm's handler, Joy, Fire and FuncK
 sys/keyb.c FuncKey lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c GetAscii apart	game: each game's declarations, lib_sys.h's in LBA1, keybdos.h's in LBA2
 sys/keyb.c InitKeyboard lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
+sys/keyb.c InputActions lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c Joy lba1	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c Key apart	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
 sys/keyb.c KeyOff lba2	game: keyboard.asm's handler, Joy, Fire and FuncKey, against keybdos.asm's map
@@ -208,6 +209,8 @@ sys/replay.c replay apart	game: LBA2's DisableAltF4, which refuses Alt+F4 as the
 sys/replay.c summed apart	game: mode 13h's screens in LBA1, 320x200 and the mode summed
 sys/replay.c summedmidi lba1	game: LBA1's music chip
 sys/replay.c writebmp apart	game: mode 13h's screens in LBA1, 320x200 and the mode summed
+sys/sdl.c actionkey lba1	game: LbaWinSettings' 4, W on AZERTY
+sys/sdl.c key apart	game: the W of LbaWinSettings' 4
 sys/sdl.c lastw lba2	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, LBA2's one mode, its texture made again at each width
 sys/sdl.c main apart	game: each program's start, LBA1's in InitAdelineSystem, LBA2's display, wide screen and clock in main before the 1997 game's parameters, and LBA1's music written raw by -m, beside the sound by -w in both
 sys/sdl.c maketexture lba2	game: LBA1's screen in two modes, mode 13h's 320x200 in a 4:3 rectangle, LBA2's one mode, its texture made again at each width

@@ -17,6 +17,8 @@
 enum
 {
 	Nbios = 15,	/* the keys the BIOS's buffer holds */
+	Kw = 0x2C,	/* W on AZERTY, the game's K_W */
+	Talk = 0x200,	/* InputActions: the Classic's Talk/Search, W */
 };
 
 volatile uint16_t	Key;
@@ -24,6 +26,14 @@ volatile uint16_t	Joy;
 volatile uint16_t	Fire;
 volatile uint16_t	FuncKey;
 uint16_t	AsciiMode;
+
+/*
+ * FEATURE: the action key held, LbaWinSettings's 4: W's bit holds
+ * while W is down, whatever else is pressed, where Key keeps the last
+ * key alone. Taken from the Classic 3.2.3.
+ */
+/* InputActions is TLBA1C.exe 0x8dbe7c: the inputs held, of which the port keeps Talk/Search, W */
+volatile uint32_t	InputActions;
 
 /* keyboard.asm's TabSpecialKey and TabSpecialFunc */
 static uint8_t special[] = {
@@ -102,6 +112,13 @@ xtcode(int c)
 			extended = 0;
 			return;
 		}
+	/* FEATURE: W held as the Talk/Search input, with LbaWinSettings's 4. Taken from the Classic 3.2.3. */
+	if (s == Kw && (LbaWinSettings & 4)) {
+		if (up)
+			InputActions &= ~Talk;
+		else
+			InputActions |= Talk;
+	}
 	if (up)
 		Key &= 0xFF00;
 	else

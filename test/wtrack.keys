@@ -1,0 +1,29 @@
+# The normal behaviour in a sequence (fixtures/wtrack: the outside save,
+# fixtures/outside, put in scene 56, byte 261, with Twinsen in its zone 2
+# by the barrel: SceneStartX, Y, Z at bytes 270-275, 26624 2304 25500,
+# and the CD's LBA.CFG with LbaWinSettings: 214). F2 makes him sporty,
+# and W starts his script's sequence by the barrel, which takes him and
+# kashes fly out: he plays it in the normal behaviour, and gets back his
+# moves and the sporty behaviour he had. Space makes him jump.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 12
+shot start
+key F2
+sleep 2
+shot sporty
+key w
+sleep 1
+shot search
+sleep 5
+shot after
+key space
+sleep 0.5
+shot jump
+sleep 3
+shot end

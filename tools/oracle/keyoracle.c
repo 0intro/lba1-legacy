@@ -48,8 +48,10 @@
  *		the one it found there
  *
  * After each byte or burst Key, Joy, Fire and FuncKey must be the same,
- * and after each GetAscii its word. What the port does otherwise on
- * purpose is let pass:
+ * and after each GetAscii its word. The parts run again with
+ * LbaWinSettings's 4, where W held sets InputActions's Talk too, which
+ * must follow the bytes given. What the port does otherwise on purpose
+ * is let pass:
  *
  *	_Key, the handler's last byte: the game reads Key
  *
@@ -63,6 +65,8 @@ enum
 	Nstate = 1024,
 	Rounds = 250000,
 	Nbios = 16,	/* the BIOS's buffer at 40:1Eh, one slot kept empty */
+	Kw = 0x2C,	/* W on AZERTY, which sys/keyb.c takes as the action */
+	Talk = 0x200,	/* its bit in InputActions */
 	Nburst = 4,
 };
 
@@ -86,6 +90,7 @@ extern volatile uint16_t	Key;
 extern volatile uint16_t	Joy;
 extern volatile uint16_t	Fire;
 extern volatile uint16_t	FuncKey;
+extern volatile uint32_t	InputActions;
 uint16_t	GetAscii(void);
 void	ClearAsciiBuffer(void);
 
@@ -109,9 +114,13 @@ struct Bios
 
 static Bios bios;	/* the assembly's, chained to */
 static Bios pbios;	/* the words sys/sdl.c would give the port */
+static int talk;	/* W held, with LbaWinSettings's 4 */
 static int nreset;
 static int warmboot;
 static sigjmp_buf resetjmp;
+
+/* settings.c's, for sys/keyb.c */
+int32_t	LbaWinSettings = 0xd2;
 
 /* sys/timer.c's, for GetAscii */
 void
@@ -317,6 +326,8 @@ port(uint8_t *b, int n)
 
 	for (i = 0; i < n; i++) {
 		xtcode(b[i]);
+		if ((b[i] & 0x7f) == Kw && (LbaWinSettings & 4))
+			talk = !(b[i] & 0x80);
 		w = bioskey(&pbios, b[i]);
 		if (w != 0)
 			biosword(w);
@@ -336,6 +347,10 @@ putstate(uint16_t key, uint16_t joy, uint16_t fire, uint16_t funckey)
 static int
 same(void)
 {
+	if ((InputActions & Talk) != (talk ? Talk : 0u)) {
+		fail("InputActions %x where W is %s", InputActions, talk ? "held" : "up");
+		return 0;
+	}
 	if (*as.key == Key && *as.joy == Joy && *as.fire == Fire && *as.funckey == FuncKey)
 		return 1;
 	fail("the assembly's Key %04x Joy %04x Fire %04x FuncKey %04x, ours %04x %04x %04x %04x",
@@ -571,7 +586,8 @@ main(int argc, char **argv)
 		{"ascii", ascii},
 		{"vectors", vectors},
 	};
-	int i, nbad;
+	char label[Nlabel];
+	int i, k, nbad;
 
 	oracle = "keyoracle";
 	if (argc != 3) {
@@ -595,8 +611,13 @@ main(int argc, char **argv)
 	pcint(0x16, int16);
 	pcfault = onreset;
 	nbad = 0;
-	for (i = 0; i < (int)nelem(parts); i++)
-		nbad += inchild(parts[i].name, 600, parts[i].fn, NULL);
+	for (k = 0; k < 2; k++) {
+		LbaWinSettings = k == 0 ? 0xd2 : 0xd2 | 4;
+		for (i = 0; i < (int)nelem(parts); i++) {
+			snprintf(label, sizeof label, "%s%s", parts[i].name, k ? ", the action key" : "");
+			nbad += inchild(label, 600, parts[i].fn, NULL);
+		}
+	}
 	if (nbad > 0) {
 		fprintf(stderr, "keyoracle: %d failed\n", nbad);
 		return 1;

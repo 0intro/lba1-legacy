@@ -8,6 +8,14 @@
 
 	WORD	TextLig = 0 ;
 
+#ifndef	DOS
+/*
+ * MemoComportement is TLBA1C.exe 0x819658 (LbaWin.exe 0x4300c4): the
+ * behaviour Twinsen had when a script took him, -1 for none.
+ */
+	WORD	MemoComportement = -1 ;
+#endif
+
 extern	WORD 	IndexGrm ;
 extern	WORD	ZoneGrm ;
 
@@ -490,6 +498,22 @@ void	DoLife( WORD numobj )
 
 			case LM_COMPORTEMENT_HERO:
 				InitAnim( GEN_ANIM_RIEN, ANIM_REPEAT, NO_ANIM, NUM_PERSO ) ;
+#ifndef	DOS
+				/*
+				 * FEATURE: the action key's memory of the
+				 * behaviour. The behaviour a script replaces is
+				 * kept, for Twinsen to get back with his moves.
+				 * Taken from LbaWin 0.7.6 and 0.7.7, as the
+				 * Classic 3.2.3 keeps it.
+				 *
+				 * FIXED: LbaWin and the Classic keep it whatever
+				 * LbaWinSettings says. It is kept with 4 set alone.
+				 */
+				if( (LbaWinSettings & 4) AND (MemoComportement == -1) )
+				{
+					MemoComportement = Comportement ;
+				}
+#endif
 				SetComportement( *PtrPrg++ ) ;
 				break ;
 
@@ -544,6 +568,39 @@ void	DoLife( WORD numobj )
 
 			case LM_SET_DIR:
 				ptrobj->Move = *PtrPrg++ ;
+#ifndef	DOS
+				/*
+				 * FEATURE: the action key's memory of the
+				 * behaviour. Twinsen taken by his own script while
+				 * the action is down keeps his behaviour and plays
+				 * the sequence in the normal one, and gets the kept
+				 * one back with his moves. Taken from LbaWin 0.7.6
+				 * and 0.7.7, as the Classic 3.2.3 keeps it.
+				 *
+				 * FIXED: LbaWin and the Classic keep the behaviour
+				 * whatever LbaWinSettings says, so that a sequence
+				 * Space starts resets Twinsen twice, and a behaviour
+				 * a script forces is undone when he gets his moves
+				 * back. It is kept with 4 set alone.
+				 */
+				if( (LbaWinSettings & 4) AND (numobj == NUM_PERSO) )
+				{
+					if( (ptrobj->Move == NO_MOVE) AND ActionNormal )
+					{
+						if( MemoComportement == -1 )
+						{
+							MemoComportement = Comportement ;
+						}
+						SetComportement( C_NORMAL ) ;
+					}
+					if( (ptrobj->Move == MOVE_MANUAL)
+					AND (MemoComportement != -1) )
+					{
+						SetComportement( MemoComportement ) ;
+						MemoComportement = -1 ;
+					}
+				}
+#endif
 				if( ptrobj->Move == MOVE_FOLLOW )
 				{
 					ptrobj->Info3 = *PtrPrg++ ;

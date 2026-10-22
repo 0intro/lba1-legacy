@@ -26,6 +26,7 @@ extern Vga vga;	/* the video card (video.c) */
 
 extern uint16_t	AsciiMode;	/* the keys passed to the BIOS's buffer too, for GetAscii (keyb.c) */
 extern char	PathConfigFile[];	/* lba.cfg's name, InitAdelineSystem's (sys.c) */
+extern int32_t	LbaWinSettings;	/* lba.cfg's LbaWinSettings, LbaWin's switches (settings.c) */
 extern volatile uint32_t	TimerRef;	/* the game's time, in the PIT's ticks of 50 Hz (timer.c) */
 extern int32_t	Wave_Driver_Enable;	/* the samples' driver loaded (wave.c) */
 extern int32_t	PlayRate;	/* the samples' rate, in Hz */

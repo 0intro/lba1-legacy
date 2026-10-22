@@ -332,6 +332,9 @@ main(int argc, char **argv)
 	put("S.CFG", "LbaWinSettings: 209\r\n");
 	ReadLbaWinSettings();
 	setting(211);	/* LbaWin's: keep original game play sets Hit walls */
+	put("S.CFG", "LbaWinSettings: 213\r\n");
+	ReadLbaWinSettings();
+	setting(211);	/* and clears the action key */
 	put("S.CFG", "LbaWinSettings: 212\r\n");
 	ReadLbaWinSettings();
 	setting(212);	/* the Classic's: Hit walls off */

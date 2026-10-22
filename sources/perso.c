@@ -178,6 +178,15 @@ void	InitGame( int argc, UBYTE *argv[] )
 	NumObjFollow = NUM_PERSO ;
 	SaveBeta = 0 ;
 	SaveComportement = Comportement = C_NORMAL ;
+#ifndef	DOS
+	/*
+	 * FIXED: LbaWin, DotEmu and the Classic set MemoComportement once,
+	 * when the program starts, so that a behaviour kept when a game
+	 * ended comes back at the next game's first SET_DIR 1 on Twinsen.
+	 * It is emptied here, with the rest of the game.
+	 */
+	MemoComportement = -1 ;
+#endif
 
 	if( argc == -1 )
 	{
@@ -339,6 +348,9 @@ startloop:
 		MyJoy = Joy		;
 		MyFire = Fire ; //& ~32 ;
 		MyKey = Key ;
+#ifndef	DOS
+		MyActions = InputActions ;
+#endif
 
 /*-------------------------------------------------------------------------*/
 /* gestion clavier */	/* tools */

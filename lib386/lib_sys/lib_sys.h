@@ -7,6 +7,9 @@
  *══════════════════════════════════════════════════════════════════════════*/
 
 extern	volatile	UWORD	Key	;	/* scan code keyboard */
+#ifndef	DOS
+extern	volatile	ULONG	InputActions ;	/* W held with LbaWinSettings's 4: 0x200 */
+#endif
 
 #define	K_ESC		1
 

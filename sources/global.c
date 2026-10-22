@@ -17,6 +17,9 @@ UBYTE	PalettePcx[768+500] ;
 WORD	MyJoy = 0 ;
 WORD	MyFire = 0 ;
 WORD	MyKey = 0 ;
+#ifndef	DOS
+ULONG	MyActions = 0 ;	// FEATURE: InputActions as the frame began, TLBA1C.exe 0x836128. Taken from the Classic 3.2.3.
+#endif
 UBYTE	*PtrPal ;
 WORD	LastFire = 0 ;
 

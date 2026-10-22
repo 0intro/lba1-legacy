@@ -221,7 +221,16 @@ void	WaitReleaseSpace()
 	 * Continue does.
 	 */
 #ifdef	FIXES
-	while( Key OR Fire ) idle() ;
+	while( Key OR Fire
+#ifndef	DOS
+	/*
+	 * FEATURE: the action key. W, held with LbaWinSettings's 4 set
+	 * (InputActions' 0x200, the Classic's Talk/Search), is waited for as
+	 * Space is, so that W held acts once. Taken from the Classic 3.2.3.
+	 */
+	OR (InputActions & 0x200)
+#endif
+	) idle() ;
 #else
 	while( (Fire & F_SPACE)
 	OR (Key == K_ESC) ) ;

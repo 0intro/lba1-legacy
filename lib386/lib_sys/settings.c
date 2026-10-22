@@ -7,9 +7,9 @@
  * game play, 2 Hit walls, 4 the action key in every behaviour, 8 no
  * screen saver, 0x10 a fade at each change of scene, 0x20 moves
  * relative to the screen, 0x40 no Alt+F4, 0x80 no Windows keys. The
- * port reads 1, the original game play at each start, and 2, the bump
- * into walls, which the option menu switches. Taken from the Classic
- * 3.2.3, as LbaWin 0.7.4 made it.
+ * port reads 1, the original game play at each start, 2, the bump into
+ * walls, which the option menu switches, and 4, W as the action. Taken
+ * from the Classic 3.2.3, as LbaWin 0.7.4 made it.
  */
 
 /*

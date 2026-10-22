@@ -19,6 +19,7 @@ enum
 	Width = 640,
 	Height = 480,
 	Ext = 0x100,	/* an extended key: E0 before its code */
+	Kw = 0x2C,	/* W on AZERTY, the game's K_W */
 	Quiet = 16,	/* a sample of the music within this of 0 is silence: -66 dB */
 	Drift = 5000,	/* the most steer nudges a stream's rate, in millionths */
 };
@@ -681,12 +682,32 @@ sdlshow(void)
 	SDL_RenderPresent(renderer);
 }
 
+/*
+ * FEATURE: the action key, W, a virtual key as LbaWin's and the
+ * Classic's are. With LbaWinSettings's 4 set, the key that types W in
+ * the keyboard's layout gives the game K_W, W's code on AZERTY, and the
+ * key in that place, where it types another letter, the code of W's
+ * place: the two trade codes. Taken from LbaWin 0.7.4 and the Classic
+ * 3.2.3.
+ */
+static int
+actionkey(int c, SDL_Keycode k)
+{
+	if (k == SDLK_W)
+		return Kw;
+	if (c == Kw)
+		return xt[SDL_GetScancodeFromKey(SDLK_W, NULL)];
+	return c;
+}
+
 static void
-key(SDL_Scancode sc, int down)
+key(SDL_Scancode sc, SDL_Keycode k, int down)
 {
 	int c, i;
 
 	c = xt[sc];
+	if (LbaWinSettings & 4)
+		c = actionkey(c, k);
 	if (c == 0)
 		return;
 	if (c & Ext)
@@ -759,7 +780,7 @@ sdlpoll(void)
 			break;
 		case SDL_EVENT_KEY_DOWN:
 		case SDL_EVENT_KEY_UP:
-			key(e.key.scancode, e.type == SDL_EVENT_KEY_DOWN);
+			key(e.key.scancode, e.key.key, e.type == SDL_EVENT_KEY_DOWN);
 			break;
 		case SDL_EVENT_TEXT_INPUT:
 			text(e.text.text);

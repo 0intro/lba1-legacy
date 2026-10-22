@@ -97,6 +97,9 @@ extern	UBYTE	*PtrPal ;
 extern	WORD	MyJoy ;
 extern	WORD	MyFire ;
 extern	WORD	MyKey ;
+#ifndef	DOS
+extern	ULONG	MyActions ;
+#endif
 
 extern	WORD	LastFire ;
 
@@ -237,6 +240,9 @@ extern	WORD	InventoryAction ;
 extern	WORD	Weapon ;
 
 extern	WORD	Comportement ;
+#ifndef	DOS
+extern	WORD	MemoComportement ;
+#endif
 extern	WORD	AnimRien ;
 extern	WORD	AnimRienNormal, AnimRienSportif, AnimRienAgressif, AnimRienDiscret, AnimRienProtopack ;
 

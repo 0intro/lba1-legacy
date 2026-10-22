@@ -1,0 +1,30 @@
+# W as the action key before the life candy machine (fixtures/wcandy:
+# the save of fixtures/candy and the CD's LBA.CFG with LbaWinSettings:
+# 214). F2 makes Twinsen sporty, and W asks whether to buy, as Space
+# does in the normal behaviour. Return takes "Ok, I'll buy.", the
+# machine answers "Not enough Kashes!", Return leaves it, and Twinsen
+# is still sporty: Space makes him jump.
+
+sleep 40
+shot menu
+key Down Return
+sleep 3
+key Return
+sleep 12
+shot start
+key F2
+sleep 2
+key w
+sleep 4
+shot question
+key Return
+sleep 4
+shot empty
+key Return
+sleep 4
+shot left
+key space
+sleep 0.5
+shot jump
+sleep 4
+shot end

@@ -1,0 +1,35 @@
+# A behaviour kept by one game and forgotten by the next
+# (fixtures/wmemo). Shift+C at the main menu plays the credits, whose
+# script gives Twinsen the normal behaviour, which keeps the one he had,
+# and ends without giving it back. Then a save by the prison is
+# loaded, Twinsen walks into the prison's back door's zone, F2 makes him
+# sporty and W opens the door: he comes into the prison sporty, as in
+# wmemo, and Space makes him jump.
+
+hold 0.05
+sleep 40
+down Shift_L
+key c
+up Shift_L
+sleep 230
+shot menu2
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 12
+shot start
+down Up
+sleep 0.8
+up Up
+sleep 1
+key F2
+sleep 2
+key w
+sleep 10
+shot inside
+key space
+sleep 0.5
+shot jump
+sleep 3
+shot end

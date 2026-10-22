@@ -1,0 +1,27 @@
+# W held across another key (fixtures/wheld: a save with
+# Twinsen outside the prison's back door and facing
+# it, and the CD's LBA.CFG with LbaWinSettings: 214). W is held, X is
+# pressed and released, and Up walks Twinsen into the door's zone with
+# W still down: the action holds, as the Classic's Talk/Search does,
+# and the door opens, its script walking him in.
+
+hold 0.05
+sleep 40
+key Down Return
+sleep 3
+key Return
+hold 0.15
+sleep 12
+shot start
+down w
+sleep 0.5
+key x
+sleep 0.5
+down Up
+sleep 0.8
+up Up
+sleep 2
+up w
+shot door
+sleep 8
+shot inside

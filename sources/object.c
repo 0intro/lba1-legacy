@@ -2083,6 +2083,20 @@ void	DoDir( WORD numobj  )
 	if( numobj == NUM_PERSO )	/* protection anim speciales */
 	{
 		ActionNormal = FALSE ;
+#ifndef	DOS
+		/*
+		 * FEATURE: the action key. With LbaWinSettings's 4 set, W does
+		 * in every behaviour what Space does in the normal one, while
+		 * it is down, whatever else is pressed (MyActions' 0x200, the
+		 * Classic's Talk/Search): K_W, which the port gives the key
+		 * that types W in the keyboard's layout. Taken from LbaWin
+		 * 0.7.4 and the Classic 3.2.3.
+		 */
+		if( (LbaWinSettings & 4) AND (MyActions & 0x200) )
+		{
+			ActionNormal = TRUE ;
+		}
+#endif
 /*
 		if( MyKey == K_F1 )	SetComportement( C_NORMAL ) ;
 		if( MyKey == K_F2 )	SetComportement( C_SPORTIF ) ;
