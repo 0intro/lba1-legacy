@@ -1246,6 +1246,15 @@ void	InitProgram()
 #ifdef	CDROM
 	InitVoiceFile()	;
 #endif
+#ifndef	DOS
+
+	/*
+	 * FEATURE: lba.cfg's SkipLogo, ON for a key that passes the logo at
+	 * the start, as the Classic always lets it, OFF for the logo whole.
+	 * Taken from the Classic 3.2.3.
+	 */
+	FlagSkipLogo = gamekey( PathConfigFile, "SkipLogo" ) ;
+#endif
 }
 
 /*══════════════════════════════════════════════════════════════════════════*/
@@ -1428,11 +1437,26 @@ int	main( int argc, char *argv[] )
 #ifndef	DEBUG_TOOLS
 
 // logo adeline
+#ifdef	DOS
 	AdelineLogo() ;
 
 // pause logo
 	memotimer = TimerRef ;
 	while( TimerRef < (memotimer+50*4) ) idle() ;
+#else
+	/*
+	 * FEATURE: with SkipLogo the logo's pause waits after the loading,
+	 * counted from the logo's end, and a logo that a key cut passes it,
+	 * as lba_main (TLBA1C.exe 0x42227e) keeps the logo's end. Taken
+	 * from the Classic 3.2.3.
+	 */
+	memotimer = 0 ;
+	if( !AdelineLogo() )	memotimer = TimerRef ;
+
+// pause logo
+	if( !FlagSkipLogo )
+		while( TimerRef < (memotimer+50*4) ) idle() ;
+#endif
 #endif
 
 // check cd rom
@@ -1581,6 +1605,36 @@ int	main( int argc, char *argv[] )
 
 
 #ifndef	DEBUG_TOOLS
+#ifndef	DOS
+	/*
+	 * FEATURE: with SkipLogo the logo's pause, after the loading, ends
+	 * on a key, Fire or Joy, as lba_main (TLBA1C.exe 0x4224aa) waits.
+	 * Taken from the Classic 3.2.3.
+	 */
+	if( FlagSkipLogo AND memotimer )
+	{
+		memotimer += 50*4 ;
+		while( TimerRef < memotimer )
+		{
+			idle() ;
+			if( Key OR Fire OR Joy )	break ;
+		}
+	}
+	/*
+	 * FEATURE: with SkipLogo the screen fades from the palette shown,
+	 * PalEntries, as lba_main (TLBA1C.exe 0x4224ee) fades it, so that a
+	 * logo that a key cut in its white fade fades from its grey. Taken
+	 * from the Classic 3.2.3.
+	 */
+	/*
+	 * FIXED: the Classic fades PalEntries itself, which each step's
+	 * Palette writes over, so that each step takes its percent of the
+	 * step before and the screen is black within a third of the fade.
+	 * This fades a copy, made in PalettePcx, which the bumper loads
+	 * again.
+	 */
+	if( FlagSkipLogo )	memmove( PalettePcx, PalEntries, 768 ) ;
+#endif
 // bumper
 	FadeToBlack( PalettePcx ) ;
 

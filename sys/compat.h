@@ -18,6 +18,7 @@
 #endif
 
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -72,5 +73,8 @@ void	watcomqsort(void*, size_t, size_t, int (*)(const void*, const void*));
  */
 void	idle(void);
 void	framesync(void);
+
+/* The game's own switches of lba.cfg, each its default where the file leaves it out (sys/modes.c). */
+int32_t	gamekey(char*, char*);
 
 #include "dos.h"

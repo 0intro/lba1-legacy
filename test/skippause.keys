@@ -1,0 +1,8 @@
+# SkipLogo: ON (fixtures/skiplogo, the CD's LBA.CFG with the key on).
+# The logo plays whole, its fades and the start of its 4 s pause, and
+# Space in the pause ends it: the logo fades out and the bumper comes.
+
+sleep 8
+key space
+sleep 2.5
+shot bumper

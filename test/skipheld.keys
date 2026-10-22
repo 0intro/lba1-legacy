@@ -1,0 +1,11 @@
+# SkipLogo: ON (fixtures/skiplogo, the CD's LBA.CFG with the key on).
+# Escape held from the start cuts the logo at one of its first steps,
+# and every page after it passes at once: the bumpers' pauses and
+# DRAGON3 end on the key held, their fades run whole, and the main
+# menu, which ignores Escape, comes in about 7 s.
+
+down Escape
+sleep 12
+shot menu
+up Escape
+sleep 1

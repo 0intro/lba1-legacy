@@ -1,0 +1,11 @@
+# SkipLogo: ON (fixtures/skiplogo, the CD's LBA.CFG with the key on).
+# Escape in the logo's fade from white shows the logo at once in its
+# colours, and the bumper comes after the logo's fade out, the pause
+# passed.
+
+sleep 5.1
+key Escape
+sleep 0.5
+shot cut
+sleep 3
+shot bumper

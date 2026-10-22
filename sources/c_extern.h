@@ -111,6 +111,7 @@ extern	WORD	FlagMCGA ;
 extern	LONG	FlagCredits ;
 #ifndef	DOS
 extern	LONG	FlagPal ;
+extern	LONG	FlagSkipLogo ;
 #endif
 
 extern	UBYTE	String[] ;

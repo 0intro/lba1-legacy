@@ -248,10 +248,18 @@ Vsync(void)
 	vsync();
 }
 
+/*
+ * FEATURE: PalEntries is TLBA1C.exe 0x837188: the palette Palette last
+ * set, whose copy SkipLogo fades after the logo. Taken from the Classic
+ * 3.2.3.
+ */
+uint8_t	PalEntries[768];
+
 /* The DAC took the palette's bytes shifted right by two (s_pal.asm). */
 void
 Palette(void *pal)
 {
+	memmove(PalEntries, pal, sizeof PalEntries);
 	PalMulti(0, 256, pal);
 }
 

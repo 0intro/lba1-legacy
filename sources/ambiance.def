@@ -27,8 +27,16 @@ extern void HQ_ChangeBalanceSamples(int16_t ,int16_t );
 extern void GereAmbiance(void);
 extern void FadePal(unsigned char ,unsigned char ,unsigned char ,unsigned char *,int16_t );
 extern void FadeToBlack(unsigned char *);
+#ifdef	DOS
 extern void WhiteFade(void);
+#else
+extern int32_t WhiteFade(void);
+#endif
+#ifdef	DOS
 extern void FadeWhiteToPal(unsigned char *);
+#else
+extern int32_t FadeWhiteToPal(unsigned char *);
+#endif
 extern void FadeToPal(unsigned char *);
 extern void SetBlackPal(void);
 extern void FadePalToPal(unsigned char *,unsigned char *);

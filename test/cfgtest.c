@@ -27,15 +27,17 @@
  * lines after it, and lines longer than DefString, a key read past them
  * and a value kept to its first 255 bytes. Then LbaWin's settings, as
  * lib386/lib_sys/settings.c reads, forces and writes them. First, the
- * port's keys as readplatform reads them, from sys/lba.cfg, shipped
- * beside the program and held as its text, each named there, and from
- * the CD's LBA.CFG, which leaves them out: the same values, the code's
- * defaults being the shipped file's.
+ * port's keys as readplatform reads them, and the game's own switch,
+ * SkipLogo, as gamekey reads it for sources/perso.c, from sys/lba.cfg,
+ * shipped beside the program and held as its text, each named there, and
+ * from the CD's LBA.CFG, which leaves them out: the same values, the
+ * code's defaults being the shipped file's.
  */
 
 void	setdirs(char*, char**, int, char**, int);
 int	bindtext(int, char*, const char*, char*, int);
 void	readplatform(char*);
+char*	gamekeyname(int);
 
 
 char	PathConfigFile[260];	/* sys/sys.c's, which cfgtest leaves out */
@@ -195,13 +197,15 @@ shipped(char *key, int32_t a, int32_t b)
  * The port's keys of sys/lba.cfg, the program's text of it (lbacfg),
  * and of the CD's LBA.CFG, which leaves them out, read first, while
  * LbaWinSettings and the data the reads keep hold their values at the
- * start: each named in sys/lba.cfg, and the same in both.
+ * start, then the game's own switches (gamekeys) as the game reads
+ * them: each named in sys/lba.cfg, and the same in both.
  */
 static void
 defaults(void)
 {
 	char err[256];
 	int32_t a[nelem(names)], b[nelem(names)];
+	char *key;
 	int i;
 
 	platform("LBA.CFG", a);
@@ -210,6 +214,8 @@ defaults(void)
 	platform("SHIPPED.CFG", b);
 	for (i = 0; i < (int)nelem(names); i++)
 		shipped(names[i], a[i], b[i]);
+	for (i = 0; (key = gamekeyname(i)) != NULL; i++)
+		shipped(key, gamekey("LBA.CFG", key), gamekey("SHIPPED.CFG", key));
 }
 
 static void

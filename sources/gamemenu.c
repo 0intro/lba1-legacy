@@ -3377,16 +3377,37 @@ void	TimerPause( WORD nbsec )
 
 /*──────────────────────────────────────────────────────────────────────────*/
 
+#ifdef	DOS
 void	AdelineLogo()
+#else
+LONG	AdelineLogo()
+#endif
 {
+#ifndef	DOS
+	LONG	cut ;
+
+#endif
 	PlayMidiFile( 31 ) ;
 
 	Load_HQR( PATH_RESSOURCE"ress.hqr", Screen, RESS_LOGO_PCR ) ;
 	CopyScreen( Screen, Log ) ;
 	Load_HQR( PATH_RESSOURCE"ress.hqr", PalettePcx, RESS_LOGO_PAL ) ;
+#ifdef	DOS
 	WhiteFade() ;
 	Flip() ;
 	FadeWhiteToPal( PalettePcx ) ;
+#else
+	/*
+	 * FEATURE: with SkipLogo a key that cuts the white fade passes the
+	 * fade from white too, and the answer says that a key cut the logo,
+	 * as AdelineLogo (TLBA1C.exe 0x414db0) answers. Taken from the
+	 * Classic 3.2.3.
+	 */
+	cut = WhiteFade() ;
+	Flip() ;
+	if( cut )	return TRUE ;
+	return FadeWhiteToPal( PalettePcx ) ;
+#endif
 }
 
 /*──────────────────────────────────────────────────────────────────────────*/

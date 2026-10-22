@@ -479,7 +479,11 @@ void	FadeToBlack( UBYTE *ptrpal )
 	FlagBlackPal = TRUE ;
 }
 
+#ifdef	DOS
 void	WhiteFade()
+#else
+LONG	WhiteFade()
+#endif
 {
 	UBYTE	workpal[768] ;
 	LONG	n,m ;
@@ -498,10 +502,26 @@ void	WhiteFade()
 		memset( workpal, n, 768 ) ;
 		Vsync() ;
 		Palette( workpal ) ;
+#ifndef	DOS
+		/*
+		 * FEATURE: with SkipLogo a key, Fire or Joy ends the white
+		 * fade at its step, the palette as it stands, and the answer
+		 * says that a key cut it, as WhiteFade (TLBA1C.exe 0x40b7e0)
+		 * answers. Taken from the Classic 3.2.3.
+		 */
+		if( FlagSkipLogo AND (Key OR Fire OR Joy) )	return TRUE ;
+#endif
 	}
+#ifndef	DOS
+	return FALSE ;
+#endif
 }
 
+#ifdef	DOS
 void	FadeWhiteToPal( UBYTE *ptrpal )
+#else
+LONG	FadeWhiteToPal( UBYTE *ptrpal )
+#endif
 {
 	LONG	n ;
 
@@ -524,9 +544,26 @@ void	FadeWhiteToPal( UBYTE *ptrpal )
 	{
 		Vsync() ;
 		FadePal( 255,255,255, ptrpal, n ) ;
+#ifndef	DOS
+		/*
+		 * FEATURE: with SkipLogo a key, Fire or Joy ends the fade at
+		 * its step on the palette it fades to, and the answer says
+		 * that a key cut it, as FadeWhiteToPal (TLBA1C.exe 0x40b8e0)
+		 * gives FadePalTime its key. Taken from the Classic 3.2.3.
+		 */
+		if( FlagSkipLogo AND (Key OR Fire OR Joy) )
+		{
+			Palette( ptrpal ) ;
+			RestoreTimer() ;
+			return TRUE ;
+		}
+#endif
 	}
 #ifdef	FIXES
 	RestoreTimer() ;
+#endif
+#ifndef	DOS
+	return FALSE ;
 #endif
 }
 

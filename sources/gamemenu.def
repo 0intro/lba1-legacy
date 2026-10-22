@@ -50,5 +50,9 @@ extern void GameOver(void);
 extern void Credits(void);
 extern void RessPict(int16_t );
 extern void TimerPause(int16_t );
+#ifdef	DOS
 extern void AdelineLogo(void);
+#else
+extern int32_t AdelineLogo(void);
+#endif
 extern void MenuDemo(void);

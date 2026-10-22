@@ -23,6 +23,7 @@ struct Vga
 };
 
 extern Vga vga;	/* the video card (video.c) */
+extern uint8_t	PalEntries[768];	/* the palette Palette last set, which SkipLogo fades (video.c) */
 
 extern uint16_t	AsciiMode;	/* the keys passed to the BIOS's buffer too, for GetAscii (keyb.c) */
 extern char	PathConfigFile[];	/* lba.cfg's name, InitAdelineSystem's (sys.c) */

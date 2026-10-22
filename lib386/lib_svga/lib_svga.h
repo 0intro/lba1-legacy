@@ -114,6 +114,7 @@ void    SimpleInitSvga( void )                          ;
 #ifndef	DOS
 extern  LONG    FlagFullScreen                          ;
 void    WriteFullScreen( void )                         ;
+extern  UBYTE   PalEntries[]                            ;
 #endif
 /*-----------------------------------------------------------------------------*/
 /*                      Box.asm                                                 */

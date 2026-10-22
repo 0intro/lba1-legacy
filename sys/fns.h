@@ -100,7 +100,11 @@ void	waveto(char*);
 void	musicto(char*);
 
 /* modes.c */
+int	readmode(char*, char*, char**);
+int	readswitch(char*, char*, int);
 void	readplatform(char*);
+int32_t	gamekey(char*, char*);
+char*	gamekeyname(int);
 
 /* video.c */
 void	videoinit(void);

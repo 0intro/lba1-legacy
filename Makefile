@@ -223,8 +223,8 @@ EMU8KTEST=\
 	sys/emu8kfx.o\
 	sys/emu8ktab.o\
 
-# cfgtest: lba.cfg's reading and writing, through the port's files, and
-# LbaWin's settings.
+# cfgtest: lba.cfg's reading and writing, through the port's files, its
+# switches and LbaWin's settings.
 CFGTEST=\
 	test/cfgtest.o\
 	lib386/lib_sys/def_file.o\

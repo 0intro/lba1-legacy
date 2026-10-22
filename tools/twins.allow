@@ -24,6 +24,7 @@ sys/compat.c watcommemicmp lba2	game: the C library calls each game makes
 sys/compat.c watcomvbprintf lba2	game: the C library calls each game makes
 sys/compat.h * lba1	game: the C library, Watcom's names and DOS's calls each game's code was written for
 sys/compat.h * lba2	game: the C library, Watcom's names and DOS's calls each game's code was written for
+sys/compat.h decl gamekey apart	game: each game's reader of its settings, LBA1's of a file by its name, LBA2's of deffile.c's buffer
 sys/dat.h * apart	game: each port's data, its game's modules' among them, which follow their files
 sys/dat.h * lba1	game: each port's data, its game's modules' among them, which follow their files
 sys/dat.h * lba2	game: each port's data, its game's modules' among them, which follow their files
@@ -245,8 +246,13 @@ sys/sys.c ManageEvents lba2	game: LBA2's sys.c stands for dossys.c's ManageEvent
 sys/sys.c ManageProc lba2	game: LBA2's sys.c stands for dossys.c's ManageEvents
 sys/sys.c MidiFM lba1	game: LBA1's sys.c stands for lib386's adeline.c
 sys/sys.c PathConfigFile lba1	game: LBA1's sys.c stands for lib386's adeline.c
+sys/sys.c gamekey lba2	game: the game's own keys, LBA2's spelt 1 and 0 in sys.c beside readplatform, LBA1's ON and OFF in modes.c beside its own
+sys/sys.c gamekeyname lba2	game: the game's own keys, LBA2's spelt 1 and 0 in sys.c beside readplatform, LBA1's ON and OFF in modes.c beside its own
+sys/sys.c gamekeys lba2	game: the game's own keys, LBA2's spelt 1 and 0 in sys.c beside readplatform, LBA1's ON and OFF in modes.c beside its own
 sys/sys.c readdisplaynum lba2	game: each game's settings
 sys/sys.c readplatform lba2	game: LBA2 reads the port's keys, spelt 1 and 0, from ReadConfigFile, LBA1 its own in InitAdelineSystem
+sys/sys.c struct Gamekey lba2	game: the game's own keys, LBA2's spelt 1 and 0 in sys.c beside readplatform, LBA1's ON and OFF in modes.c beside its own
+sys/sys.c typedef Gamekey lba2	game: the game's own keys, LBA2's spelt 1 and 0 in sys.c beside readplatform, LBA1's ON and OFF in modes.c beside its own
 sys/syskeys.c DisableAltF4 lba2	game: LBA2's two keys, which LBA1 holds in LbaWinSettings
 sys/syskeys.c DisableWindowsKeys lba2	game: LBA2's two keys, which LBA1 holds in LbaWinSettings
 sys/syskeys.c refusealtf4 apart	game: the settings, LbaWinSettings' 0x40 and 0x80 against LBA2's two keys
@@ -319,6 +325,7 @@ sys/video.c InitVESA lba2	game: lib_svga's own routines and mode 13h, against th
 sys/video.c InitVESAMode lba2	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
 sys/video.c Log lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
 sys/video.c MemoClip lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
+sys/video.c PalEntries lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
 sys/video.c PalMulti lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
 sys/video.c PalOne lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS
 sys/video.c Palette lba1	game: lib_svga's own routines and mode 13h, against the 1997 library over a VESA BIOS

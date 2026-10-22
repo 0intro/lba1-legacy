@@ -1,0 +1,13 @@
+# SkipLogo: OFF (fixtures/skiplogooff, the CD's LBA.CFG with the key
+# off). Escape in the logo's white fade, at skipwhite's time, leaves the
+# logo whole as in 1994: its white fade, its fade from white and its
+# 4 s pause, then the bumper.
+
+sleep 2
+key Escape
+sleep 1
+shot white
+sleep 3
+shot logo
+sleep 6
+shot bumper
